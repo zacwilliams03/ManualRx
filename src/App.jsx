@@ -1,13 +1,60 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './pages/auth/Login'
 import Signup from './pages/auth/Signup'
+import ForgotPassword from './pages/auth/ForgotPassword'
+import ResetPassword from './pages/auth/ResetPassword'
+import Account from './pages/Account'
 import TherapistDashboard from './pages/therapist/Dashboard'
 import Clients from './pages/therapist/Clients'
 import ExerciseLibrary from './pages/therapist/ExerciseLibrary'
+import ExerciseDetail from './pages/therapist/ExerciseDetail'
+import ExerciseUpload from './pages/therapist/ExerciseUpload'
 import Prescribe from './pages/therapist/Prescribe'
 import ClientDashboard from './pages/client/Dashboard'
 import MyExercises from './pages/client/MyExercises'
+import SessionWizard from './pages/client/SessionWizard'
+import SessionEdit from './pages/therapist/SessionEdit'
+import Join from './pages/Join'
+
+function ProtectedRoute({ children, requiredRole }) {
+  const { user, profile, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-500">
+        Loading…
+      </div>
+    )
+  }
+
+  if (!user) return <Navigate to="/login" replace />
+
+  // Wait until profile loads (very brief gap between user and profile)
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-500">
+        Loading profile…
+      </div>
+    )
+  }
+
+  if (requiredRole && profile.role !== requiredRole) {
+    // Logged in but wrong role — send to their own dashboard
+    return <Navigate to={profile.role === 'therapist' ? '/therapist' : '/client'} replace />
+  }
+
+  return children
+}
+
+function PublicOnlyRoute({ children }) {
+  const { user, profile, loading } = useAuth()
+  if (loading) return null
+  if (user && profile) {
+    return <Navigate to={profile.role === 'therapist' ? '/therapist' : '/client'} replace />
+  }
+  return children
+}
 
 export default function App() {
   return (
@@ -15,18 +62,29 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+          <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+          <Route path="/signup" element={<PublicOnlyRoute><Signup /></PublicOnlyRoute>} />
+          <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
+          <Route path="/join/:code" element={<Join />} />
 
-          {/* Therapist */}
-          <Route path="/therapist" element={<TherapistDashboard />} />
-          <Route path="/therapist/clients" element={<Clients />} />
-          <Route path="/therapist/exercises" element={<ExerciseLibrary />} />
-          <Route path="/therapist/prescribe/:clientId" element={<Prescribe />} />
+          {/* Therapist — protected */}
+          <Route path="/therapist" element={<ProtectedRoute requiredRole="therapist"><TherapistDashboard /></ProtectedRoute>} />
+          <Route path="/therapist/clients" element={<ProtectedRoute requiredRole="therapist"><Clients /></ProtectedRoute>} />
+          <Route path="/therapist/exercises" element={<ProtectedRoute requiredRole="therapist"><ExerciseLibrary /></ProtectedRoute>} />
+          <Route path="/therapist/exercises/new" element={<ProtectedRoute requiredRole="therapist"><ExerciseUpload /></ProtectedRoute>} />
+          <Route path="/therapist/exercises/:id" element={<ProtectedRoute requiredRole="therapist"><ExerciseDetail /></ProtectedRoute>} />
+          <Route path="/therapist/prescribe/:clientId" element={<ProtectedRoute requiredRole="therapist"><Prescribe /></ProtectedRoute>} />
+          <Route path="/therapist/prescribe/:clientId/sessions/:sessionId" element={<ProtectedRoute requiredRole="therapist"><SessionEdit /></ProtectedRoute>} />
 
-          {/* Client */}
-          <Route path="/client" element={<ClientDashboard />} />
-          <Route path="/client/exercises" element={<MyExercises />} />
+          {/* Client — protected */}
+          <Route path="/client" element={<ProtectedRoute requiredRole="client"><ClientDashboard /></ProtectedRoute>} />
+          <Route path="/client/exercises" element={<ProtectedRoute requiredRole="client"><MyExercises /></ProtectedRoute>} />
+          <Route path="/client/sessions/:sessionId" element={<ProtectedRoute requiredRole="client"><SessionWizard /></ProtectedRoute>} />
+
+          {/* Anything else */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
