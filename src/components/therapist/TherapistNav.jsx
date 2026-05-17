@@ -26,7 +26,7 @@ export default function TherapistNav() {
   return (
     <nav className="bg-gray-800 px-6 py-3 flex items-center justify-between">
       <Link to="/therapist" className="text-sm font-semibold text-white">
-        PrescriptR
+        ManualRx
       </Link>
       <div className="flex items-center gap-6">
         {navLink('/therapist/clients', 'Clients', ['/therapist/clients', '/therapist/prescribe'])}

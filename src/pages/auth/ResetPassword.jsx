@@ -86,7 +86,7 @@ export default function ResetPassword() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow p-8">
         <h1 className="text-2xl font-semibold text-gray-900">Set new password</h1>
-        <p className="mt-1 text-sm text-gray-500">PrescriptR</p>
+        <p className="mt-1 text-sm text-gray-500">ManualRx</p>
 
         {success ? (
           <p className="mt-6 text-sm text-gray-700">Password updated. Redirecting to login…</p>
