@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 
 export default function Onboarding() {
-  const { profile } = useAuth()
+  const { profile, loading: authLoading } = useAuth()
   const navigate = useNavigate()
 
   const [checking, setChecking] = useState(true)
@@ -16,6 +16,12 @@ export default function Onboarding() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    if (authLoading) return  // auth still resolving
+    if (!profile) {
+      // ProtectedRoute handles redirect, but clear checking state defensively
+      setChecking(false)
+      return
+    }
     async function checkOnboarded() {
       const { data, error } = await supabase
         .from('therapist_profiles')
@@ -29,8 +35,8 @@ export default function Onboarding() {
       }
       setChecking(false)
     }
-    if (profile) checkOnboarded()
-  }, [profile, navigate])
+    checkOnboarded()
+  }, [profile, authLoading, navigate])
 
   function frequencyDaysValue() {
     if (frequencyMode === 'none') return null
@@ -42,8 +48,18 @@ export default function Onboarding() {
 
   async function handleSave(e) {
     e.preventDefault()
+    if (!profile) return
     setError(null)
     setLoading(true)
+
+    if (frequencyMode === 'custom') {
+      const n = parseInt(customDays, 10)
+      if (!Number.isFinite(n) || n < 1) {
+        setError('Please enter a valid number of days.')
+        setLoading(false)
+        return
+      }
+    }
 
     const { error } = await supabase
       .from('therapist_profiles')
@@ -67,6 +83,7 @@ export default function Onboarding() {
   }
 
   async function handleSkip() {
+    if (!profile) return
     setError(null)
     setLoading(true)
 
@@ -84,7 +101,7 @@ export default function Onboarding() {
 
   if (checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500">
         Loading…
       </div>
     )
