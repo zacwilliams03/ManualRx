@@ -35,6 +35,7 @@ export default function TherapistNav() {
       <div className="flex items-center gap-4">
         <span className="text-sm text-gray-400">{firstName}</span>
         {navLink('/account', 'Account', ['/account'])}
+        {navLink('/settings', 'Settings', ['/settings'])}
         <button
           onClick={signOut}
           className="text-sm text-gray-400 hover:text-gray-200 transition-colors"
