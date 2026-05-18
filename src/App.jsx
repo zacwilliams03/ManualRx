@@ -16,6 +16,8 @@ import MyExercises from './pages/client/MyExercises'
 import SessionWizard from './pages/client/SessionWizard'
 import SessionEdit from './pages/therapist/SessionEdit'
 import Join from './pages/Join'
+import Onboarding from './pages/therapist/Onboarding'
+import Settings from './pages/therapist/Settings'
 
 function ProtectedRoute({ children, requiredRole }) {
   const { user, profile, loading } = useAuth()
@@ -70,6 +72,8 @@ export default function App() {
           <Route path="/join/:code" element={<Join />} />
 
           {/* Therapist — protected */}
+          <Route path="/onboarding" element={<ProtectedRoute requiredRole="therapist"><Onboarding /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute requiredRole="therapist"><Settings /></ProtectedRoute>} />
           <Route path="/therapist" element={<ProtectedRoute requiredRole="therapist"><TherapistDashboard /></ProtectedRoute>} />
           <Route path="/therapist/clients" element={<ProtectedRoute requiredRole="therapist"><Clients /></ProtectedRoute>} />
           <Route path="/therapist/exercises" element={<ProtectedRoute requiredRole="therapist"><ExerciseLibrary /></ProtectedRoute>} />
