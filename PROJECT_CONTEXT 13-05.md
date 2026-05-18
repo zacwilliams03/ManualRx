@@ -226,6 +226,11 @@ Annual billing at 20% discount. Stripe handles subscriptions.
 - [ ] Stripe integration
 - [x] Password reset / email flows
 - [ ] Therapist mobile polish pass (separate, lower priority)
+- [x] App deployed to Vercel at www.manualrx.com
+- [x] Fix client login bug (disabled email confirmation in Supabase — Session 15)
+- [x] Automatic invite email — Resend + Supabase Edge Function built and deployed (Session 15). ⚠️ Needs end-to-end test once Resend domain verification completes for manualrx.com
+- [x] Therapist onboarding flow — one-time /onboarding page shown after signup (Session 16)
+- [x] Therapist settings page — permanent /settings page accessible from nav (Session 16)
 
 ---
 
@@ -398,7 +403,28 @@ To recreate the comparison artifact exactly:
 - **Page background:** `#F4F4F2`
 - **Font:** Georgia serif throughout
 
+Branding Decisions Required Before Launch
+Blocking everything else
 
+Colour palette — #2E6B7A is provisional throughout the codebase and email template. Finalise this first. All UI updates, the logo, and email templates depend on it.
+
+Dependent on colour palette
+
+Logo — nothing finalised yet. For exploration: Ideogram (free, handles text well) or Looka (purpose-built, production-ready SVG output). Current wordmark is bold text in #2E6B7A.
+Favicon — separate deliverable from the logo. Must work at 16x16 and 32x32. Required before launch or browser tabs look unfinished.
+UI update — app currently uses Tailwind defaults + #2E6B7A. Full UI pass once palette and logo are settled.
+Typography — currently system-ui defaults. Deliberate decision needed — even one Google Font for headings locks in the feel.
+
+Email templates
+
+Invite email — specced and built (see email invite plan). Uses #2E6B7A, update when palette finalised.
+Supabase auth emails — password reset and email confirmation are currently Supabase default templates. Must be customised in the Supabase dashboard before launch or clients receive emails with no ManualRx branding.
+Supabase sender name — currently shows "Supabase" as the sender. Change to "ManualRx" in Supabase dashboard → Authentication → Email Templates before launch.
+
+Pages
+
+Marketing/home page — does not exist yet. Required before launch.
+Privacy policy page — required before launch (AU Privacy Act). Can live on the marketing site.
 ---
 
 ## Session Log
@@ -608,36 +634,102 @@ Extensive name exploration across multiple sessions.
 - Decision: register manualrx.app, implement name change across codebase (see below)
 - Trademark note: file for registration in AU and US before any serious US expansion
 
+### Session 14 — First deployment, bug discovery
+
+**Completed:**
+- Committed all code from sessions 5–13 (was never pushed to GitHub — Vercel was serving a stale placeholder)
+- Added `.agents/`, `.superpowers/`, `skills-lock.json` to `.gitignore`
+- Set up Vercel project, connected manualrx.com domain via Namecheap DNS (A record + CNAME)
+- Supabase Auth URLs updated: Site URL → https://www.manualrx.com, Redirect URL → https://www.manualrx.com/reset-password
+- App live at www.manualrx.com, therapist login and password reset confirmed working
+- Domain: manualrx.com only — manualrx.app not purchased (consider buying to park defensively, ~$14/yr)
+
+**Bugs discovered:**
+- Client login fails with "could not load profile" — root cause: Supabase email confirmation is enabled. Fixed in Session 15 by disabling email confirmation in Supabase → Authentication → Providers → Email.
+- Invite link is manually copied by therapist — fixed in Session 15 with Resend + Edge Function.
+
+---
+
 ### Next steps (in priority order)
 
-**You (manual steps before next Claude session):**
-1. Register manualrx.app — do this first; also check manualrx.com (Cloudflare Registrar or Namecheap)
-2. Rename GitHub repo — github.com/zacwilliams03/prescriptr → Settings → General → rename to `manualrx`
-3. Rename Supabase project — Project Settings → General → name → ManualRx (cosmetic only)
-4. Rename Vercel project — Settings → General → Project Name → manualrx; then Domains → add manualrx.app
-5. Update Supabase Auth URLs — Authentication → URL Configuration → Site URL: https://manualrx.app; Redirect URLs: add https://manualrx.app/reset-password, remove any prescriptr references
+#### 1. ✅ Fix client login bug — DONE (Session 15)
+Disabled email confirmation in Supabase → Authentication → Providers → Email.
 
-**Claude (codebase rename — paste this into the next session):**
+#### 2. ✅ Automatic invite email — BUILT (Session 15), needs end-to-end test
+Resend + Supabase Edge Function fully implemented and deployed. Amber fallback path confirmed working. Pending: Resend domain verification for manualrx.com (DNS propagation in progress as of 2026-05-18). Once verified, test green path: add a client with a real email, confirm "Invite sent" box appears and email arrives.
 
-> We are renaming the app from PrescriptR to ManualRx. Please search the entire codebase for every reference to "PrescriptR", "prescriptr", "Prescriptr" and "PRESCRIPTR" (case-insensitive) and replace appropriately with "ManualRx" or "manualrx" depending on context. Specifically:
-> - `index.html` — update the `<title>` tag and any meta/og tags
-> - `src/components/therapist/TherapistNav.jsx` — update the logo/brand name in the nav bar
-> - `src/pages/client/Dashboard.jsx` — update any brand name visible to clients
-> - `src/pages/auth/Login.jsx` — update any brand name in headings or copy
-> - `src/pages/auth/ForgotPassword.jsx` — update any brand name in UI copy
-> - `src/pages/auth/ResetPassword.jsx` — update any brand name in UI copy
-> - `src/pages/Account.jsx` — update any brand name in UI copy
-> - `package.json` — update the name field to manualrx
-> - `vite.config.js` — check for any hardcoded app name references
-> - Run a global search across all of `src/` for any remaining references and replace them
->
-> After making changes, confirm every file that was modified and show me the specific lines that changed.
+#### 3. ✅ Therapist onboarding + settings — DONE (Session 16)
+See Session 16 below.
 
-**After name change:**
-1. Video content decision for built-in library
-2. Stripe integration
+#### 4. Test invite email green path
+Once Resend domain verification completes for manualrx.com, add a client with a real email address and confirm: "Invite sent" green box appears, email arrives, invite link works, client can set password and log in.
 
+#### 5. Consolidate settings — merge Account page into Settings
+Currently therapists have two places with overlapping concerns: `/account` (change password) and `/settings` (clinic name, weight unit, frequency). These should be one page. Plan:
+- Add a "Change password" section to `/settings` — re-auth with current password, then `updateUser` (same logic as `Account.jsx`)
+- Remove or redirect `/account` for the therapist role (clients still use `/account` for their own password change)
+- Remove the "Account" nav link from `TherapistNav` — replaced by Settings
+- The client "Account" link on the client dashboard stays as-is
 
+#### 6. Video content for built-in exercise library
+#### 7. Stripe integration
 
-Note for Claude- always tell me if I should switch models to something more powerful, or if a lighter model is okay.
+---
+
+### Session 15 — Client login bug fix + automatic invite email
+
+**Bug fixed:**
+- Client login "could not load profile" — fixed by disabling email confirmation in Supabase → Authentication → Providers → Email. With confirmation disabled, `signUp` in `Join.jsx` returns an active session immediately, the `clients.update({ user_id })` call runs with a valid JWT, and RLS allows it.
+
+**Automatic invite email built:**
+- Resend account created. Domain `manualrx.com` added with DKIM, SPF, and DMARC DNS records added to Namecheap. MX record skipped (Namecheap doesn't expose it when email hosting is active — not blocking, only affects bounce tracking).
+- Supabase Edge Function: `supabase/functions/send-invite-email/index.ts` — Deno TypeScript. Verifies caller JWT via service role client, builds invite URL from `SITE_URL` secret, extracts client first name, builds sender line (falls back gracefully if `clinicName` is null), POSTs to Resend API. Returns `{ success: true }` or 500.
+- `Clients.jsx` updated: fetches `therapist_profiles.clinic_name` on mount (stored as `clinicName` state, does not shadow auth context `profile`). After both DB inserts succeed, invokes edge function with `{ code, email, clientName, therapistName, clinicName }`. Failure condition: `!fnError && fnData?.success === true`. Two success UI paths: green "Invite sent to [email]" with secondary copy-link on success; amber "Couldn't send email — share this link manually" with prominent copy-link on failure.
+- Secrets set: `RESEND_API_KEY`, `SITE_URL`. `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are auto-injected by Supabase into Edge Functions — do not add manually.
+- Edge function deployed via `supabase functions deploy send-invite-email`.
+- Amber fallback path confirmed working in production (Resend rejected send because domain not yet verified).
+- GitHub remote updated to `github.com/zacwilliams03/ManualRx.git`.
+
+**⚠️ Still needs:** Resend domain verification to complete (DNS propagating as of 2026-05-18), then test green path end-to-end. See Next Steps item 4.
+
+**Email template details:**
+- From: `ManualRx <invites@manualrx.com>`
+- Subject: `[TherapistName] has shared an exercise program with you`
+- Body: ManualRx wordmark (Ocean Slate `#2E6B7A`), greeting with client first name only, sender line, CTA button (Ocean Slate), 7-day expiry note, no-reply notice. All inline styles for Gmail/Outlook compatibility.
+- Colors: only two occurrences of `#2E6B7A` in the template — trivial to update when palette is finalised.
+
+---
+
+### Session 16 — Therapist onboarding flow + settings page
+
+**SQL run:**
+- `ALTER TABLE therapist_profiles ADD COLUMN IF NOT EXISTS has_onboarded boolean DEFAULT false`
+- `ALTER TABLE therapist_profiles ADD COLUMN IF NOT EXISTS weight_unit text DEFAULT 'kg'`
+- `ALTER TABLE therapist_profiles ADD COLUMN IF NOT EXISTS default_frequency_days integer`
+- `NOTIFY pgrst, 'reload schema'`
+- Verified: `therapist_profiles.user_id` has both PRIMARY KEY (`therapist_profiles_pkey`) and UNIQUE (`therapist_profiles_user_id_key`) constraints — upsert with `{ onConflict: 'user_id' }` is safe
+
+**Frontend built:**
+- `src/pages/therapist/Onboarding.jsx` — one-time setup page shown after signup. On mount: checks `has_onboarded` on `therapist_profiles`; redirects to `/therapist` if already true. Fields: clinic name (text), weight unit (kg/lb toggle), default session frequency (No repeat / Daily / Weekly / Custom). "Save and continue" upserts all fields + `has_onboarded: true`. "Skip for now" upserts `has_onboarded: true` only. Both paths show inline error on failure; neither redirects on failure. `authLoading` guard prevents stuck spinner if auth never resolves.
+- `src/pages/therapist/Settings.jsx` — permanent settings page at `/settings`. Same three fields, pre-populated from `therapist_profiles` on mount. Separate `fetchError` state suppresses the form if load fails (prevents saving blank values over real data). "Save changes" upserts fields. "Settings saved." confirmation auto-dismisses after 3 seconds via `useRef` timer with unmount cleanup. `hasFetchedRef` prevents re-fetch when `AuthContext` creates a new profile object reference on token refresh.
+- `src/App.jsx` — added `/onboarding` and `/settings` routes, both `<ProtectedRoute requiredRole="therapist">`
+- `src/pages/auth/Signup.jsx` — post-signup `navigate` changed from `/therapist` to `/onboarding`
+- `src/components/therapist/TherapistNav.jsx` — "Settings" link added between Account and Log out
+
+**Key decisions:**
+- Login flow does NOT redirect `has_onboarded = false` therapists to `/onboarding` — they land on `/therapist` as normal. Onboarding only shown on the signup path. Pre-migration therapists (existing accounts with `has_onboarded = false`) can reach it by navigating manually; acceptable for MVP.
+- `clinic_name` saves as `null` (not `''`) when left blank — `clinicName || null` on upsert
+- `/onboarding` and `/settings` are top-level routes (consistent with `/account`), not `/therapist/*`
+- GitHub remote updated: `git remote set-url origin https://github.com/zacwilliams03/ManualRx.git`
+
+**Tested and confirmed working:**
+- New signup → `/onboarding` → save → `/therapist`
+- Return login → `/therapist` (onboarding not shown again)
+- Skip flow → `/therapist`, `has_onboarded = true` in DB
+- Settings pre-populated, save persists, success banner auto-dismisses
+- Access control: unauthenticated → `/login`, client role → `/client`
+
+---
+
+Note for Claude — always tell me if I should switch models to something more powerful, or if a lighter model is okay.
 
