@@ -41,7 +41,7 @@ export default function Signup() {
     }
 
     // Otherwise, user is logged in immediately
-    navigate('/therapist')
+    navigate('/onboarding')
   }
 
   if (submitted) {
