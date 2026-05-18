@@ -16,7 +16,8 @@ export default function Clients() {
   const [formError, setFormError] = useState(null)
   const [submitLoading, setSubmitLoading] = useState(false)
 
-  const [lastInvite, setLastInvite] = useState(null) // { code, name }
+  const [clinicName, setClinicName] = useState(null)
+  const [lastInvite, setLastInvite] = useState(null) // { code, name, email, emailSent }
   const [copied, setCopied] = useState(false)
 
   async function fetchClients() {
@@ -34,8 +35,20 @@ export default function Clients() {
     setListLoading(false)
   }
 
+  async function fetchClinicName() {
+    const { data: tpRow } = await supabase
+      .from('therapist_profiles')
+      .select('clinic_name')
+      .eq('user_id', profile.id)
+      .single()
+    setClinicName(tpRow?.clinic_name ?? null)
+  }
+
   useEffect(() => {
-    if (profile?.id) fetchClients()
+    if (profile?.id) {
+      fetchClients()
+      fetchClinicName()
+    }
   }, [profile?.id])
 
   async function handleSubmit(e) {
@@ -76,7 +89,20 @@ export default function Clients() {
     if (inviteError) {
       setFormError('Client added, but invite link generation failed. You can re-invite them later.')
     } else {
-      setLastInvite({ code, name: name.trim() })
+      const { data: fnData, error: fnError } = await supabase.functions.invoke(
+        'send-invite-email',
+        {
+          body: {
+            code,
+            email: email.trim(),
+            clientName: name.trim(),
+            therapistName: profile.name,
+            clinicName,
+          },
+        }
+      )
+      const emailSent = !fnError && fnData?.success === true
+      setLastInvite({ code, name: name.trim(), email: email.trim(), emailSent })
     }
 
     setName('')
@@ -129,17 +155,30 @@ export default function Clients() {
           </button>
         </form>
 
-        {lastInvite && (
+        {lastInvite && lastInvite.emailSent && (
           <div className="mt-4 rounded border border-green-200 bg-green-50 p-4">
             <p className="text-sm font-medium text-green-800">
-              {lastInvite.name} added. Share this link with them:
+              Invite sent to {lastInvite.email}
             </p>
-            <p className="mt-1 break-all text-sm text-green-700 font-mono">
+            <p className="mt-3 text-sm text-gray-500">
+              Didn't arrive?{' '}
+              <button onClick={copyLink} className="text-green-700 underline">
+                {copied ? 'Copied!' : 'Copy link'}
+              </button>
+            </p>
+          </div>
+        )}
+        {lastInvite && !lastInvite.emailSent && (
+          <div className="mt-4 rounded border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-medium text-amber-800">
+              Couldn't send email — share this link manually:
+            </p>
+            <p className="mt-1 break-all text-sm text-amber-700 font-mono">
               {window.location.origin}/join/{lastInvite.code}
             </p>
             <button
               onClick={copyLink}
-              className="mt-2 rounded border border-green-300 bg-white px-3 py-1 text-sm text-green-800 hover:bg-green-100"
+              className="mt-2 rounded border border-amber-300 bg-white px-3 py-1 text-sm text-amber-800 hover:bg-amber-100"
             >
               {copied ? 'Copied!' : 'Copy link'}
             </button>
