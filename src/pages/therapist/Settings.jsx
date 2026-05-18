@@ -13,6 +13,7 @@ export default function Settings() {
   const [customDays, setCustomDays] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [fetchError, setFetchError] = useState(null)
   const [success, setSuccess] = useState(false)
 
   const successTimerRef = useRef(null)
@@ -26,7 +27,7 @@ export default function Settings() {
         .single()
 
       if (error) {
-        setError('Failed to load settings. Please refresh the page.')
+        setFetchError('Failed to load settings. Please refresh the page.')
         setFetching(false)
         return
       }
@@ -104,6 +105,8 @@ export default function Settings() {
 
         {fetching ? (
           <p className="mt-6 text-gray-500">Loading…</p>
+        ) : fetchError ? (
+          <p className="mt-6 text-sm text-red-600">{fetchError}</p>
         ) : (
           <form onSubmit={handleSave} className="mt-6 space-y-6">
             <div>
