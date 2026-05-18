@@ -17,6 +17,7 @@ export default function Settings() {
   const [success, setSuccess] = useState(false)
 
   const successTimerRef = useRef(null)
+  const hasFetchedRef = useRef(false)
 
   useEffect(() => {
     async function fetchSettings() {
@@ -43,7 +44,10 @@ export default function Settings() {
       }
       setFetching(false)
     }
-    if (profile) fetchSettings()
+    if (profile && !hasFetchedRef.current) {
+      hasFetchedRef.current = true
+      fetchSettings()
+    }
   }, [profile])
 
   useEffect(() => {
@@ -80,7 +84,7 @@ export default function Settings() {
       .upsert(
         {
           user_id: profile.id,
-          clinic_name: clinicName,
+          clinic_name: clinicName || null,
           weight_unit: weightUnit,
           default_frequency_days: frequencyDaysValue(),
         },

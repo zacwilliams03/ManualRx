@@ -66,7 +66,7 @@ export default function Onboarding() {
       .upsert(
         {
           user_id: profile.id,
-          clinic_name: clinicName,
+          clinic_name: clinicName || null,
           weight_unit: weightUnit,
           default_frequency_days: frequencyDaysValue(),
           has_onboarded: true,
