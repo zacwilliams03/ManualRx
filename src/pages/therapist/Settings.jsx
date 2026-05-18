@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import TherapistNav from '../../components/therapist/TherapistNav'
@@ -15,6 +15,8 @@ export default function Settings() {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
 
+  const successTimerRef = useRef(null)
+
   useEffect(() => {
     async function fetchSettings() {
       const { data, error } = await supabase
@@ -23,7 +25,12 @@ export default function Settings() {
         .eq('user_id', profile.id)
         .single()
 
-      if (!error && data) {
+      if (error) {
+        setError('Failed to load settings. Please refresh the page.')
+        setFetching(false)
+        return
+      }
+      if (data) {
         setClinicName(data.clinic_name ?? '')
         setWeightUnit(data.weight_unit ?? 'kg')
 
@@ -37,6 +44,12 @@ export default function Settings() {
     }
     if (profile) fetchSettings()
   }, [profile])
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current)
+    }
+  }, [])
 
   function frequencyDaysValue() {
     if (frequencyMode === 'none') return null
@@ -79,6 +92,8 @@ export default function Settings() {
       return
     }
     setSuccess(true)
+    if (successTimerRef.current) clearTimeout(successTimerRef.current)
+    successTimerRef.current = setTimeout(() => setSuccess(false), 3000)
   }
 
   return (
