@@ -53,10 +53,10 @@ export default function ClientDashboard() {
           <p className="mt-0.5 text-sm text-gray-500">{profile?.name}</p>
         </div>
         <Link
-          to="/account"
+          to="/client/settings"
           className="rounded border border-gray-300 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
         >
-          Account
+          Settings
         </Link>
         <button
           onClick={signOut}

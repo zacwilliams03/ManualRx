@@ -4,7 +4,7 @@ import Login from './pages/auth/Login'
 import Signup from './pages/auth/Signup'
 import ForgotPassword from './pages/auth/ForgotPassword'
 import ResetPassword from './pages/auth/ResetPassword'
-import Account from './pages/Account'
+import ClientSettings from './pages/client/Settings'
 import TherapistDashboard from './pages/therapist/Dashboard'
 import Clients from './pages/therapist/Clients'
 import ExerciseLibrary from './pages/therapist/ExerciseLibrary'
@@ -68,7 +68,7 @@ export default function App() {
           <Route path="/signup" element={<PublicOnlyRoute><Signup /></PublicOnlyRoute>} />
           <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
+          <Route path="/client/settings" element={<ProtectedRoute requiredRole="client"><ClientSettings /></ProtectedRoute>} />
           <Route path="/join/:code" element={<Join />} />
 
           {/* Therapist — protected */}
