@@ -10,6 +10,15 @@ function frequencyLabel(days) {
   return `Every ${days} days`
 }
 
+function isRecentlyCompleted(session) {
+  const logs = session.session_logs ?? []
+  if (logs.length === 0) return false
+  const lastMs = Math.max(...logs.map(l => new Date(l.completed_at).getTime()))
+  if (!session.frequency_days) return true
+  const daysSince = (Date.now() - lastMs) / (1000 * 60 * 60 * 24)
+  return daysSince < session.frequency_days
+}
+
 export default function ClientDashboard() {
   const { profile, signOut } = useAuth()
 
@@ -90,7 +99,7 @@ export default function ClientDashboard() {
               <div>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-gray-900">{s.name}</p>
-                  {s.session_logs?.length > 0 && (
+                  {isRecentlyCompleted(s) && (
                     <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
                       Completed
                     </span>
