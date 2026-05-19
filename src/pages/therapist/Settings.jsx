@@ -25,7 +25,7 @@ export default function Settings() {
         .from('therapist_profiles')
         .select('clinic_name, weight_unit, default_frequency_days')
         .eq('user_id', profile.id)
-        .single()
+        .maybeSingle()
 
       if (error) {
         setFetchError('Failed to load settings. Please refresh the page.')
