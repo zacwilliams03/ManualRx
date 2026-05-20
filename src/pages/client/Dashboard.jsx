@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
+import { useClinicName } from '../../hooks/useClinicName'
 
 function frequencyLabel(days) {
   if (!days) return 'No repeat'
@@ -11,7 +12,7 @@ function frequencyLabel(days) {
 }
 
 function isRecentlyCompleted(session) {
-  const logs = session.session_logs ?? []
+  const logs = (session.session_logs ?? []).filter(l => l.completed_at)
   if (logs.length === 0) return false
   const lastMs = Math.max(...logs.map(l => new Date(l.completed_at).getTime()))
   if (!session.frequency_days) return true
@@ -21,6 +22,7 @@ function isRecentlyCompleted(session) {
 
 export default function ClientDashboard() {
   const { profile } = useAuth()
+  const clinicName = useClinicName()
 
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -59,7 +61,9 @@ export default function ClientDashboard() {
       <div className="flex flex-wrap items-center justify-between gap-y-3 mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">My Sessions</h1>
-          <p className="mt-0.5 text-sm text-gray-500">{profile?.name}</p>
+          <p className="mt-0.5 text-sm text-gray-500">
+            {profile?.name}{clinicName ? ` · ${clinicName}` : ''}
+          </p>
         </div>
         <Link
           to="/client/history"

@@ -96,6 +96,7 @@ export default function Prescribe() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [creating, setCreating] = useState(false)
+  const [defaultFrequencyDays, setDefaultFrequencyDays] = useState(null)
 
   const [activeTab, setActiveTab] = useState('prescriptions')
 
@@ -143,19 +144,21 @@ export default function Prescribe() {
     setLoading(true)
     setError(null)
 
-    const [clientRes, sessionsRes] = await Promise.all([
+    const [clientRes, sessionsRes, therapistRes] = await Promise.all([
       supabase.from('clients').select('id, name, email').eq('id', clientId).single(),
       supabase
         .from('prescriptions')
         .select('id, name, frequency_days, created_at, prescription_exercises(count)')
         .eq('client_id', clientId)
         .order('created_at', { ascending: true }),
+      supabase.from('therapist_profiles').select('default_frequency_days').eq('user_id', profile.id).maybeSingle(),
     ])
 
     if (clientRes.error) { setError('Client not found.'); setLoading(false); return }
     setClient(clientRes.data)
     if (sessionsRes.error) setError('Failed to load sessions.')
     else setSessions(sessionsRes.data)
+    if (therapistRes.data?.default_frequency_days) setDefaultFrequencyDays(therapistRes.data.default_frequency_days)
     setLoading(false)
   }
 
@@ -164,7 +167,7 @@ export default function Prescribe() {
     const name = `Session ${sessions.length + 1}`
     const { data, error: insertError } = await supabase
       .from('prescriptions')
-      .insert({ therapist_id: profile.id, client_id: clientId, name })
+      .insert({ therapist_id: profile.id, client_id: clientId, name, frequency_days: defaultFrequencyDays })
       .select('id')
       .single()
 

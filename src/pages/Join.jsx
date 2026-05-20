@@ -6,6 +6,7 @@ export default function Join() {
   const { code } = useParams()
 
   const [invite, setInvite] = useState(null)
+  const [clinicName, setClinicName] = useState(null)
   const [checkLoading, setCheckLoading] = useState(true)
   const [checkError, setCheckError] = useState(null)
 
@@ -42,6 +43,14 @@ export default function Join() {
       }
 
       setInvite(data)
+
+      const { data: tpData } = await supabase
+        .from('therapist_profiles')
+        .select('clinic_name')
+        .eq('user_id', data.therapist_id)
+        .maybeSingle()
+      if (tpData?.clinic_name) setClinicName(tpData.clinic_name)
+
       setCheckLoading(false)
     }
 
@@ -156,7 +165,7 @@ export default function Join() {
       <div className="max-w-md w-full bg-white rounded-lg shadow p-8">
         <h1 className="text-2xl font-semibold text-gray-900">Set up your account</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Welcome, {invite.name}. Choose a password to activate your account.
+          Welcome, {invite.name}.{clinicName ? ` You've been invited to join ${clinicName}.` : ' Choose a password to activate your account.'}
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">

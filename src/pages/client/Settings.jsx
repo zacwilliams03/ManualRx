@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { useClinicName } from '../../hooks/useClinicName'
 
 export default function ClientSettings() {
   const { user, profile, signOut } = useAuth()
+  const clinicName = useClinicName()
 
   const [fetching, setFetching] = useState(true)
   const [fetchError, setFetchError] = useState(null)
@@ -167,6 +169,13 @@ export default function ClientSettings() {
                   ))}
                 </div>
               </div>
+
+              {clinicName && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Your clinic</label>
+                  <p className="mt-1 text-sm text-gray-900">{clinicName}</p>
+                </div>
+              )}
 
               {saveError && <p className="text-sm text-red-600">{saveError}</p>}
               {saveSuccess && <p className="text-sm text-green-600">Settings saved.</p>}
