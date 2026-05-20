@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
+import { useWeightUnit } from '../../hooks/useWeightUnit'
+import { toCanonical, fromCanonical, formatWeight } from '../../utils/weightUtils'
 
 function VideoPlayer({ url }) {
   if (!url) return null
@@ -57,6 +59,7 @@ export default function SessionWizard() {
   const { sessionId } = useParams()
   const { profile } = useAuth()
 
+  const weightUnit = useWeightUnit()
   const [session, setSession] = useState(null)
   const [exercises, setExercises] = useState([])
   const [clientId, setClientId] = useState(null)  // clients.id (FK), distinct from auth uid
@@ -169,6 +172,7 @@ export default function SessionWizard() {
       .insert({
         prescription_id: sessionId,
         client_id: profile.id,  // session_logs.client_id stores auth uid
+        completed_at: new Date().toISOString(),
         session_rpe: sessionEffort,
         session_notes: sessionNotes.trim() || null,
       })
@@ -187,7 +191,10 @@ export default function SessionWizard() {
         client_id: clientId,  // exercise_logs.client_id is FK to clients.id
         session_log_id: sessionLog.id,
         sets_completed: ex.setsData.length,
-        sets_data: ex.setsData,
+        sets_data: ex.setsData.map(s => ({
+          ...s,
+          weight: s.weight ? String(toCanonical(parseFloat(s.weight), weightUnit)) : s.weight,
+        })),
         reps_completed: null,
         weight_completed: null,
         pain_rating: ex.painRating,
@@ -338,7 +345,7 @@ export default function SessionWizard() {
           <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Target</p>
             <p className="text-sm font-medium text-gray-800">
-              {ex.sets} sets × {ex.reps} reps{ex.weight ? ` @ ${ex.weight}kg` : ''}
+              {ex.sets} sets × {ex.reps} reps{ex.weight ? ` @ ${formatWeight(ex.weight, weightUnit)}` : ''}
             </p>
           </div>
 
@@ -370,7 +377,7 @@ export default function SessionWizard() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600">
-                    Weight <span className="font-normal text-gray-400">(kg, optional)</span>
+                    Weight <span className="font-normal text-gray-400">({weightUnit}, optional)</span>
                   </label>
                   <input
                     type="text"
@@ -378,7 +385,7 @@ export default function SessionWizard() {
                     pattern="[0-9.]*"
                     value={currentSetData.weight}
                     onChange={e => updateSetField(step, currentSet, 'weight', e.target.value)}
-                    placeholder={ex.weight ? String(ex.weight) : '—'}
+                    placeholder={ex.weight ? String(parseFloat(fromCanonical(ex.weight, weightUnit).toFixed(1))) : '—'}
                     className="mt-1 w-full rounded border border-gray-300 px-3 py-2.5 text-sm focus:border-gray-500 focus:outline-none"
                   />
                 </div>
@@ -398,7 +405,7 @@ export default function SessionWizard() {
                 <div className="rounded border border-gray-100 bg-white px-3 py-2 space-y-1">
                   {setsData.slice(0, currentSet).map((s, i) => (
                     <p key={i} className="text-xs text-gray-500">
-                      Set {i + 1}: {s.reps} reps{s.weight ? ` @ ${s.weight}kg` : ''}
+                      Set {i + 1}: {s.reps} reps{s.weight ? ` @ ${s.weight} ${weightUnit}` : ''}
                     </p>
                   ))}
                 </div>
@@ -411,7 +418,7 @@ export default function SessionWizard() {
               <div className="rounded border border-gray-100 bg-white px-3 py-2 space-y-1">
                 {setsData.map((s, i) => (
                   <p key={i} className="text-xs text-gray-500">
-                    Set {i + 1}: {s.reps} reps{s.weight ? ` @ ${s.weight}kg` : ''}
+                    Set {i + 1}: {s.reps} reps{s.weight ? ` @ ${s.weight} ${weightUnit}` : ''}
                   </p>
                 ))}
               </div>

@@ -3,6 +3,8 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import TherapistNav from '../../components/therapist/TherapistNav'
+import { useWeightUnit } from '../../hooks/useWeightUnit'
+import { toCanonical, formatWeight } from '../../utils/weightUtils'
 
 const CATEGORIES = [
   'Custom',
@@ -20,6 +22,7 @@ export default function SessionEdit() {
   const { clientId, sessionId } = useParams()
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const weightUnit = useWeightUnit()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -146,7 +149,7 @@ export default function SessionEdit() {
         exercise_id: pickerExercise.id,
         sets: parseInt(configSets) || null,
         reps: parseInt(configReps) || null,
-        weight: configWeight ? parseFloat(configWeight) : null,
+        weight: configWeight ? toCanonical(parseFloat(configWeight), weightUnit) : null,
         therapist_notes: configNotes.trim() || null,
       })
       .select('id, sets, reps, weight, therapist_notes, exercises(id, name, category)')
@@ -282,7 +285,7 @@ export default function SessionEdit() {
                       <p className="text-sm font-medium text-gray-900">{pe.exercises.name}</p>
                       <p className="mt-0.5 text-xs text-gray-500">
                         {pe.sets} sets × {pe.reps} reps
-                        {pe.weight ? ` · ${pe.weight} kg` : ''}
+                        {pe.weight ? ` · ${formatWeight(pe.weight, weightUnit)}` : ''}
                       </p>
                       {pe.therapist_notes && (
                         <p className="mt-0.5 text-xs text-gray-400 italic">{pe.therapist_notes}</p>
@@ -425,7 +428,7 @@ export default function SessionEdit() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600">Weight (kg)</label>
+                      <label className="block text-xs font-medium text-gray-600">Weight ({weightUnit})</label>
                       <input
                         type="number" min="0" step="0.5" value={configWeight}
                         onChange={e => setConfigWeight(e.target.value)}

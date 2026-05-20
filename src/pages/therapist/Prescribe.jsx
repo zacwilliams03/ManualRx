@@ -3,6 +3,8 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import TherapistNav from '../../components/therapist/TherapistNav'
+import { useWeightUnit } from '../../hooks/useWeightUnit'
+import { formatWeight } from '../../utils/weightUtils'
 
 const TAB_LABELS = { prescriptions: 'Prescribed Sessions', history: 'Session History' }
 
@@ -19,7 +21,7 @@ function formatDate(iso) {
   })
 }
 
-function ExerciseLogDetail({ el, videoUrls, onPlayVideo }) {
+function ExerciseLogDetail({ el, videoUrls, onPlayVideo, weightUnit }) {
   const pe = el.prescription_exercises
   const hasPerSetData = Array.isArray(el.sets_data) && el.sets_data.length > 0
 
@@ -31,7 +33,7 @@ function ExerciseLogDetail({ el, videoUrls, onPlayVideo }) {
 
       {pe && (
         <p className="mt-0.5 text-xs text-gray-400">
-          Prescribed: {pe.sets} sets × {pe.reps} reps{pe.weight ? ` @ ${pe.weight}kg` : ''}
+          Prescribed: {pe.sets} sets × {pe.reps} reps{pe.weight ? ` @ ${formatWeight(pe.weight, weightUnit)}` : ''}
         </p>
       )}
 
@@ -39,14 +41,14 @@ function ExerciseLogDetail({ el, videoUrls, onPlayVideo }) {
         <div className="mt-1 space-y-0.5">
           {el.sets_data.map((s, si) => (
             <p key={si} className="text-xs text-gray-500">
-              Set {si + 1}: {s.reps} reps{s.weight ? ` @ ${s.weight}kg` : ''}
+              Set {si + 1}: {s.reps} reps{s.weight ? ` @ ${formatWeight(parseFloat(s.weight), weightUnit)}` : ''}
             </p>
           ))}
         </div>
       ) : (
         <p className="mt-0.5 text-xs text-gray-500">
           {el.sets_completed ?? '—'} sets × {el.reps_completed ?? '—'} reps
-          {el.weight_completed ? ` @ ${el.weight_completed}kg` : ''}
+          {el.weight_completed ? ` @ ${formatWeight(el.weight_completed, weightUnit)}` : ''}
         </p>
       )}
 
@@ -87,6 +89,7 @@ export default function Prescribe() {
   const { clientId } = useParams()
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const weightUnit = useWeightUnit()
 
   const [client, setClient] = useState(null)
   const [sessions, setSessions] = useState([])
@@ -324,6 +327,7 @@ export default function Prescribe() {
                           el={el}
                           videoUrls={videoUrls}
                           onPlayVideo={playVideo}
+                          weightUnit={weightUnit}
                         />
                       ))}
                       {(log.exercise_logs ?? []).length === 0 && (

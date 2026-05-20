@@ -129,8 +129,8 @@ What clients can do once logged in:
 
 ### Tables
 - **users** — id, email, role (therapist / client), name, created_at
-- **therapist_profiles** — user_id, clinic_name, logo_url, branding_color
-- **clients** — id, therapist_id, user_id, name, email, created_at
+- **therapist_profiles** — user_id, clinic_name, logo_url, branding_color, has_onboarded (bool, default false), weight_unit (text, default 'kg'), default_frequency_days (integer)
+- **clients** — id, therapist_id, user_id, name, email, created_at, weight_unit (text, default 'kg')
 - **client_invites** — id, therapist_id, code (unique), email, name, created_at, consumed_at (nullable), expires_at
 - **exercises** — id, name, description, category, video_url, thumbnail_url, is_custom, created_by (null if built-in), default_sets, default_reps, fts (tsvector, generated), created_at
 - **therapist_video_library** — id, therapist_id, exercise_id, video_url, label, created_at
@@ -231,6 +231,9 @@ Annual billing at 20% discount. Stripe handles subscriptions.
 - [x] Automatic invite email — Resend + Supabase Edge Function built and deployed (Session 15). ⚠️ Needs end-to-end test once Resend domain verification completes for manualrx.com
 - [x] Therapist onboarding flow — one-time /onboarding page shown after signup (Session 16)
 - [x] Therapist settings page — permanent /settings page accessible from nav (Session 16)
+- [x] Account consolidated into Settings for both roles — therapist Settings includes change-password section; /account removed from therapist nav
+- [x] Client session history page — /client/history shows all completed sessions with collapsible exercise detail
+- [x] Functional kg/lb weight unit conversion — weights stored canonically in kg; display converts to viewer's preferred unit for both therapist and client across all pages
 
 ---
 
@@ -676,6 +679,25 @@ Currently therapists have two places with overlapping concerns: `/account` (chan
 **Key implementation detail:**
 - All brand colours live in `tailwind.config.js` — a future palette change is a single-file edit
 - Note box disambiguation: `bg-blue-50` in SessionWizard (therapist notes shown to client) → `brand-note-bg`; `bg-blue-50` elsewhere (badges, info panels) → `brand-primary-light`
+
+### Session 19 — Functional kg/lb weight unit conversion
+
+**No SQL changes needed** — `therapist_profiles.weight_unit` and `clients.weight_unit` already existed from Session 16. Weights in `prescription_exercises.weight`, `exercise_logs.weight_completed`, and `exercise_logs.sets_data` were already effectively canonical kg (UI was always hardcoded to "kg").
+
+**New files:**
+- `src/utils/weightUtils.js` — `toCanonical(value, unit)`, `fromCanonical(kgValue, unit)`, `formatWeight(kgValue, unit)`
+- `src/hooks/useWeightUnit.js` — fetches current user's `weight_unit` from `therapist_profiles` or `clients` based on `profile.role`; returns `'kg'` as default
+
+**Frontend changes:**
+- `therapist/SessionEdit.jsx` — weight input label dynamically shows unit; on save, converts to canonical kg via `toCanonical`
+- `therapist/Prescribe.jsx` — all weight displays (prescribed target, per-set actuals, weight_completed fallback) use `formatWeight` with therapist's unit
+- `client/SessionWizard.jsx` — prescribed target and input label show client's unit; placeholder converts canonical kg to display unit; recap during session shows raw-entered value + unit label (not yet converted); on submit, converts all set weights to canonical kg before saving to `sets_data`
+- `client/SessionComplete.jsx` — weight placeholder shows unit; converts to canonical kg on save
+- `client/History.jsx` — all weight displays use `formatWeight` with client's unit
+
+**Key pattern:**
+- Weights always stored in canonical kg. Input conversion (`toCanonical`) happens on save. Display conversion (`formatWeight`) happens on render. `useWeightUnit` hook handles per-role table routing using `profile.role` (not `user.role` — `user` is the raw Supabase auth object with no `.role` field).
+- `sets_data` recap in SessionWizard during an in-progress session shows raw user-entered strings (`${s.weight} ${weightUnit}`) — these are not canonical yet. Canonical conversion only happens on final submission.
 
 ---
 

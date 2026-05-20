@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
+import { useWeightUnit } from '../../hooks/useWeightUnit'
+import { toCanonical } from '../../utils/weightUtils'
 
 function VideoPlayer({ url }) {
   if (!url) return null
@@ -42,6 +44,7 @@ function VideoPlayer({ url }) {
 export default function SessionComplete() {
   const { sessionId } = useParams()
   const { profile } = useAuth()
+  const weightUnit = useWeightUnit()
 
   const [session, setSession] = useState(null)
   const [exercises, setExercises] = useState([])
@@ -103,6 +106,7 @@ export default function SessionComplete() {
       .insert({
         prescription_id: sessionId,
         client_id: profile.id,
+        completed_at: new Date().toISOString(),
         session_rpe: sessionRpe !== '' ? parseInt(sessionRpe) : null,
         session_notes: sessionNotes.trim() || null,
       })
@@ -121,7 +125,7 @@ export default function SessionComplete() {
       session_log_id: sessionLog.id,
       sets_completed: logs[pe.id]?.sets ? parseInt(logs[pe.id].sets) : null,
       reps_completed: logs[pe.id]?.reps ? parseInt(logs[pe.id].reps) : null,
-      weight_completed: logs[pe.id]?.weight ? parseFloat(logs[pe.id].weight) : null,
+      weight_completed: logs[pe.id]?.weight ? toCanonical(parseFloat(logs[pe.id].weight), weightUnit) : null,
       pain_rating: logs[pe.id]?.pain !== '' && logs[pe.id]?.pain !== undefined
         ? parseInt(logs[pe.id].pain)
         : null,
@@ -233,7 +237,7 @@ export default function SessionComplete() {
                   step="0.5"
                   value={logs[pe.id]?.weight ?? ''}
                   onChange={e => updateLog(pe.id, 'weight', e.target.value)}
-                  placeholder="kg"
+                  placeholder={weightUnit}
                   className="mt-1 block w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-gray-500 focus:outline-none"
                 />
               </div>

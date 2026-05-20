@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
+import { useWeightUnit } from '../../hooks/useWeightUnit'
+import { formatWeight } from '../../utils/weightUtils'
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -11,6 +13,7 @@ function formatDate(iso) {
 
 export default function History() {
   const { profile } = useAuth()
+  const weightUnit = useWeightUnit()
 
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -97,7 +100,7 @@ export default function History() {
 
                           {pe && (
                             <p className="mt-0.5 text-xs text-gray-400">
-                              Prescribed: {pe.sets} sets × {pe.reps} reps{pe.weight ? ` @ ${pe.weight}kg` : ''}
+                              Prescribed: {pe.sets} sets × {pe.reps} reps{pe.weight ? ` @ ${formatWeight(pe.weight, weightUnit)}` : ''}
                             </p>
                           )}
 
@@ -105,14 +108,14 @@ export default function History() {
                             <div className="mt-1 space-y-0.5">
                               {el.sets_data.map((s, si) => (
                                 <p key={si} className="text-xs text-gray-500">
-                                  Set {si + 1}: {s.reps} reps{s.weight ? ` @ ${s.weight}kg` : ''}
+                                  Set {si + 1}: {s.reps} reps{s.weight ? ` @ ${formatWeight(parseFloat(s.weight), weightUnit)}` : ''}
                                 </p>
                               ))}
                             </div>
                           ) : (
                             <p className="mt-0.5 text-xs text-gray-500">
                               {el.sets_completed ?? '—'} sets × {el.reps_completed ?? '—'} reps
-                              {el.weight_completed ? ` @ ${el.weight_completed}kg` : ''}
+                              {el.weight_completed ? ` @ ${formatWeight(el.weight_completed, weightUnit)}` : ''}
                             </p>
                           )}
 
