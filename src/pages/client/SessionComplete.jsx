@@ -169,7 +169,7 @@ export default function SessionComplete() {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
         <p className="text-sm text-red-600">{error}</p>
-        <Link to="/client" className="mt-2 inline-block text-sm text-blue-600 hover:underline">
+        <Link to="/client" className="mt-2 inline-block text-sm text-brand-primary hover:underline">
           Back
         </Link>
       </div>
@@ -197,7 +197,7 @@ export default function SessionComplete() {
             )}
 
             {pe.therapist_notes && (
-              <p className="mt-3 rounded bg-blue-50 px-3 py-2 text-sm text-blue-800">
+              <p className="mt-3 rounded bg-brand-note-bg border border-brand-note-border px-3 py-2 text-sm text-brand-note-text">
                 {pe.therapist_notes}
               </p>
             )}

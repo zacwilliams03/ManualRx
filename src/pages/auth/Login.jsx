@@ -59,7 +59,7 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
           </div>
 
@@ -70,12 +70,12 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
           </div>
 
           <div className="text-right">
-            <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
+            <Link to="/forgot-password" className="text-sm text-brand-primary hover:underline">
               Forgot your password?
             </Link>
           </div>
@@ -85,7 +85,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded bg-blue-600 text-white py-2 font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="w-full rounded bg-brand-primary text-white py-2 font-medium hover:bg-brand-primary-dark disabled:opacity-50"
           >
             {loading ? 'Logging in…' : 'Log in'}
           </button>
@@ -93,7 +93,7 @@ export default function Login() {
 
         <p className="mt-6 text-sm text-gray-600 text-center">
           No account?{' '}
-          <Link to="/signup" className="text-blue-600 hover:underline">
+          <Link to="/signup" className="text-brand-primary hover:underline">
             Sign up
           </Link>
         </p>

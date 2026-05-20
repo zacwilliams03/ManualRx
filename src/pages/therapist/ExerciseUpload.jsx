@@ -101,7 +101,7 @@ export default function ExerciseUpload() {
             <div className="mt-6 flex justify-center gap-3">
               <Link
                 to={`/therapist/exercises/${uploadedId}`}
-                className="rounded bg-gray-800 px-4 py-2 text-sm text-white"
+                className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark"
               >
                 View exercise
               </Link>
@@ -204,7 +204,7 @@ export default function ExerciseUpload() {
             <button
               type="submit"
               disabled={uploading}
-              className="w-full rounded bg-gray-800 py-2 text-sm text-white disabled:opacity-50"
+              className="w-full rounded bg-brand-primary py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
             >
               {uploading ? `Uploading… ${uploadProgress}%` : 'Save exercise'}
             </button>
@@ -213,7 +213,7 @@ export default function ExerciseUpload() {
               <div>
                 <div className="w-full rounded-full bg-gray-200 h-2">
                   <div
-                    className="h-2 rounded-full bg-gray-800 transition-all duration-200"
+                    className="h-2 rounded-full bg-brand-primary transition-all duration-200"
                     style={{ width: `${uploadProgress}%` }}
                   />
                 </div>

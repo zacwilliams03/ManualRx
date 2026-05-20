@@ -76,7 +76,7 @@ export default function ExerciseLibrary() {
         <h1 className="text-2xl font-semibold text-gray-900">Exercise Library</h1>
         <Link
           to="/therapist/exercises/new"
-          className="rounded bg-gray-800 px-4 py-2 text-sm text-white hover:bg-gray-700"
+          className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark"
         >
           Add exercise
         </Link>
@@ -97,7 +97,7 @@ export default function ExerciseLibrary() {
               onClick={() => setCategory(cat)}
               className={`rounded-full px-3 py-1 text-sm ${
                 category === cat
-                  ? 'bg-gray-800 text-white'
+                  ? 'bg-brand-primary text-white'
                   : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
             >
@@ -132,7 +132,7 @@ export default function ExerciseLibrary() {
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-medium text-gray-900 leading-snug">{ex.name}</p>
                     {ex.is_custom && (
-                      <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                      <span className="shrink-0 rounded-full bg-brand-primary-light px-2 py-0.5 text-xs text-brand-primary-dark">
                         Custom
                       </span>
                     )}

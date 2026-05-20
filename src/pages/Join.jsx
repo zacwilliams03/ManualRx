@@ -123,7 +123,7 @@ export default function Join() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="max-w-md w-full bg-white rounded-lg shadow p-8 text-center">
           <p className="text-gray-800 font-medium">{checkError}</p>
-          <Link to="/login" className="mt-4 inline-block text-sm text-blue-600 hover:underline">
+          <Link to="/login" className="mt-4 inline-block text-sm text-brand-primary hover:underline">
             Back to login
           </Link>
         </div>
@@ -142,7 +142,7 @@ export default function Join() {
           </p>
           <Link
             to="/login"
-            className="mt-6 inline-block rounded bg-gray-800 px-5 py-2 text-sm text-white"
+            className="mt-6 inline-block rounded bg-brand-primary px-5 py-2 text-sm text-white hover:bg-brand-primary-dark"
           >
             Go to login
           </Link>
@@ -197,7 +197,7 @@ export default function Join() {
           <button
             type="submit"
             disabled={submitLoading}
-            className="w-full rounded bg-gray-800 py-2 text-sm text-white disabled:opacity-50"
+            className="w-full rounded bg-brand-primary py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
           >
             {submitLoading ? 'Creating account…' : 'Create account'}
           </button>

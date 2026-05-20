@@ -103,7 +103,7 @@ export default function ExerciseDetail() {
         <TherapistNav />
         <div className="max-w-2xl mx-auto px-6 py-8">
           <p className="text-sm text-red-600">{error}</p>
-          <Link to="/therapist/exercises" className="mt-2 inline-block text-sm text-blue-600 hover:underline">
+          <Link to="/therapist/exercises" className="mt-2 inline-block text-sm text-brand-primary hover:underline">
             Back to library
           </Link>
         </div>
@@ -130,7 +130,7 @@ export default function ExerciseDetail() {
                   {exercise.category}
                 </span>
                 {exercise.is_custom && (
-                  <span className="rounded-full bg-blue-100 px-3 py-0.5 text-xs text-blue-700">
+                  <span className="rounded-full bg-brand-primary-light px-3 py-0.5 text-xs text-brand-primary-dark">
                     Custom
                   </span>
                 )}

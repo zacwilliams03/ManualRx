@@ -114,7 +114,7 @@ export default function ClientDashboard() {
               </div>
               <Link
                 to={`/client/sessions/${s.id}`}
-                className="shrink-0 rounded bg-gray-800 px-4 py-2.5 text-sm text-white hover:bg-gray-700"
+                className="shrink-0 rounded bg-brand-primary px-4 py-2.5 text-sm text-white hover:bg-brand-primary-dark"
               >
                 Start
               </Link>

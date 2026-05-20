@@ -39,7 +39,7 @@ export default function ForgotPassword() {
               If this email is registered, you'll receive a reset link shortly. Check your inbox.
             </p>
             <p className="mt-4 text-sm text-center">
-              <Link to="/login" className="text-blue-600 hover:underline">Back to log in</Link>
+              <Link to="/login" className="text-brand-primary hover:underline">Back to log in</Link>
             </p>
           </div>
         ) : (
@@ -51,7 +51,7 @@ export default function ForgotPassword() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
               />
             </div>
 
@@ -60,13 +60,13 @@ export default function ForgotPassword() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded bg-blue-600 text-white py-2 font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="w-full rounded bg-brand-primary text-white py-2 font-medium hover:bg-brand-primary-dark disabled:opacity-50"
             >
               {loading ? 'Sending…' : 'Send reset link'}
             </button>
 
             <p className="text-sm text-gray-600 text-center">
-              <Link to="/login" className="text-blue-600 hover:underline">Back to log in</Link>
+              <Link to="/login" className="text-brand-primary hover:underline">Back to log in</Link>
             </p>
           </form>
         )}

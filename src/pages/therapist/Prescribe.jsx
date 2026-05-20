@@ -72,7 +72,7 @@ function ExerciseLogDetail({ el, videoUrls, onPlayVideo }) {
           ) : (
             <button
               onClick={() => onPlayVideo(el.id, el.video_url)}
-              className="text-xs text-blue-600 hover:underline"
+              className="text-xs text-brand-primary hover:underline"
             >
               ▶ Play feedback video
             </button>
@@ -218,7 +218,7 @@ export default function Prescribe() {
             <button
               onClick={createSession}
               disabled={creating}
-              className="rounded bg-gray-800 px-4 py-2 text-sm text-white hover:bg-gray-700 disabled:opacity-50"
+              className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
             >
               {creating ? 'Creating…' : 'New session'}
             </button>
@@ -233,7 +233,7 @@ export default function Prescribe() {
               onClick={() => { setActiveTab(tab); setExpandedLogId(null) }}
               className={`pb-2 text-sm font-medium transition-colors ${
                 activeTab === tab
-                  ? 'border-b-2 border-gray-900 text-gray-900'
+                  ? 'border-b-2 border-brand-primary text-brand-primary'
                   : 'text-gray-400 hover:text-gray-600'
               }`}
             >

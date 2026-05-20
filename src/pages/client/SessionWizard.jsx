@@ -41,7 +41,7 @@ function ScaleSelector({ label, value, onChange }) {
             onClick={() => onChange(n)}
             className={`w-11 h-11 rounded text-sm font-medium transition-colors ${
               value === n
-                ? 'bg-gray-800 text-white'
+                ? 'bg-brand-primary text-white'
                 : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
@@ -219,7 +219,7 @@ export default function SessionWizard() {
     return (
       <div className="min-h-[100dvh] bg-gray-50 p-8">
         <p className="text-sm text-red-600">{error}</p>
-        <Link to="/client" className="mt-2 inline-block text-sm text-blue-600 hover:underline">
+        <Link to="/client" className="mt-2 inline-block text-sm text-brand-primary hover:underline">
           Back
         </Link>
       </div>
@@ -242,7 +242,7 @@ export default function SessionWizard() {
           </p>
           <Link
             to="/client"
-            className="mt-6 inline-block rounded bg-gray-800 px-6 py-2.5 text-sm text-white hover:bg-gray-700"
+            className="mt-6 inline-block rounded bg-brand-primary px-6 py-2.5 text-sm text-white hover:bg-brand-primary-dark"
           >
             Back to sessions
           </Link>
@@ -263,7 +263,7 @@ export default function SessionWizard() {
           </p>
           <button
             onClick={() => setStep(0)}
-            className="mt-8 w-full rounded bg-gray-800 py-3 text-sm font-medium text-white hover:bg-gray-700"
+            className="mt-8 w-full rounded bg-brand-primary py-3 text-sm font-medium text-white hover:bg-brand-primary-dark"
           >
             Start session
           </button>
@@ -312,7 +312,7 @@ export default function SessionWizard() {
                 key={i}
                 className={`h-1.5 rounded-full transition-colors ${
                   exercises.length > 8 ? 'w-3' : 'w-5'
-                } ${i < step ? 'bg-gray-400' : i === step ? 'bg-gray-800' : 'bg-gray-200'}`}
+                } ${i < step ? 'bg-gray-400' : i === step ? 'bg-brand-primary' : 'bg-gray-200'}`}
               />
             ))}
           </div>
@@ -343,7 +343,7 @@ export default function SessionWizard() {
           </div>
 
           {ex.therapist_notes && (
-            <p className="rounded bg-blue-50 px-3 py-2 text-sm text-blue-800">
+            <p className="rounded bg-brand-note-bg border border-brand-note-border px-3 py-2 text-sm text-brand-note-text">
               {ex.therapist_notes}
             </p>
           )}
@@ -388,7 +388,7 @@ export default function SessionWizard() {
                 type="button"
                 disabled={!currentSetData.reps}
                 onClick={() => completeSet(step)}
-                className="w-full rounded bg-gray-800 py-3 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-40"
+                className="w-full rounded bg-brand-primary py-3 text-sm font-medium text-white hover:bg-brand-primary-dark disabled:opacity-40"
               >
                 {isLastSet ? 'Complete final set →' : `Complete Set ${currentSet + 1} →`}
               </button>
@@ -469,7 +469,7 @@ export default function SessionWizard() {
 
               <button
                 onClick={() => setStep(isLast ? 'summary' : step + 1)}
-                className="w-full rounded bg-gray-800 py-3 text-sm font-medium text-white hover:bg-gray-700"
+                className="w-full rounded bg-brand-primary py-3 text-sm font-medium text-white hover:bg-brand-primary-dark"
               >
                 {isLast ? 'Review session →' : 'Next →'}
               </button>
@@ -513,7 +513,7 @@ export default function SessionWizard() {
                 )}
                 <button
                   onClick={() => setStep(i)}
-                  className="mt-0.5 text-xs text-blue-500 hover:underline"
+                  className="mt-0.5 text-xs text-brand-primary hover:underline"
                 >
                   Edit
                 </button>
@@ -546,7 +546,7 @@ export default function SessionWizard() {
         <button
           onClick={handleComplete}
           disabled={submitting}
-          className="w-full rounded bg-gray-800 py-3 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
+          className="w-full rounded bg-brand-primary py-3 text-sm font-medium text-white hover:bg-brand-primary-dark disabled:opacity-50"
         >
           {submitting ? 'Saving…' : 'Complete session'}
         </button>

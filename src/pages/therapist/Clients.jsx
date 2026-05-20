@@ -149,7 +149,7 @@ export default function Clients() {
           <button
             type="submit"
             disabled={submitLoading}
-            className="rounded bg-gray-800 px-4 py-2 text-sm text-white disabled:opacity-50"
+            className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
           >
             {submitLoading ? 'Adding…' : 'Add client'}
           </button>

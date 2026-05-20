@@ -187,7 +187,7 @@ export default function SessionEdit() {
         <TherapistNav />
         <div className="max-w-4xl mx-auto px-6 py-8">
           <p className="text-sm text-red-600">{error}</p>
-          <Link to={`/therapist/prescribe/${clientId}`} className="mt-2 inline-block text-sm text-blue-600 hover:underline">
+          <Link to={`/therapist/prescribe/${clientId}`} className="mt-2 inline-block text-sm text-brand-primary hover:underline">
             Back
           </Link>
         </div>
@@ -231,7 +231,7 @@ export default function SessionEdit() {
                     onClick={() => setFrequencyDays(opt.value)}
                     className={`rounded-full px-3 py-1 text-sm ${
                       frequencyDays === opt.value
-                        ? 'bg-gray-800 text-white'
+                        ? 'bg-brand-primary text-white'
                         : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                     }`}
                   >
@@ -254,7 +254,7 @@ export default function SessionEdit() {
             <button
               onClick={saveMeta}
               disabled={savingMeta}
-              className="rounded bg-gray-800 px-4 py-2 text-sm text-white disabled:opacity-50"
+              className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
             >
               {savingMeta ? 'Saving…' : 'Save'}
             </button>
@@ -449,7 +449,7 @@ export default function SessionEdit() {
                   <button
                     onClick={confirmAdd}
                     disabled={adding || !configSets || !configReps}
-                    className="w-full rounded bg-gray-800 py-2 text-sm text-white hover:bg-gray-700 disabled:opacity-50"
+                    className="w-full rounded bg-brand-primary py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
                   >
                     {adding ? 'Adding…' : 'Add to session'}
                   </button>

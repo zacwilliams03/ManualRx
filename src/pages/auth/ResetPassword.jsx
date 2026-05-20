@@ -73,7 +73,7 @@ export default function ResetPassword() {
         <div className="max-w-md w-full bg-white rounded-lg shadow p-8 text-center">
           <p className="text-sm text-gray-700">This link is invalid or has expired.</p>
           <p className="mt-4 text-sm">
-            <Link to="/forgot-password" className="text-blue-600 hover:underline">
+            <Link to="/forgot-password" className="text-brand-primary hover:underline">
               Request a new reset link
             </Link>
           </p>
@@ -99,7 +99,7 @@ export default function ResetPassword() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
               />
             </div>
             <div>
@@ -109,7 +109,7 @@ export default function ResetPassword() {
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 required
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
               />
             </div>
 
@@ -118,7 +118,7 @@ export default function ResetPassword() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded bg-blue-600 text-white py-2 font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="w-full rounded bg-brand-primary text-white py-2 font-medium hover:bg-brand-primary-dark disabled:opacity-50"
             >
               {loading ? 'Updating…' : 'Update password'}
             </button>

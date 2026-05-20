@@ -52,7 +52,7 @@ export default function Signup() {
           <p className="mt-3 text-gray-600">
             We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account, then log in.
           </p>
-          <Link to="/login" className="mt-6 inline-block text-blue-600 hover:underline">
+          <Link to="/login" className="mt-6 inline-block text-brand-primary hover:underline">
             Back to login
           </Link>
         </div>
@@ -74,7 +74,7 @@ export default function Signup() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
           </div>
 
@@ -85,7 +85,7 @@ export default function Signup() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
           </div>
 
@@ -97,7 +97,7 @@ export default function Signup() {
               onChange={(e) => setPassword(e.target.value)}
               minLength={6}
               required
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
             <p className="mt-1 text-xs text-gray-500">Minimum 6 characters</p>
           </div>
@@ -107,7 +107,7 @@ export default function Signup() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded bg-blue-600 text-white py-2 font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="w-full rounded bg-brand-primary text-white py-2 font-medium hover:bg-brand-primary-dark disabled:opacity-50"
           >
             {loading ? 'Creating account…' : 'Sign up'}
           </button>
@@ -115,7 +115,7 @@ export default function Signup() {
 
         <p className="mt-6 text-sm text-gray-600 text-center">
           Already have an account?{' '}
-          <Link to="/login" className="text-blue-600 hover:underline">
+          <Link to="/login" className="text-brand-primary hover:underline">
             Log in
           </Link>
         </p>

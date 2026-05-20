@@ -123,7 +123,7 @@ export default function Onboarding() {
               value={clinicName}
               onChange={(e) => setClinicName(e.target.value)}
               placeholder="e.g. City Physio"
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
           </div>
 
@@ -137,7 +137,7 @@ export default function Onboarding() {
                   onClick={() => setWeightUnit(unit)}
                   className={`flex-1 py-2 rounded border text-sm font-medium transition-colors ${
                     weightUnit === unit
-                      ? 'bg-blue-600 text-white border-blue-600'
+                      ? 'bg-brand-primary text-white border-brand-primary'
                       : 'border-gray-300 text-gray-700 hover:border-gray-400'
                   }`}
                 >
@@ -162,7 +162,7 @@ export default function Onboarding() {
                   onClick={() => setFrequencyMode(value)}
                   className={`py-2 rounded border text-sm font-medium transition-colors ${
                     frequencyMode === value
-                      ? 'bg-blue-600 text-white border-blue-600'
+                      ? 'bg-brand-primary text-white border-brand-primary'
                       : 'border-gray-300 text-gray-700 hover:border-gray-400'
                   }`}
                 >
@@ -178,7 +178,7 @@ export default function Onboarding() {
                   value={customDays}
                   onChange={(e) => setCustomDays(e.target.value)}
                   placeholder="e.g. 3"
-                  className="w-24 rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-24 rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
                 />
                 <span className="text-sm text-gray-500">days between sessions</span>
               </div>
@@ -190,7 +190,7 @@ export default function Onboarding() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded bg-blue-600 text-white py-2 font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="w-full rounded bg-brand-primary text-white py-2 font-medium hover:bg-brand-primary-dark disabled:opacity-50"
           >
             {loading ? 'Saving…' : 'Save and continue'}
           </button>

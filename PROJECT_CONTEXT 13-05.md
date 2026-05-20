@@ -309,122 +309,53 @@ Decision should be driven by what the first real therapist customers say they ne
 ## Branding
 
 ### Status
-Colour palette undecided — awaiting outside feedback. Three options shortlisted after eight rounds of exploration. Typography and logo not yet explored.
+Colour palette **decided** (Session 18). Typography **decided** (Session 18). Logo and favicon not yet done.
+
+### Decisions locked
+
+**Colour palette — Slate Navy + Bright Teal**
+
+| Role | Hex | Tailwind token |
+|---|---|---|
+| Nav background | `#1E2D3D` | `bg-brand-nav` |
+| Primary (buttons, links, active) | `#3DBDB5` | `bg-brand-primary` / `text-brand-primary` |
+| Primary dark (hover, dark text) | `#2A8A86` | `bg-brand-primary-dark` |
+| Primary light (badge bg, info panels) | `#E5F7F6` | `bg-brand-primary-light` |
+| Page background | `#F7F8F9` | `bg-brand-bg` |
+| Border | `#D4E8E8` | `border-brand-border` |
+| Note box background | `#EEF6F6` | `bg-brand-note-bg` |
+| Note box border | `#C8E8E6` | `border-brand-note-border` |
+| Note box text | `#2A8A86` | `text-brand-note-text` |
+
+All tokens are defined in `tailwind.config.js` under `theme.extend.colors.brand`. Badge bg = `brand-primary-light`, badge text = `brand-primary-dark`. Invite email template still uses old `#2E6B7A` — update when re-doing email templates.
+
+**Typography — DM Sans**
+- Loaded via Google Fonts (preconnect + link in `index.html`)
+- Set as default `font-sans` in `tailwind.config.js` — no per-component changes needed
+- Weights in use: 400 (body), 500 (labels, nav), 600 (headings, buttons)
 
 ### Design Direction
 - **Feel:** Clinical without being cold. Professional enough for health practitioners, not so sterile it feels like a hospital system.
-- **Audience split:** Therapist interface — used at a desk, needs to feel like a professional tool. Client interface — used on mobile at home, needs to feel approachable and simple.
+- **Audience split:** Therapist interface — used at a desk, can be moderately dense. Client interface — used on mobile at home, must be airy and simple.
 - **Reference point:** A well-designed allied health clinic, not a gym app or a consumer wellness product.
-- **Key principle:** Restraint. Whitespace, tight typography, and neutral backgrounds do the heavy lifting. Colour is used intentionally, not decoratively.
+- **Key principle:** Restraint. Whitespace and consistency do the heavy lifting. Colour is used intentionally, not decoratively.
+- **Avoid:** Wellness app aesthetic, hospital system aesthetic, generic health crosses or abstract human figures in any future logo work.
 
----
+### Still needed before launch
 
-### Shortlisted Palettes (decision pending)
+**Logo / favicon:**
+- Wordmark: "ManualRx" in DM Sans SemiBold — white version (for nav) + dark version (`#1E2D3D`, for light backgrounds)
+- Favicon: "Rx" in `#3DBDB5` on white, minimum 32×32px
+- No icon mark / symbol yet — deferred until post-validation
 
-All three options use the same UI preview layout for comparison: dark nav bar, white card content area, two session cards (one with a Completed badge), a therapist note box, and a primary/secondary button pair.
+**Email templates:**
+- Invite email still uses old `#2E6B7A` — needs updating to new palette
+- Supabase auth emails (password reset, confirmation) still show Supabase defaults — must be customised in Supabase dashboard → Authentication → Email Templates before launch
+- Supabase sender name shows "Supabase" — change to "ManualRx" in dashboard before launch
 
----
-
-#### Option 1 — Ocean Slate
-**Tag:** Bookmarked — Round 1
-**Verdict:** Strongest overall. Safe choice that doesn't feel safe.
-**Description:** Professional, clinical, distinctive. Health without hospital coldness. The teal-green in the slate separates it from pure blue — more health-coded, less finance.
-
-| Role | Hex |
-|---|---|
-| Nav | `#1A2F36` |
-| Primary | `#2E6B7A` |
-| Primary Dark | `#1F4E5A` |
-| Primary Light | `#E5F1F4` |
-| Mid (for gradients/swatches) | `#5A9BAA` |
-| Background | `#F7F8F8` |
-| Border | `#D6E4E8` |
-| Badge background | `#E5F1F4` |
-| Badge text | `#1F4E5A` |
-
-**Nav active link colour:** `#5BBDCE` (lighter teal, readable on dark nav)
-**Note box:** Background `#E5F1F4`, border `#D6E4E8`, text `#1F4E5A`
-
----
-
-#### Option 2 — Mint Primary
-**Tag:** Bookmarked — Round 2
-**Verdict:** Most distinctive. Higher risk, higher reward.
-**Description:** Carbon nav gives the mint enough weight to feel professional rather than soft. The contrast is sharp and memorable. Sits at the health/fitness crossover more than Option 1.
-
-| Role | Hex |
-|---|---|
-| Nav | `#1C1C1C` |
-| Primary | `#4DB896` |
-| Primary Dark | `#2A8A6A` |
-| Primary Light | `#E8F8F3` |
-| Mid (for gradients/swatches) | `#8ED4BC` |
-| Background | `#F7F8F8` |
-| Border | `#D4EAE3` |
-| Badge background | `#E8F8F3` |
-| Badge text | `#2A8A6A` |
-
-**Nav active link colour:** `#4DB896` (mint directly on carbon nav)
-**Note box:** Background `#E8F8F3`, border `#D4EAE3`, text `#2A8A6A`
-
----
-
-#### Option 3 — Monochrome + Ocean Slate
-**Tag:** Standout — Round 8
-**Verdict:** Most refined. Colour used with maximum intentionality.
-**Description:** Pure black nav, white content, grey borders — Ocean Slate appears only on interactive elements (buttons, active links, focus rings, badges). The single colour hit carries all brand meaning. Most influenced by Linear/Notion aesthetic applied to health.
-
-| Role | Hex |
-|---|---|
-| Nav | `#111111` |
-| Primary | `#2E6B7A` |
-| Primary Dark | `#1F4E5A` |
-| Primary Light | `#E5F1F4` |
-| Text | `#1A1A1A` |
-| Background | `#FAFAFA` |
-| Border | `#E0E0E0` |
-| Badge background | `#E5F1F4` |
-| Badge text | `#1F4E5A` |
-
-**Nav active link colour:** `#2E6B7A` (Ocean Slate on black nav)
-**Note box:** Background `#E5F1F4`, border `#E0E0E0`, text `#1F4E5A`
-
----
-
-### UI Preview Spec
-To recreate the comparison artifact exactly:
-
-- **Layout:** Three equal columns, each containing: label block (name, tag, description) → UI preview card → swatch strip (4 colours, equal width) → verdict box → hex reference list
-- **Nav bar:** Dark background (`nav` colour), white bold logo left, nav links right (40% opacity white for inactive, primary colour + underline for active "Account" link)
-- **Content area:** White background, 20px padding. Subheading label in primary colour uppercase monospace, page title in `text` colour. Two session cards stacked vertically with border, name + optional Completed badge + subtitle. Start button in primary colour. Therapist note box below cards. Primary + secondary button row at bottom.
-- **Swatch strip:** 4 swatches equal width, 20px height, 4px border radius, subtle inset shadow
-- **Verdict box:** White background, italic text, light border
-- **Hex block:** Monospace, small, muted grey, 4 rows (Nav / Primary / Dark / Light)
-- **Page background:** `#F4F4F2`
-- **Font:** Georgia serif throughout
-
-Branding Decisions Required Before Launch
-Blocking everything else
-
-Colour palette — #2E6B7A is provisional throughout the codebase and email template. Finalise this first. All UI updates, the logo, and email templates depend on it.
-
-Dependent on colour palette
-
-Logo — nothing finalised yet. For exploration: Ideogram (free, handles text well) or Looka (purpose-built, production-ready SVG output). Current wordmark is bold text in #2E6B7A.
-Favicon — separate deliverable from the logo. Must work at 16x16 and 32x32. Required before launch or browser tabs look unfinished.
-UI update — app currently uses Tailwind defaults + #2E6B7A. Full UI pass once palette and logo are settled.
-Typography — currently system-ui defaults. Deliberate decision needed — even one Google Font for headings locks in the feel.
-
-Email templates
-
-Invite email — specced and built (see email invite plan). Uses #2E6B7A, update when palette finalised.
-Supabase auth emails — password reset and email confirmation are currently Supabase default templates. Must be customised in the Supabase dashboard before launch or clients receive emails with no ManualRx branding.
-Supabase sender name — currently shows "Supabase" as the sender. Change to "ManualRx" in Supabase dashboard → Authentication → Email Templates before launch.
-
-Pages
-
-Marketing/home page — does not exist yet. Required before launch.
-Privacy policy page — required before launch (AU Privacy Act). Can live on the marketing site.
+**Pages:**
+- Marketing/home page — does not exist yet. Required before launch.
+- Privacy policy page — required before launch (AU Privacy Act). Can live on the marketing site.
 ---
 
 ## Session Log
@@ -728,6 +659,23 @@ Currently therapists have two places with overlapping concerns: `/account` (chan
 - Skip flow → `/therapist`, `has_onboarded = true` in DB
 - Settings pre-populated, save persists, success banner auto-dismisses
 - Access control: unauthenticated → `/login`, client role → `/client`
+
+### Session 18 — UI colour pass + typography
+
+**Decisions made:**
+- Colour palette finalised: Slate Navy + Bright Teal (new palette, not one of the three prior shortlisted options)
+- Typography: DM Sans via Google Fonts
+
+**Code changes:**
+- `tailwind.config.js` — added 9 custom `brand.*` colour tokens + DM Sans as default `font-sans`
+- `index.html` — added DM Sans Google Fonts preload links + `<meta name="theme-color" content="#1E2D3D">`
+- `src/components/therapist/TherapistNav.jsx` — nav background `bg-gray-800` → `bg-brand-nav`; active link colour → `text-brand-primary`
+- All 20 component/page files updated: replaced all `blue-*` Tailwind classes with `brand-*` tokens; replaced `gray-800` button/CTA colours with `brand-primary`; therapist note boxes in SessionWizard use `brand-note-*` tokens; Custom exercise badges use `brand-primary-light/dark`
+- Build verified clean (`npm run build` — no errors, zero `blue-*` classes remaining)
+
+**Key implementation detail:**
+- All brand colours live in `tailwind.config.js` — a future palette change is a single-file edit
+- Note box disambiguation: `bg-blue-50` in SessionWizard (therapist notes shown to client) → `brand-note-bg`; `bg-blue-50` elsewhere (badges, info panels) → `brand-primary-light`
 
 ---
 

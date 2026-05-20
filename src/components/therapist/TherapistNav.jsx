@@ -14,7 +14,7 @@ export default function TherapistNav() {
         to={to}
         className={`text-sm transition-colors pb-0.5 ${
           active
-            ? 'text-white border-b border-white'
+            ? 'text-brand-primary border-b border-brand-primary'
             : 'text-gray-400 hover:text-gray-200'
         }`}
       >
@@ -24,7 +24,7 @@ export default function TherapistNav() {
   }
 
   return (
-    <nav className="bg-gray-800 px-6 py-3 flex items-center justify-between">
+    <nav className="bg-brand-nav px-6 py-3 flex items-center justify-between">
       <Link to="/therapist" className="text-sm font-semibold text-white">
         ManualRx
       </Link>
