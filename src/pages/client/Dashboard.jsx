@@ -20,7 +20,7 @@ function isRecentlyCompleted(session) {
 }
 
 export default function ClientDashboard() {
-  const { profile, signOut } = useAuth()
+  const { profile } = useAuth()
 
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -62,17 +62,17 @@ export default function ClientDashboard() {
           <p className="mt-0.5 text-sm text-gray-500">{profile?.name}</p>
         </div>
         <Link
+          to="/client/history"
+          className="rounded border border-gray-300 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+        >
+          History
+        </Link>
+        <Link
           to="/client/settings"
           className="rounded border border-gray-300 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
         >
           Settings
         </Link>
-        <button
-          onClick={signOut}
-          className="rounded border border-gray-300 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-        >
-          Log out
-        </button>
       </div>
 
       {loading && <p className="text-sm text-gray-500">Loading…</p>}
