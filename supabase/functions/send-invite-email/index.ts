@@ -43,10 +43,11 @@ Deno.serve(async (req) => {
     }
 
     const firstName = clientName.split(' ')[0]
+    const therapistFirstName = therapistName.split(' ')[0]
     const inviteUrl = `${Deno.env.get('SITE_URL')}/join/${code}`
     const senderLine = clinicName?.trim()
-      ? `${therapistName} from ${clinicName}`
-      : therapistName
+      ? `${therapistFirstName} from ${clinicName}`
+      : therapistFirstName
 
     const html = `<!DOCTYPE html>
 <html>
@@ -98,7 +99,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: 'ManualRx <invites@manualrx.com>',
         to: [email],
-        subject: `${therapistName} has shared an exercise program with you`,
+        subject: `${therapistFirstName} has shared an exercise program with you`,
         html,
       }),
     })

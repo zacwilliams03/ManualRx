@@ -6,6 +6,27 @@ import TherapistNav from '../../components/therapist/TherapistNav'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
 import { toCanonical, formatWeight } from '../../utils/weightUtils'
 
+function VideoPlayer({ url }) {
+  if (!url) return null
+  const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
+  if (isYouTube) {
+    let embedUrl = url
+    if (url.includes('watch?v=')) {
+      const videoId = new URL(url).searchParams.get('v')
+      embedUrl = `https://www.youtube.com/embed/${videoId}`
+    } else if (url.includes('youtu.be/')) {
+      const videoId = url.split('youtu.be/')[1].split('?')[0]
+      embedUrl = `https://www.youtube.com/embed/${videoId}`
+    }
+    return (
+      <iframe src={embedUrl} className="w-full rounded mt-2" style={{ aspectRatio: '16/9' }}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen title="Exercise video" />
+    )
+  }
+  return <video src={url} controls className="w-full rounded mt-2" style={{ aspectRatio: '16/9' }} />
+}
+
 const CATEGORIES = [
   'Custom',
   'Cervical',
@@ -76,7 +97,7 @@ export default function SessionEdit() {
       supabase.from('prescriptions').select('id, name, frequency_days').eq('id', sessionId).single(),
       supabase
         .from('prescription_exercises')
-        .select('id, sets, reps, weight, therapist_notes, exercises(id, name, category)')
+        .select('id, sets, reps, weight, therapist_notes, exercises(id, name, category, video_url)')
         .eq('prescription_id', sessionId),
     ])
 
@@ -110,7 +131,7 @@ export default function SessionEdit() {
     setSearching(true)
     const { data } = await supabase
       .from('exercises')
-      .select('id, name, category, default_sets, default_reps')
+      .select('id, name, category, default_sets, default_reps, video_url')
       .textSearch('fts', debouncedSearch.trim(), { type: 'websearch', config: 'english' })
       .limit(10)
     setSearchResults(data ?? [])
@@ -121,7 +142,7 @@ export default function SessionEdit() {
     setCategoryLoading(true)
     setPickerCategory(cat)
     setPickerView('category')
-    let query = supabase.from('exercises').select('id, name, category, default_sets, default_reps')
+    let query = supabase.from('exercises').select('id, name, category, default_sets, default_reps, video_url')
     if (cat === 'Custom') query = query.eq('is_custom', true)
     else query = query.eq('category', cat)
     const { data } = await query.order('name', { ascending: true })
@@ -152,7 +173,7 @@ export default function SessionEdit() {
         weight: configWeight ? toCanonical(parseFloat(configWeight), weightUnit) : null,
         therapist_notes: configNotes.trim() || null,
       })
-      .select('id, sets, reps, weight, therapist_notes, exercises(id, name, category)')
+      .select('id, sets, reps, weight, therapist_notes, exercises(id, name, category, video_url)')
       .single()
 
     if (insertError) {
@@ -280,23 +301,28 @@ export default function SessionEdit() {
             ) : (
               <div className="divide-y divide-gray-100">
                 {exercises.map(pe => (
-                  <div key={pe.id} className="flex items-center justify-between px-4 py-3 gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{pe.exercises.name}</p>
-                      <p className="mt-0.5 text-xs text-gray-500">
-                        {pe.sets} sets × {pe.reps} reps
-                        {pe.weight ? ` · ${formatWeight(pe.weight, weightUnit)}` : ''}
-                      </p>
-                      {pe.therapist_notes && (
-                        <p className="mt-0.5 text-xs text-gray-400 italic">{pe.therapist_notes}</p>
-                      )}
+                  <div key={pe.id} className="px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{pe.exercises.name}</p>
+                        <p className="mt-0.5 text-xs text-gray-500">
+                          {pe.sets} sets × {pe.reps} reps
+                          {pe.weight ? ` · ${formatWeight(pe.weight, weightUnit)}` : ''}
+                        </p>
+                        {pe.therapist_notes && (
+                          <p className="mt-0.5 text-xs text-gray-400 italic">{pe.therapist_notes}</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => removeExercise(pe.id)}
+                        className="shrink-0 text-xs text-red-500 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
                     </div>
-                    <button
-                      onClick={() => removeExercise(pe.id)}
-                      className="shrink-0 text-xs text-red-500 hover:text-red-700"
-                    >
-                      Remove
-                    </button>
+                    {pe.exercises.video_url && (
+                      <VideoPlayer url={pe.exercises.video_url} />
+                    )}
                   </div>
                 ))}
               </div>
@@ -342,7 +368,12 @@ export default function SessionEdit() {
                             onClick={() => selectExercise(ex)}
                             className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50"
                           >
-                            <span className="text-sm text-gray-900">{ex.name}</span>
+                            <div className="flex flex-col">
+                              <span className="text-sm text-gray-900">{ex.name}</span>
+                              {ex.video_url && (
+                                <span className="text-xs text-gray-400 mt-0.5">Video attached</span>
+                              )}
+                            </div>
                             <span className="text-xs text-gray-400 ml-3 shrink-0">{ex.category}</span>
                           </button>
                         ))}
@@ -387,7 +418,12 @@ export default function SessionEdit() {
                     onClick={() => selectExercise(ex)}
                     className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-0"
                   >
-                    <span className="text-sm text-gray-900">{ex.name}</span>
+                    <div className="flex flex-col">
+                      <span className="text-sm text-gray-900">{ex.name}</span>
+                      {ex.video_url && (
+                        <span className="text-xs text-gray-400 mt-0.5">Video attached</span>
+                      )}
+                    </div>
                     <span className="text-xs text-gray-400 ml-3 shrink-0">
                       {ex.default_sets ?? 3} × {ex.default_reps ?? 10}
                     </span>
@@ -408,6 +444,9 @@ export default function SessionEdit() {
                 <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
                   <p className="text-sm font-medium text-gray-900">{pickerExercise.name}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{pickerExercise.category}</p>
+                  {pickerExercise.video_url && (
+                    <p className="text-xs text-gray-400 mt-0.5">Video attached</p>
+                  )}
                 </div>
                 <div className="p-4 space-y-4">
                   <div className="grid grid-cols-3 gap-3">

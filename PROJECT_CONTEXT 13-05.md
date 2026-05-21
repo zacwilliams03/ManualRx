@@ -197,6 +197,78 @@ Annual billing at 20% discount. Stripe handles subscriptions.
 
 ---
 
+## Competitor Feature Gap Analysis
+
+> Researched May 2026. Sources: Rehab My Patient, SimpleSet, Physitrack, TrueCoach.
+> Purpose: track what the market has that ManualRx does not, and prioritise accordingly.
+
+---
+
+### What ManualRx has that competitors lack
+- Built specifically for massage/manual therapists (all competitors are physio/OT-first)
+- Simpler, more focused UX — not trying to be an EMR
+- Per-set logging with JSONB storage (granular beyond most competitors)
+- Feedback video upload per exercise (client films themselves)
+
+---
+
+### Gaps by priority
+
+#### High — therapists will notice the absence
+
+**1. Session/program templates**
+Rehab My Patient and SimpleSet both let therapists save a group of exercises as a reusable template for a condition or patient type. In ManualRx every session is built from scratch. For a therapist treating 10 clients with similar presentations this is a real time cost. Most requested missing feature in SimpleSet reviews.
+
+**2. PDF / print export of the exercise program**
+Rehab My Patient allows therapists to email or print the exercise plan. Some clients — particularly older ones — want a printed sheet. No export option excludes that segment. Also useful when a client loses phone access.
+
+**3. In-app messaging (therapist ↔ client)**
+TrueCoach and SimpleSet (user-requested) both support direct messaging. Currently there is no way for a client to ask a question or a therapist to send a follow-up without going outside the app. Not a dealbreaker at MVP but becomes a retention problem as therapists rely on the tool daily.
+
+**4. Client progress / adherence visibility**
+SimpleSet and Physitrack show clients their adherence trends and pain score history over time. In ManualRx clients can log sessions but have no summary view — no "8 of 12 sessions completed this month", no pain trend chart. This is the primary engagement driver on the client side. Without it the client interface is a task list, not a tool.
+
+---
+
+#### Medium — can ship without, but matter for retention
+
+**5. Outcome measures / PROMs**
+SimpleSet and Physitrack support validated Patient-Reported Outcome Measures (e.g. Oswestry, DASH, PSFS) — standardised clinical questionnaires therapists use to measure progress objectively. Manual therapists do use these. Not fatal to omit, but a visible gap vs. established tools.
+
+**6. Therapist mobile app**
+Physitrack's mobile app lets clinicians prescribe and review client programs hands-free in a clinical setting. ManualRx's therapist interface is desktop-first (intentionally, for now). In practice, therapists often want to pull up a client program on their phone mid-session. Listed as lower priority in project status — keep it there for now, but revisit after Stripe.
+
+**7. Practice management / EMR integration**
+SimpleSet has one-click charting that syncs to EMR notes. Physitrack integrates with Jane App, Cliniko, Zanda, CorePlus, and others. Many AU therapists already use Jane App or Cliniko. No integration means an extra login and an extra tool, which increases churn risk at the clinic tier.
+
+---
+
+#### Low — not relevant to ManualRx's positioning
+
+**Telehealth / video calls** — Physitrack has it. Not applicable to massage therapy workflows. Skip.
+
+**Native iOS/Android apps** — Competitors have them. Responsive web is fine for now. Revisit at scale.
+
+**Full EMR / clinical notes** — Moves ManualRx into regulated health records territory. Increases compliance surface area significantly. Do not build until compliance questions (HIPAA, AU Privacy Act) are resolved and customer research confirms demand.
+
+---
+
+### Build order recommendation (based on impact vs. complexity)
+
+| Priority | Feature | Complexity | Notes |
+|---|---|---|---|
+| 1 | Session templates | Low | UI + DB only, no new compliance issues |
+| 2 | Client progress/adherence view | Low–Medium | Uses data already in DB (session_logs, exercise_logs) |
+| 3 | PDF export | Medium | Requires PDF generation library |
+| 4 | In-app messaging | Medium–High | New table, real-time or polling, moderation considerations |
+| 5 | PROMs | High | Clinical validation required, compliance implications |
+| 6 | EMR integrations | High | Deferred until post-revenue |
+
+---
+
+### Compliance note (client notes / clinical records)
+A therapist-facing "client notes" page (free-text clinical observations) would cross into health record territory under AU Privacy Act and US HIPAA. Competitors have it, but it meaningfully increases legal obligations (data retention, right of access, breach notification). Do not build before compliance questions are resolved. Exercise prescription data (pain ratings, RPE, session logs) is already health-adjacent — a dedicated clinical notes field is a harder line.
+
 ## Project Status
 
 - [x] Accounts created: GitHub, Supabase, Vercel
@@ -234,6 +306,8 @@ Annual billing at 20% discount. Stripe handles subscriptions.
 - [x] Account consolidated into Settings for both roles — therapist Settings includes change-password section; /account removed from therapist nav
 - [x] Client session history page — /client/history shows all completed sessions with collapsible exercise detail
 - [x] Functional kg/lb weight unit conversion — weights stored canonically in kg; display converts to viewer's preferred unit for both therapist and client across all pages
+- [x] Invite email uses therapist first name only (not full name) in both subject line and body
+- [x] Video attachment indicator in session builder — exercises with a video show "Video attached" in grey during search, category browse, and configure view; added exercises show the full video player inline
 
 ---
 
@@ -698,6 +772,70 @@ Currently therapists have two places with overlapping concerns: `/account` (chan
 **Key pattern:**
 - Weights always stored in canonical kg. Input conversion (`toCanonical`) happens on save. Display conversion (`formatWeight`) happens on render. `useWeightUnit` hook handles per-role table routing using `profile.role` (not `user.role` — `user` is the raw Supabase auth object with no `.role` field).
 - `sets_data` recap in SessionWizard during an in-progress session shows raw user-entered strings (`${s.weight} ${weightUnit}`) — these are not canonical yet. Canonical conversion only happens on final submission.
+
+---
+
+### Session 22 — Persistent client account-linking bug fix
+
+**Bug fixed:**
+- `clients.user_id` was silently left NULL after the join flow completed, causing "could not load profile" on the client dashboard.
+- Root cause: The client-side `UPDATE clients SET user_id = ?` call relied on RLS USING clause `(user_id IS NULL AND lower(email) = lower(auth.jwt() ->> 'email'))`. The `auth.jwt() ->> 'email'` claim is unreliable for newly created sessions — PostgREST does not always include it. This caused the USING clause to evaluate to NULL (not TRUE), silently filtering the row and updating 0 rows with no error returned.
+- Secondary issue: Supabase JS returns `{ data: null, error: null }` on any non-error UPDATE without `.select()`, so the code couldn't detect the 0-row silent failure. Fixed by adding `.select('id')` and checking `!linkData?.length`.
+- Tertiary issue: A `SECURITY DEFINER` RPC function (`claim_client_invite`) was created as a fallback, but PostgREST continued to return 404 even after `NOTIFY pgrst, 'reload schema'` — the schema cache reload is unreliable for newly created functions.
+
+**Final fix — DB trigger (most robust approach):**
+- Created `handle_client_account_link()` SECURITY DEFINER function + `on_client_account_link` trigger on `AFTER INSERT ON auth.users`.
+- Trigger reads `therapist_id` from `raw_user_meta_data`, runs `UPDATE clients SET user_id = NEW.id WHERE lower(email) = lower(NEW.email) AND therapist_id = ... AND user_id IS NULL`, and marks `client_invites.consumed_at = now()`. All in one transaction, no RLS involved.
+- `Join.jsx` `signUp()` call updated to pass `therapist_id: invite.therapist_id` in `options.data` so the trigger has it available.
+- Removed all client-side link + invite-consumption logic from `Join.jsx`. `handleSubmit` now just calls `signUp()`, checks `data.user?.id` and `data.session`, then shows success.
+
+**SQL run:**
+```sql
+CREATE OR REPLACE FUNCTION public.handle_client_account_link()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_therapist_id uuid;
+BEGIN
+  IF NEW.raw_user_meta_data->>'role' = 'client' AND
+     NEW.raw_user_meta_data->>'therapist_id' IS NOT NULL THEN
+    UPDATE public.clients SET user_id = NEW.id
+    WHERE lower(email) = lower(NEW.email)
+    AND therapist_id = (NEW.raw_user_meta_data->>'therapist_id')::uuid
+    AND user_id IS NULL;
+    UPDATE public.client_invites SET consumed_at = now()
+    WHERE lower(email) = lower(NEW.email)
+    AND therapist_id = (NEW.raw_user_meta_data->>'therapist_id')::uuid
+    AND consumed_at IS NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_client_account_link
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_client_account_link();
+```
+
+**Key gotchas confirmed:**
+- `auth.jwt() ->> 'email'` is unreliable in RLS for new sessions — do not rely on it. Use `auth.users` subquery or SECURITY DEFINER functions.
+- `NOTIFY pgrst, 'reload schema'` does not reliably expose newly created functions via PostgREST in all cases.
+- Supabase `.update()` without `.select()` always returns `{ data: null, error: null }` on success regardless of rows affected — always add `.select('id')` and check result length when row-count matters.
+
+---
+
+### Session 23 — Invite email first name + video attachment in session builder
+
+**`supabase/functions/send-invite-email/index.ts`:**
+- Added `therapistFirstName = therapistName.split(' ')[0]` — email subject and body now use first name only, not full name
+
+**`therapist/SessionEdit.jsx`:**
+- Added `VideoPlayer` component (same YouTube/HTML5/null logic as `SessionWizard`, `ExerciseDetail`)
+- Added `video_url` to all four exercise queries: `runSearch`, `selectCategory`, `fetchData` exercises join, `confirmAdd` exercises join
+- Search results and category list: exercises with `video_url` show "Video attached" in grey below the exercise name
+- Configure view header: "Video attached" label shown below category when exercise has a video
+- Added exercises list: `VideoPlayer` renders below each exercise row when `pe.exercises.video_url` is set — video_url is returned via the `.select()` chained after `.insert()` in `confirmAdd`, so it populates immediately without a re-fetch
+
+**Edge function redeployed:** `supabase functions deploy send-invite-email`
 
 ---
 
