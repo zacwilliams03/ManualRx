@@ -80,7 +80,7 @@ export default function Join() {
       email: invite.email,
       password,
       options: {
-        data: { role: 'client', name: invite.name },
+        data: { role: 'client', name: invite.name, therapist_id: invite.therapist_id },
       },
     })
 
@@ -94,25 +94,16 @@ export default function Join() {
       return
     }
 
-    const userId = data.user?.id
+    if (!data.user?.id) {
+      setFormError('Could not create your account. Please try again.')
+      setSubmitLoading(false)
+      return
+    }
 
-    if (userId) {
-      const { error: linkError } = await supabase
-        .from('clients')
-        .update({ user_id: userId })
-        .eq('email', invite.email)
-        .eq('therapist_id', invite.therapist_id)
-
-      if (linkError) {
-        setFormError('Account created but could not link your profile. Please contact your therapist.')
-        setSubmitLoading(false)
-        return
-      }
-
-      await supabase
-        .from('client_invites')
-        .update({ consumed_at: new Date().toISOString() })
-        .eq('code', code)
+    if (!data.session) {
+      setFormError('Account created but sign-in failed. Please contact your therapist.')
+      setSubmitLoading(false)
+      return
     }
 
     setSubmitLoading(false)
