@@ -134,6 +134,8 @@ What clients can do once logged in:
 - **client_invites** — id, therapist_id, code (unique), email, name, created_at, consumed_at (nullable), expires_at
 - **exercises** — id, name, description, category, video_url, thumbnail_url, is_custom, created_by (null if built-in), default_sets, default_reps, fts (tsvector, generated), created_at
 - **therapist_video_library** — id, therapist_id, exercise_id, video_url, label, created_at
+- **templates** — id, therapist_id, name, category (nullable text, free-form tag e.g. "Rotator Cuff"), created_at. RLS: therapist_id = auth.uid()
+- **template_exercises** — id, template_id (FK → templates, CASCADE), exercise_id (FK → exercises), sets, reps, weight (nullable numeric, canonical kg), therapist_notes, created_at. RLS: template_id IN (SELECT id FROM templates WHERE therapist_id = auth.uid())
 - **prescriptions** — id, therapist_id, client_id, name, frequency_days (nullable integer), created_at, notes
 - **prescription_exercises** — id, prescription_id, exercise_id, sets, reps, weight (nullable numeric), frequency, therapist_notes, order
 - **session_logs** — id, prescription_id, client_id, completed_at, session_rpe (0–10), session_notes
@@ -308,6 +310,7 @@ A therapist-facing "client notes" page (free-text clinical observations) would c
 - [x] Functional kg/lb weight unit conversion — weights stored canonically in kg; display converts to viewer's preferred unit for both therapist and client across all pages
 - [x] Invite email uses therapist first name only (not full name) in both subject line and body
 - [x] Video attachment indicator in session builder — exercises with a video show "Video attached" in grey during search, category browse, and configure view; added exercises show the full video player inline
+- [x] Reusable session templates — Templates tab in nav; therapists create/edit/delete named exercise programs with optional category tag; ExercisePicker extracted as shared component (used by SessionEdit and TemplateEdit); Apply Template modal on Prescribe page with search + category filter pills; applying creates a fresh prescription, template is never modified
 
 ---
 
@@ -836,6 +839,40 @@ CREATE TRIGGER on_client_account_link
 - Added exercises list: `VideoPlayer` renders below each exercise row when `pe.exercises.video_url` is set — video_url is returned via the `.select()` chained after `.insert()` in `confirmAdd`, so it populates immediately without a re-fetch
 
 **Edge function redeployed:** `supabase functions deploy send-invite-email`
+
+---
+
+### Session 24 — Reusable session templates
+
+**SQL run:**
+```sql
+CREATE TABLE templates (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), therapist_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE, name TEXT NOT NULL, category TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+ALTER TABLE templates ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Therapists manage own templates" ON templates FOR ALL USING (therapist_id = auth.uid()) WITH CHECK (therapist_id = auth.uid());
+CREATE TABLE template_exercises (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE, exercise_id UUID NOT NULL REFERENCES exercises(id), sets INTEGER, reps INTEGER, weight NUMERIC, therapist_notes TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+ALTER TABLE template_exercises ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Therapists manage own template exercises" ON template_exercises FOR ALL USING (template_id IN (SELECT id FROM templates WHERE therapist_id = auth.uid())) WITH CHECK (template_id IN (SELECT id FROM templates WHERE therapist_id = auth.uid()));
+NOTIFY pgrst, 'reload schema';
+```
+
+**New files:**
+- `src/components/therapist/ExercisePicker.jsx` — shared exercise picker extracted from SessionEdit. Props: `onAdd(async { exerciseId, sets, reps, weight, notes })`, `weightUnit`, `disabled`, `confirmLabel` (default 'Add to session'). Manages its own three-view state (browse/category/configure); calls `onAdd` and resets on success, shows error on throw.
+- `src/pages/therapist/Templates.jsx` — list all templates; "Add Template" eagerly creates a record (name = "New Template") and navigates to TemplateEdit; cards show name, category badge, exercise count, exercise names; Edit + Delete per card.
+- `src/pages/therapist/TemplateEdit.jsx` — create/edit a template; name + category (with datalist autocomplete from therapist's existing categories) at top; exercise list + ExercisePicker below; Save navigates back to /therapist/templates.
+- `src/components/therapist/ApplyTemplateModal.jsx` — two-step modal on Prescribe page. Step 1: search bar + category filter pills + template list (all client-side filtered). Step 2: apply as-is (copies template exercises directly) or customise (inline editable exercise list before confirming). Applying creates a new `prescriptions` + `prescription_exercises`; template is never mutated. `onApplied` callback triggers `fetchData()` on Prescribe to refresh session list with correct exercise counts.
+
+**Files modified:**
+- `src/pages/therapist/SessionEdit.jsx` — inline picker replaced with `<ExercisePicker onAdd={handleAddExercise} weightUnit={weightUnit} />`; `toCanonical` call moved into ExercisePicker; all picker state/handlers removed from SessionEdit
+- `src/components/therapist/TherapistNav.jsx` — "Templates" nav link added (highlights on `/therapist/templates`)
+- `src/pages/therapist/Prescribe.jsx` — "Apply Template" button added alongside "New session"; `ApplyTemplateModal` mounted when `showApplyModal` is true
+- `src/App.jsx` — routes `/therapist/templates` and `/therapist/templates/:templateId` added
+
+**Key decisions:**
+- No `order` column on `template_exercises` (reserved SQL keyword). Order by `created_at ASC`.
+- Deleting a template cascades to `template_exercises` only — no FK from `prescriptions` to `templates`, so applied prescriptions survive template deletion.
+- `createPrescription()` selects only `id, name, frequency_days, created_at` (not exercise count) because exercises haven't been inserted yet at that point; Prescribe calls `fetchData()` after apply to get real counts.
+- Category is free text (`template_exercises.category`). TemplateEdit fetches all therapist templates on load, deduplicates categories client-side, feeds them into a `<datalist>` for native browser autocomplete — no separate categories table needed.
+- Apply modal filtering is entirely client-side: search (substring on name) + category pill (exact match); both filters combine with AND.
 
 ---
 
