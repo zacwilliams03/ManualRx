@@ -311,6 +311,7 @@ A therapist-facing "client notes" page (free-text clinical observations) would c
 - [x] Invite email uses therapist first name only (not full name) in both subject line and body
 - [x] Video attachment indicator in session builder — exercises with a video show "Video attached" in grey during search, category browse, and configure view; added exercises show the full video player inline
 - [x] Reusable session templates — Templates tab in nav; therapists create/edit/delete named exercise programs with optional category tag; ExercisePicker extracted as shared component (used by SessionEdit and TemplateEdit); Apply Template modal on Prescribe page with search + category filter pills; applying creates a fresh prescription, template is never modified
+- [x] Prescription duration + active/inactive state — `start_date` and `duration_weeks` added to prescriptions; `duration_weeks` added to templates as a default; active/inactive derived client-side (+7 grace period); inactive cards shown dimmed with Inactive badge + Reactivate button (duplicates prescription with today as new start_date, navigates to SessionEdit); clients only see active prescriptions; applying a template copies its duration_weeks + sets start_date = today
 
 ---
 
@@ -873,6 +874,38 @@ NOTIFY pgrst, 'reload schema';
 - `createPrescription()` selects only `id, name, frequency_days, created_at` (not exercise count) because exercises haven't been inserted yet at that point; Prescribe calls `fetchData()` after apply to get real counts.
 - Category is free text (`template_exercises.category`). TemplateEdit fetches all therapist templates on load, deduplicates categories client-side, feeds them into a `<datalist>` for native browser autocomplete — no separate categories table needed.
 - Apply modal filtering is entirely client-side: search (substring on name) + category pill (exact match); both filters combine with AND.
+
+---
+
+### Session 25 — Prescription duration + active/inactive state
+
+**SQL run:**
+```sql
+ALTER TABLE prescriptions
+  ADD COLUMN IF NOT EXISTS start_date DATE,
+  ADD COLUMN IF NOT EXISTS duration_weeks INTEGER;
+NOTIFY pgrst, 'reload schema';
+
+ALTER TABLE templates
+  ADD COLUMN IF NOT EXISTS duration_weeks INTEGER;
+NOTIFY pgrst, 'reload schema';
+```
+
+**Files modified:**
+- `src/pages/therapist/SessionEdit.jsx` — added Start date field (date input, defaults to today) and Duration pill selector (None / 1 / 2 / 4 / 6 / 8 / 12 weeks / Custom) below the frequency selector; `saveMeta` saves `start_date` and `duration_weeks` to DB
+- `src/pages/therapist/TemplateEdit.jsx` — added Duration pill selector (no start date on templates); hint label "applied when template is used"; `saveMeta` saves `duration_weeks`
+- `src/components/therapist/ApplyTemplateModal.jsx` — template fetch includes `duration_weeks`; `createPrescription()` now sets `start_date = today`, copies `duration_weeks` from template, and sets `frequency_days = null` (therapist sets frequency in SessionEdit after applying)
+- `src/pages/therapist/Prescribe.jsx` — fetch includes `start_date`, `duration_weeks`, `session_logs(count)`; added `isActive`, `expectedSessions`, `reactivatePrescription` helpers; sessions sorted active-first then by `created_at`; active cards show "Active until [date]" and completion count (X / Y if duration + frequency both set); inactive cards dimmed (`opacity-50 bg-gray-50`) with grey "Inactive" badge and Reactivate | Edit | Delete buttons
+- `src/pages/client/Dashboard.jsx` — fetch includes `start_date`, `duration_weeks`; `isActive` helper added; only active prescriptions rendered (no label shown to client — sessions silently disappear)
+
+**Key decisions:**
+- Active/inactive derived in JS on every render from `start_date` + `duration_weeks` — no `is_active` boolean column (would go stale)
+- Grace period: expiry = `start_date + duration_weeks * 7 + 7` days — real-world programmes rarely run perfectly on schedule
+- Prescriptions with `start_date IS NULL` or `duration_weeks IS NULL` are always active
+- Reactivate = duplicate: creates a new prescription row (same name/frequency/duration/notes, `start_date = today`), copies all `prescription_exercises`, navigates to SessionEdit. Original prescription is NOT modified — kept as inactive historical record
+- Templates get `duration_weeks` only — `start_date` is always set at apply time (today)
+- Applying a template sets `frequency_days = null`; therapist configures frequency in SessionEdit afterward
+- `session_logs(count)` from PostgREST returns `[{ count: "3" }]` — a string inside an array. Always `parseInt(s.session_logs?.[0]?.count ?? 0)` when using it
 
 ---
 
