@@ -20,6 +20,14 @@ function isRecentlyCompleted(session) {
   return daysSince < session.frequency_days
 }
 
+function isActive(prescription) {
+  const { start_date, duration_weeks } = prescription
+  if (!start_date || !duration_weeks) return true
+  const expiry = new Date(start_date)
+  expiry.setDate(expiry.getDate() + duration_weeks * 7 + 7) // +7 grace period
+  return expiry >= new Date()
+}
+
 export default function ClientDashboard() {
   const { profile } = useAuth()
   const clinicName = useClinicName()
@@ -47,7 +55,7 @@ export default function ClientDashboard() {
 
     const { data, error: sessionsError } = await supabase
       .from('prescriptions')
-      .select('id, name, frequency_days, prescription_exercises(count), session_logs(completed_at)')
+      .select('id, name, frequency_days, start_date, duration_weeks, prescription_exercises(count), session_logs(completed_at)')
       .eq('client_id', clientRecord.id)
       .order('created_at', { ascending: true })
 
@@ -81,12 +89,12 @@ export default function ClientDashboard() {
 
       {loading && <p className="text-sm text-gray-500">Loading…</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {!loading && !error && sessions.length === 0 && (
+      {!loading && !error && sessions.filter(isActive).length === 0 && (
         <p className="text-sm text-gray-500">Your therapist hasn't added any sessions yet.</p>
       )}
 
       <div className="space-y-3 max-w-lg">
-        {sessions.map(s => {
+        {sessions.filter(isActive).map(s => {
           const completions = s.session_logs ?? []
           const lastDone =
             completions.length > 0

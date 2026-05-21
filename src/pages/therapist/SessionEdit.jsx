@@ -41,6 +41,9 @@ export default function SessionEdit() {
   const [name, setName] = useState('')
   const [frequencyDays, setFrequencyDays] = useState(null)
   const [customDays, setCustomDays] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [durationWeeks, setDurationWeeks] = useState(null)
+  const [customWeeks, setCustomWeeks] = useState('')
   const [savingMeta, setSavingMeta] = useState(false)
 
   useEffect(() => {
@@ -50,7 +53,7 @@ export default function SessionEdit() {
   async function fetchData() {
     setLoading(true)
     const [sessionRes, exercisesRes] = await Promise.all([
-      supabase.from('prescriptions').select('id, name, frequency_days').eq('id', sessionId).single(),
+      supabase.from('prescriptions').select('id, name, frequency_days, start_date, duration_weeks').eq('id', sessionId).single(),
       supabase
         .from('prescription_exercises')
         .select('id, sets, reps, weight, therapist_notes, exercises(id, name, category, video_url)')
@@ -59,12 +62,24 @@ export default function SessionEdit() {
 
     if (sessionRes.error) { setError('Session not found.'); setLoading(false); return }
 
-    setName(sessionRes.data.name)
-    const fd = sessionRes.data.frequency_days
+    const data = sessionRes.data
+    setName(data.name)
+    const fd = data.frequency_days
     if (!fd) setFrequencyDays(null)
     else if (fd === 1) setFrequencyDays(1)
     else if (fd === 7) setFrequencyDays(7)
     else { setFrequencyDays('custom'); setCustomDays(String(fd)) }
+
+    setStartDate(data.start_date ?? new Date().toISOString().split('T')[0])
+    const dw = data.duration_weeks
+    if (dw == null) {
+      setDurationWeeks(null)
+    } else if ([1, 2, 4, 6, 8, 12].includes(dw)) {
+      setDurationWeeks(dw)
+    } else {
+      setDurationWeeks('custom')
+      setCustomWeeks(String(dw))
+    }
 
     if (exercisesRes.error) {
       setError('Failed to load exercises: ' + exercisesRes.error.message)
@@ -78,7 +93,13 @@ export default function SessionEdit() {
     setSavingMeta(true)
     let fd = frequencyDays
     if (frequencyDays === 'custom') fd = parseInt(customDays) || null
-    await supabase.from('prescriptions').update({ name, frequency_days: fd }).eq('id', sessionId)
+    const dw = durationWeeks === 'custom' ? parseInt(customWeeks) || null : durationWeeks
+    await supabase.from('prescriptions').update({
+      name,
+      frequency_days: fd,
+      start_date: startDate || null,
+      duration_weeks: dw,
+    }).eq('id', sessionId)
     setSavingMeta(false)
     navigate(`/therapist/prescribe/${clientId}`)
   }
@@ -186,12 +207,60 @@ export default function SessionEdit() {
                 </div>
               )}
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Start date</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                className="rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-gray-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Duration</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: 'None (ongoing)', value: null },
+                  { label: '1 week', value: 1 },
+                  { label: '2 weeks', value: 2 },
+                  { label: '4 weeks', value: 4 },
+                  { label: '6 weeks', value: 6 },
+                  { label: '8 weeks', value: 8 },
+                  { label: '12 weeks', value: 12 },
+                  { label: 'Custom', value: 'custom' },
+                ].map(opt => (
+                  <button
+                    key={String(opt.value)}
+                    type="button"
+                    onClick={() => setDurationWeeks(opt.value)}
+                    className={`rounded-full px-3 py-1 text-sm ${
+                      durationWeeks === opt.value
+                        ? 'bg-brand-primary text-white'
+                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {durationWeeks === 'custom' && (
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="number" min="1" value={customWeeks}
+                    onChange={e => setCustomWeeks(e.target.value)}
+                    placeholder="e.g. 3"
+                    className="w-20 rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-gray-500 focus:outline-none"
+                  />
+                  <span className="text-sm text-gray-500">weeks</span>
+                </div>
+              )}
+            </div>
             <button
               onClick={saveMeta}
               disabled={savingMeta}
               className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
             >
-              {savingMeta ? 'Saving…' : 'Save'}
+              {savingMeta ? 'Saving…' : 'Save & Exit'}
             </button>
           </div>
         </div>

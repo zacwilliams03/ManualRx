@@ -22,6 +22,25 @@ function formatDate(iso) {
   })
 }
 
+function formatExpiryDate(startDate, durationWeeks) {
+  const d = new Date(startDate)
+  d.setDate(d.getDate() + durationWeeks * 7 + 7)
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function isActive(prescription) {
+  const { start_date, duration_weeks } = prescription
+  if (!start_date || !duration_weeks) return true
+  const expiry = new Date(start_date)
+  expiry.setDate(expiry.getDate() + duration_weeks * 7 + 7) // +7 grace period
+  return expiry >= new Date()
+}
+
+function expectedSessions(p) {
+  if (!p.duration_weeks || !p.frequency_days) return null
+  return Math.round((p.duration_weeks * 7) / p.frequency_days)
+}
+
 function ExerciseLogDetail({ el, videoUrls, onPlayVideo, weightUnit }) {
   const pe = el.prescription_exercises
   const hasPerSetData = Array.isArray(el.sets_data) && el.sets_data.length > 0
@@ -97,6 +116,7 @@ export default function Prescribe() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [creating, setCreating] = useState(false)
+  const [reactivating, setReactivating] = useState(null)
   const [defaultFrequencyDays, setDefaultFrequencyDays] = useState(null)
 
   const [activeTab, setActiveTab] = useState('prescriptions')
@@ -150,7 +170,7 @@ export default function Prescribe() {
       supabase.from('clients').select('id, name, email').eq('id', clientId).single(),
       supabase
         .from('prescriptions')
-        .select('id, name, frequency_days, created_at, prescription_exercises(count)')
+        .select('id, name, frequency_days, start_date, duration_weeks, created_at, prescription_exercises(count), session_logs(count)')
         .eq('client_id', clientId)
         .order('created_at', { ascending: true }),
       supabase.from('therapist_profiles').select('default_frequency_days').eq('user_id', profile.id).maybeSingle(),
@@ -188,6 +208,48 @@ export default function Prescribe() {
     setSessions(prev => prev.filter(s => s.id !== id))
   }
 
+  async function reactivatePrescription(original) {
+    setReactivating(original.id)
+
+    const { data: newPrescription, error: prescError } = await supabase
+      .from('prescriptions')
+      .insert({
+        therapist_id: profile.id,
+        client_id: clientId,
+        name: original.name,
+        frequency_days: original.frequency_days,
+        duration_weeks: original.duration_weeks,
+        start_date: new Date().toISOString().split('T')[0],
+        notes: original.notes ?? null,
+      })
+      .select('id')
+      .single()
+
+    if (prescError) { alert('Failed to reactivate session.'); setReactivating(null); return }
+
+    const { data: origExercises, error: exError } = await supabase
+      .from('prescription_exercises')
+      .select('exercise_id, sets, reps, weight, therapist_notes')
+      .eq('prescription_id', original.id)
+
+    if (exError) { alert('Failed to copy exercises.'); setReactivating(null); return }
+
+    if (origExercises.length > 0) {
+      const copies = origExercises.map(e => ({
+        prescription_id: newPrescription.id,
+        exercise_id: e.exercise_id,
+        sets: e.sets,
+        reps: e.reps,
+        weight: e.weight,
+        therapist_notes: e.therapist_notes,
+      }))
+      const { error: copyError } = await supabase.from('prescription_exercises').insert(copies)
+      if (copyError) { alert('Failed to copy exercises.'); setReactivating(null); return }
+    }
+
+    navigate(`/therapist/prescribe/${clientId}/sessions/${newPrescription.id}`)
+  }
+
   async function playVideo(exerciseLogId, path) {
     if (videoUrls[exerciseLogId]) return
     const { data } = await supabase.storage
@@ -197,6 +259,13 @@ export default function Prescribe() {
       setVideoUrls(prev => ({ ...prev, [exerciseLogId]: data.signedUrl }))
     }
   }
+
+  // Active first, then inactive; within each group sort by created_at ascending
+  const sortedSessions = [...sessions].sort((a, b) => {
+    const aActive = isActive(a), bActive = isActive(b)
+    if (aActive !== bActive) return aActive ? -1 : 1
+    return new Date(a.created_at) - new Date(b.created_at)
+  })
 
   if (loading) {
     return (
@@ -267,32 +336,69 @@ export default function Prescribe() {
               <p className="text-sm text-gray-500">No sessions yet. Create the first one.</p>
             )}
 
-            {sessions.map(s => (
-              <div key={s.id} className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{s.name}</p>
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      {s.prescription_exercises[0]?.count ?? 0} exercises · {frequencyLabel(s.frequency_days)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => deleteSession(s.id, s.name)}
-                      className="rounded border border-red-200 px-3 py-1 text-sm text-red-500 hover:bg-red-50"
-                    >
-                      Delete
-                    </button>
-                    <Link
-                      to={`/therapist/prescribe/${clientId}/sessions/${s.id}`}
-                      className="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      Edit
-                    </Link>
+            {sortedSessions.map(s => {
+              const active = isActive(s)
+              const completedCount = parseInt(s.session_logs?.[0]?.count ?? 0)
+              const expected = expectedSessions(s)
+
+              return (
+                <div
+                  key={s.id}
+                  className={`rounded-lg border overflow-hidden ${
+                    active ? 'border-gray-200 bg-white' : 'border-gray-200 bg-gray-50 opacity-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-gray-900">{s.name}</p>
+                        {!active && (
+                          <span className="inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600">
+                            Inactive
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        {s.prescription_exercises[0]?.count ?? 0} exercises · {frequencyLabel(s.frequency_days)}
+                      </p>
+                      {active && s.duration_weeks && s.start_date && (
+                        <p className="mt-0.5 text-xs text-gray-400">
+                          Active until {formatExpiryDate(s.start_date, s.duration_weeks)}
+                        </p>
+                      )}
+                      <p className="mt-0.5 text-xs text-gray-400">
+                        {expected != null
+                          ? `${completedCount} / ${expected} sessions completed`
+                          : `${completedCount} session${completedCount !== 1 ? 's' : ''} completed`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!active && (
+                        <button
+                          onClick={() => reactivatePrescription(s)}
+                          disabled={reactivating === s.id}
+                          className="rounded border border-brand-primary px-3 py-1 text-sm text-brand-primary hover:bg-brand-primary-light disabled:opacity-50"
+                        >
+                          {reactivating === s.id ? 'Copying…' : 'Reactivate'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => deleteSession(s.id, s.name)}
+                        className="rounded border border-red-200 px-3 py-1 text-sm text-red-500 hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                      <Link
+                        to={`/therapist/prescribe/${clientId}/sessions/${s.id}`}
+                        className="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        Edit
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 

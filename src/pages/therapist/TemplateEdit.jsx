@@ -40,6 +40,8 @@ export default function TemplateEdit() {
 
   const [name, setName] = useState('')
   const [category, setCategory] = useState('')
+  const [durationWeeks, setDurationWeeks] = useState(null)
+  const [customWeeks, setCustomWeeks] = useState('')
   const [saving, setSaving] = useState(false)
   const [existingCategories, setExistingCategories] = useState([])
 
@@ -50,7 +52,7 @@ export default function TemplateEdit() {
   async function fetchData() {
     setLoading(true)
     const [templateRes, exercisesRes, allTemplatesRes] = await Promise.all([
-      supabase.from('templates').select('id, name, category').eq('id', templateId).single(),
+      supabase.from('templates').select('id, name, category, duration_weeks').eq('id', templateId).single(),
       supabase
         .from('template_exercises')
         .select('id, sets, reps, weight, therapist_notes, exercises(id, name, category, video_url)')
@@ -64,8 +66,19 @@ export default function TemplateEdit() {
     ])
 
     if (templateRes.error) { setError('Template not found.'); setLoading(false); return }
-    setName(templateRes.data.name)
-    setCategory(templateRes.data.category ?? '')
+    const data = templateRes.data
+    setName(data.name)
+    setCategory(data.category ?? '')
+
+    const dw = data.duration_weeks
+    if (dw == null) {
+      setDurationWeeks(null)
+    } else if ([1, 2, 4, 6, 8, 12].includes(dw)) {
+      setDurationWeeks(dw)
+    } else {
+      setDurationWeeks('custom')
+      setCustomWeeks(String(dw))
+    }
 
     if (exercisesRes.error) {
       setError('Failed to load exercises: ' + exercisesRes.error.message)
@@ -81,9 +94,10 @@ export default function TemplateEdit() {
 
   async function saveMeta() {
     setSaving(true)
+    const dw = durationWeeks === 'custom' ? parseInt(customWeeks) || null : durationWeeks
     await supabase
       .from('templates')
-      .update({ name, category: category.trim() || null })
+      .update({ name, category: category.trim() || null, duration_weeks: dw })
       .eq('id', templateId)
     setSaving(false)
     navigate('/therapist/templates')
@@ -177,12 +191,53 @@ export default function TemplateEdit() {
                 ))}
               </datalist>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Duration <span className="font-normal text-gray-400">(optional default — applied when template is used)</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: 'None (ongoing)', value: null },
+                  { label: '1 week', value: 1 },
+                  { label: '2 weeks', value: 2 },
+                  { label: '4 weeks', value: 4 },
+                  { label: '6 weeks', value: 6 },
+                  { label: '8 weeks', value: 8 },
+                  { label: '12 weeks', value: 12 },
+                  { label: 'Custom', value: 'custom' },
+                ].map(opt => (
+                  <button
+                    key={String(opt.value)}
+                    type="button"
+                    onClick={() => setDurationWeeks(opt.value)}
+                    className={`rounded-full px-3 py-1 text-sm ${
+                      durationWeeks === opt.value
+                        ? 'bg-brand-primary text-white'
+                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {durationWeeks === 'custom' && (
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="number" min="1" value={customWeeks}
+                    onChange={e => setCustomWeeks(e.target.value)}
+                    placeholder="e.g. 3"
+                    className="w-20 rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-gray-500 focus:outline-none"
+                  />
+                  <span className="text-sm text-gray-500">weeks</span>
+                </div>
+              )}
+            </div>
             <button
               onClick={saveMeta}
               disabled={saving || !name.trim()}
               className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
             >
-              {saving ? 'Saving…' : 'Save template'}
+              {saving ? 'Saving…' : 'Save Template & Exit'}
             </button>
           </div>
         </div>

@@ -35,7 +35,7 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
     const { data } = await supabase
       .from('templates')
       .select(`
-        id, name, category,
+        id, name, category, duration_weeks,
         template_exercises(id, exercise_id, sets, reps, weight, therapist_notes, exercises(name))
       `)
       .eq('therapist_id', therapistId)
@@ -70,7 +70,9 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
         therapist_id: therapistId,
         client_id: clientId,
         name: selectedTemplate.name,
-        frequency_days: defaultFrequencyDays,
+        frequency_days: null,
+        duration_weeks: selectedTemplate.duration_weeks ?? null,
+        start_date: new Date().toISOString().split('T')[0],
       })
       .select('id, name, frequency_days, created_at')
       .single()
