@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import TherapistNav from '../../components/therapist/TherapistNav'
+import ApplyTemplateModal from '../../components/therapist/ApplyTemplateModal'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
 import { formatWeight } from '../../utils/weightUtils'
 
@@ -99,6 +100,7 @@ export default function Prescribe() {
   const [defaultFrequencyDays, setDefaultFrequencyDays] = useState(null)
 
   const [activeTab, setActiveTab] = useState('prescriptions')
+  const [showApplyModal, setShowApplyModal] = useState(false)
 
   const [expandedLogId, setExpandedLogId] = useState(null)
   const [videoUrls, setVideoUrls] = useState({})
@@ -221,13 +223,21 @@ export default function Prescribe() {
             <p className="text-sm text-gray-500">{client?.email}</p>
           </div>
           {activeTab === 'prescriptions' && (
-            <button
-              onClick={createSession}
-              disabled={creating}
-              className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
-            >
-              {creating ? 'Creating…' : 'New session'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowApplyModal(true)}
+                className="rounded border border-brand-primary px-4 py-2 text-sm text-brand-primary hover:bg-brand-primary-light"
+              >
+                Apply Template
+              </button>
+              <button
+                onClick={createSession}
+                disabled={creating}
+                className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
+              >
+                {creating ? 'Creating…' : 'New session'}
+              </button>
+            </div>
           )}
         </div>
 
@@ -344,6 +354,19 @@ export default function Prescribe() {
           </div>
         )}
       </div>
+
+      {showApplyModal && (
+        <ApplyTemplateModal
+          therapistId={profile.id}
+          clientId={clientId}
+          defaultFrequencyDays={defaultFrequencyDays}
+          onClose={() => setShowApplyModal(false)}
+          onApplied={() => {
+            setShowApplyModal(false)
+            fetchData()
+          }}
+        />
+      )}
     </div>
   )
 }

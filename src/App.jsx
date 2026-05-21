@@ -15,6 +15,8 @@ import ClientDashboard from './pages/client/Dashboard'
 import MyExercises from './pages/client/MyExercises'
 import SessionWizard from './pages/client/SessionWizard'
 import SessionEdit from './pages/therapist/SessionEdit'
+import Templates from './pages/therapist/Templates'
+import TemplateEdit from './pages/therapist/TemplateEdit'
 import History from './pages/client/History'
 import Join from './pages/Join'
 import Onboarding from './pages/therapist/Onboarding'
@@ -82,6 +84,8 @@ export default function App() {
           <Route path="/therapist/exercises/:id" element={<ProtectedRoute requiredRole="therapist"><ExerciseDetail /></ProtectedRoute>} />
           <Route path="/therapist/prescribe/:clientId" element={<ProtectedRoute requiredRole="therapist"><Prescribe /></ProtectedRoute>} />
           <Route path="/therapist/prescribe/:clientId/sessions/:sessionId" element={<ProtectedRoute requiredRole="therapist"><SessionEdit /></ProtectedRoute>} />
+          <Route path="/therapist/templates" element={<ProtectedRoute requiredRole="therapist"><Templates /></ProtectedRoute>} />
+          <Route path="/therapist/templates/:templateId" element={<ProtectedRoute requiredRole="therapist"><TemplateEdit /></ProtectedRoute>} />
 
           {/* Client — protected */}
           <Route path="/client" element={<ProtectedRoute requiredRole="client"><ClientDashboard /></ProtectedRoute>} />

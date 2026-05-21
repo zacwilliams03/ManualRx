@@ -31,6 +31,7 @@ export default function TherapistNav() {
       <div className="flex items-center gap-6">
         {navLink('/therapist/clients', 'Clients', ['/therapist/clients', '/therapist/prescribe'])}
         {navLink('/therapist/exercises', 'Exercises', ['/therapist/exercises'])}
+        {navLink('/therapist/templates', 'Templates', ['/therapist/templates'])}
       </div>
       <div className="flex items-center gap-4">
         <span className="text-sm text-gray-400">{firstName}</span>
