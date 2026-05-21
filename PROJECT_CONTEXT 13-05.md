@@ -909,5 +909,38 @@ NOTIFY pgrst, 'reload schema';
 
 ---
 
+### Session 26 — Clients page UI redesign + is_active per client
+
+**SQL run:**
+```sql
+ALTER TABLE clients
+  ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
+NOTIFY pgrst, 'reload schema';
+
+-- Fixed RLS policy: replaced auth.users subquery with auth.email()
+DROP POLICY "clients can self-link via invite" ON clients;
+CREATE POLICY "clients can self-link via invite" ON clients
+  FOR UPDATE
+  USING (user_id IS NULL AND lower(email) = lower(auth.email()))
+  WITH CHECK (user_id = auth.uid());
+NOTIFY pgrst, 'reload schema';
+```
+
+**Files modified:**
+- `src/pages/therapist/Clients.jsx` — full rewrite. New layout: header with "X patients treated since DD Mon YYYY" stat (total client count + therapist account creation date via `supabase.auth.getUser()`); search bar filters all clients (active + inactive) client-side; "Add Client" button opens a modal containing the existing invite flow (same inserts + edge function call); client list shows active clients by default with a "Show inactive clients (N)" toggle that reveals a labelled inactive section; each client row has Details (renamed from Prescribe, same route), Mark inactive / Reactivate toggle (updates `is_active` in DB + local state without refetch), and Delete with `window.confirm` (removes from local state on success — cascade to prescriptions already in place).
+
+**Key decisions:**
+- `is_active = true` DEFAULT covers all existing clients — no backfill needed
+- Active/inactive is a stored boolean on `clients` (unlike prescription active state which is derived from duration). Clients don't have an expiry concept — only therapists mark them inactive manually
+- Cascade from `clients → prescriptions` confirmed already in place (`confdeltype = 'c'`)
+- Delete uses `window.confirm` — no second modal needed, keeps state management simple
+- `renderClientRow` is a plain function (not a React component) returning JSX — avoids creating a new component file while keeping the map body readable
+- `therapistSince` formatted with `toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })` — locale-aware
+
+**Critical gotcha discovered:**
+- A Supabase RLS UPDATE policy on `clients` ("clients can self-link via invite") contained `SELECT users.email FROM auth.users WHERE users.id = auth.uid()` in its USING clause. PostgreSQL evaluates ALL matching UPDATE policies for every authenticated user — so therapists (not just clients) were hitting this subquery and getting `42501 permission denied for table users`. Fix: replace the `auth.users` subquery with `auth.email()`, which reads the email from the JWT with no extra privilege required. **Rule: never use `SELECT FROM auth.users` in a RLS USING/WITH CHECK clause — use `auth.uid()`, `auth.email()`, or `auth.jwt()` instead.**
+
+---
+
 Note for Claude — always tell me if I should switch models to something more powerful, or if a lighter model is okay.
 
