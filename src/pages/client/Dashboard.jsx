@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { useClinicName } from '../../hooks/useClinicName'
+import { ProgressTab } from './ProgressTab'
 
 function frequencyLabel(days) {
   if (!days) return 'No repeat'
@@ -35,6 +36,7 @@ export default function ClientDashboard() {
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [activeTab, setActiveTab] = useState('sessions')
 
   useEffect(() => {
     if (profile?.id) fetchSessions()
@@ -55,7 +57,7 @@ export default function ClientDashboard() {
 
     const { data, error: sessionsError } = await supabase
       .from('prescriptions')
-      .select('id, name, frequency_days, start_date, duration_weeks, prescription_exercises(count), session_logs(completed_at)')
+      .select('id, name, frequency_days, start_date, duration_weeks, therapist_id, prescription_exercises(count), session_logs(completed_at)')
       .eq('client_id', clientRecord.id)
       .order('created_at', { ascending: true })
 
@@ -87,12 +89,30 @@ export default function ClientDashboard() {
         </Link>
       </div>
 
+      {/* Tab switcher */}
+      <div className="max-w-lg flex gap-6 border-b border-gray-200 mb-6">
+        {[['sessions', 'Sessions'], ['progress', 'Progress']].map(([tab, label]) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`pb-2 text-sm font-medium transition-colors ${
+              activeTab === tab
+                ? 'border-b-2 border-brand-primary text-brand-primary'
+                : 'text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {loading && <p className="text-sm text-gray-500">Loading…</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {!loading && !error && sessions.filter(isActive).length === 0 && (
+      {activeTab === 'sessions' && !loading && !error && sessions.filter(isActive).length === 0 && (
         <p className="text-sm text-gray-500">Your therapist hasn't added any sessions yet.</p>
       )}
 
+      {activeTab === 'sessions' && (
       <div className="space-y-3 max-w-lg">
         {sessions.filter(isActive).map(s => {
           const completions = s.session_logs ?? []
@@ -134,6 +154,11 @@ export default function ClientDashboard() {
           )
         })}
       </div>
+      )}
+
+      {activeTab === 'progress' && !loading && !error && (
+        <ProgressTab prescriptions={sessions.filter(isActive)} />
+      )}
     </div>
   )
 }
