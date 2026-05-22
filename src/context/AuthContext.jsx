@@ -22,11 +22,16 @@ export function AuthProvider({ children }) {
     })
 
     // Listen for login/logout/token refresh events
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
         loadProfile(session.user.id)
+        if (event === 'SIGNED_IN') {
+          supabase.rpc('claim_pending_invites').catch(err =>
+            console.error('claim_pending_invites failed:', err)
+          )
+        }
       } else {
         setProfile(null)
         setLoading(false)
