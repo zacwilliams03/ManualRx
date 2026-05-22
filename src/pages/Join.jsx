@@ -86,7 +86,7 @@ export default function Join() {
 
     if (signUpError) {
       if (signUpError.message.toLowerCase().includes('already registered')) {
-        setFormError('An account with this email already exists. Please log in.')
+        setFormError("You already have an account. Just log in and you'll be connected to your new therapist automatically.")
       } else {
         setFormError(signUpError.message)
       }
