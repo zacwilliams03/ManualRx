@@ -942,5 +942,47 @@ NOTIFY pgrst, 'reload schema';
 
 ---
 
+### Session 27 — Client progress feature (completion rate, pain chart, volume chart)
+
+**SQL run:** None — no new tables or columns. All data sourced from existing `session_logs`, `exercise_logs`, `prescriptions`, `therapist_profiles`.
+
+**New dependencies:**
+- `recharts` — line charts
+- `vitest` (dev) — unit tests for pure utility functions; `test: { globals: true }` added to `vite.config.js`; `"test": "vitest run"` added to `package.json` scripts
+
+**New files:**
+- `src/utils/progressUtils.js` — four pure functions: `computeCompletionStats`, `computeExerciseVolume`, `computePainData`, `computeVolumeData`. No DB access, fully unit-tested.
+- `src/utils/progressUtils.test.js` — 18 vitest tests covering all four functions
+- `src/hooks/useProgressData.js` — fetches `session_logs` with nested `exercise_logs(pain_rating, sets_data, sets_completed, reps_completed, weight_completed)` for a given array of `prescriptionIds`. Cancellable on unmount. Used on both client and therapist surfaces.
+- `src/components/progress/CompletionStat.jsx` — renders "X of Y sessions completed" (when both duration_weeks and frequency_days are set) or "X sessions completed" (when either is null)
+- `src/components/progress/PainChart.jsx` — recharts `LineChart` for average pain per session (y-axis 0–10). Shows fallback text if fewer than 2 data points.
+- `src/components/progress/VolumeChart.jsx` — recharts `LineChart` for total volume per session in the therapist's weight unit. Fallback text if fewer than 2 data points.
+- `src/components/progress/PrescriptionProgressSection.jsx` — collapsed card by default; shows prescription name + completion summary. Click to expand CompletionStat + PainChart + VolumeChart. Each card expands independently.
+- `src/pages/client/ProgressTab.jsx` — client's Progress tab content. Filters to active prescriptions only. Fetches therapist's `weight_unit` from `therapist_profiles` via `prescriptions[0].therapist_id`. Passes all prescriptions to `PrescriptionProgressSection`.
+- `src/pages/therapist/ClientDataTab.jsx` — therapist's Client Data tab. Uses `useWeightUnit()` (already exists at `src/hooks/useWeightUnit.js`). Shows all prescriptions (active + inactive) for the client.
+
+**Files modified:**
+- `src/pages/client/Dashboard.jsx` — added `therapist_id` to prescriptions select; added `activeTab` state (`'sessions'` default); added Sessions/Progress tab switcher (same pattern as Prescribe.jsx); gated existing session list behind `activeTab === 'sessions'`; renders `<ProgressTab prescriptions={sessions.filter(isActive)} />` on progress tab
+- `src/pages/therapist/Prescribe.jsx` — added `clientData: 'Client Data'` to `TAB_LABELS`; added `'clientData'` to tab array; renders `<ClientDataTab prescriptions={sessions} />` after history tab block
+- `package.json` — recharts in dependencies, vitest in devDependencies, test script added
+- `vite.config.js` — `test: { globals: true }` added
+
+**RLS — no new policies needed:**
+- `session_logs`: client SELECT (`WHERE client_id = auth.uid()`) and therapist SELECT (`WHERE prescription_id IN (SELECT id FROM prescriptions WHERE therapist_id = auth.uid())`) both cover the new query
+- `exercise_logs`: nested select from session_logs applies existing RLS automatically on both surfaces
+- `therapist_profiles`: existing client read policy (`WHERE user_id IN (SELECT therapist_id FROM clients WHERE user_id = auth.uid())`) covers the weight_unit fetch in ProgressTab
+
+**Key decisions:**
+- Volume stored canonically in kg in the DB; converted to therapist's `weight_unit` at display time (same pattern as the rest of the app via `weightUtils.js`)
+- Client progress view uses the **therapist's** `weight_unit` (not the client's own setting) — volume was prescribed in that unit; fetched via `prescriptions[0].therapist_id → therapist_profiles.weight_unit`
+- Pain chart excludes sessions where every exercise log has `pain_rating = null`; averages only non-null ratings within a session
+- Volume chart excludes sessions where all exercise logs have zero/null weight (bodyweight-only sessions)
+- `sets_data` JSONB preferred for volume calculation; falls back to `reps_completed × weight_completed` for old logs that predate per-set data
+- Cards collapsed by default — click to expand. Multiple cards expand independently (no accordion behaviour).
+- Minimum 2 data points required to render a chart; fewer shows plain-text fallback message
+- `useProgressData` uses `prescriptionIds.join(',')` as the `useEffect` dependency key to avoid array reference churn
+
+---
+
 Note for Claude — always tell me if I should switch models to something more powerful, or if a lighter model is okay.
 
