@@ -261,7 +261,7 @@ SimpleSet has one-click charting that syncs to EMR notes. Physitrack integrates 
 |---|---|---|---|
 | 1 | Session templates | Low | UI + DB only, no new compliance issues |
 | 2 | Client progress/adherence view | Low–Medium | Uses data already in DB (session_logs, exercise_logs) |
-| 3 | PDF export | Medium | Requires PDF generation library |
+| 3 | PDF export | Medium | ✅ DONE (Session 28) |
 | 4 | In-app messaging | Medium–High | New table, real-time or polling, moderation considerations |
 | 5 | PROMs | High | Clinical validation required, compliance implications |
 | 6 | EMR integrations | High | Deferred until post-revenue |
@@ -312,6 +312,7 @@ A therapist-facing "client notes" page (free-text clinical observations) would c
 - [x] Video attachment indicator in session builder — exercises with a video show "Video attached" in grey during search, category browse, and configure view; added exercises show the full video player inline
 - [x] Reusable session templates — Templates tab in nav; therapists create/edit/delete named exercise programs with optional category tag; ExercisePicker extracted as shared component (used by SessionEdit and TemplateEdit); Apply Template modal on Prescribe page with search + category filter pills; applying creates a fresh prescription, template is never modified
 - [x] Prescription duration + active/inactive state — `start_date` and `duration_weeks` added to prescriptions; `duration_weeks` added to templates as a default; active/inactive derived client-side (+7 grace period); inactive cards shown dimmed with Inactive badge + Reactivate button (duplicates prescription with today as new start_date, navigates to SessionEdit); clients only see active prescriptions; applying a template copies its duration_weeks + sets start_date = today
+- [x] PDF export — therapist can download a PDF of any prescription; "Download PDF" button on each session card; client-side generation via `@react-pdf/renderer`; lazy-fetches exercise data on click; filename sanitised; loading + error state per card; clinic name branding (falls back to "ManualRx"); weight in therapist's unit; bodyweight exercises shown as "Bodyweight"
 
 ---
 
@@ -981,6 +982,30 @@ NOTIFY pgrst, 'reload schema';
 - Cards collapsed by default — click to expand. Multiple cards expand independently (no accordion behaviour).
 - Minimum 2 data points required to render a chart; fewer shows plain-text fallback message
 - `useProgressData` uses `prescriptionIds.join(',')` as the `useEffect` dependency key to avoid array reference churn
+
+---
+
+### Session 28 — PDF export for prescriptions
+
+**SQL run:** None.
+
+**New dependencies:**
+- `@react-pdf/renderer` — client-side PDF generation
+
+**New files:**
+- `src/utils/pdfUtils.js` — two pure utility functions: `sanitise(str)` (strips special chars, collapses hyphens, trims leading/trailing hyphens — used for safe PDF filenames); `weightDisplay(kgValue, unit)` (returns `formatWeight` result, or `'Bodyweight'` when value is null/undefined/0). Both TDD'd before implementation.
+- `src/utils/pdfUtils.test.js` — 12 vitest tests covering sanitise edge cases (spaces, slashes, apostrophes, collapse) and weightDisplay (null, undefined, zero, kg, lb)
+- `src/components/therapist/PrescriptionPDF.jsx` — `@react-pdf/renderer` Document component. Uses only renderer primitives (`Document`, `Page`, `View`, `Text`, `StyleSheet`) — no HTML elements or Tailwind inside. Props: `clinicName`, `clientName`, `prescriptionName`, `exercises[]`, `weightUnit`. Layout: header with clinic name (falls back to "ManualRx") + "EXERCISE PROGRAM" subtitle in brand-primary, meta row (client / program / date), divider, numbered exercise list (name, sets×reps@weight or Bodyweight, therapist notes in tinted box if non-empty), footer.
+
+**Files modified:**
+- `src/pages/therapist/Prescribe.jsx` — added `useClinicName` hook; added `pdfLoadingId` and `pdfError` state (keyed by prescriptionId); added `downloadPDF(prescription)` async function: fetches `prescription_exercises(sets, reps, weight, therapist_notes, exercises(name))` lazily on click, generates PDF blob via `pdf(<PrescriptionPDF/>).toBlob()`, triggers browser download, clears state in finally block, sets `pdfError` on throw; added "Download PDF" button to each prescription card (left of Edit) with disabled/loading state and inline error text on failure; filename pattern: `sanitise(clientName)-sanitise(prescriptionName).pdf`
+
+**Key patterns:**
+- `@react-pdf/renderer` uses its own layout engine — never use HTML elements or Tailwind classes inside a `Document` component. Use `StyleSheet.create({})` with plain JS style objects.
+- PDF data is fetched lazily on click (not preloaded) — `prescription_exercises` are not in the main `fetchData` query (which only fetches `count`). This keeps the Prescribe page fast when there are many prescriptions.
+- `pdf().toBlob()` is the imperative pattern; avoids `PDFDownloadLink` which requires data to be ready before render.
+- `useClinicName()` already handles therapist role correctly — queries `therapist_profiles` directly by `user.id`. Safe to call from any therapist page.
+- Chunk size warning in Vite build is expected — `@react-pdf/renderer` adds significant JS. Not an error.
 
 ---
 

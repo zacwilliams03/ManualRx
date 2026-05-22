@@ -5,7 +5,11 @@ import { supabase } from '../../lib/supabase'
 import TherapistNav from '../../components/therapist/TherapistNav'
 import ApplyTemplateModal from '../../components/therapist/ApplyTemplateModal'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
+import { useClinicName } from '../../hooks/useClinicName'
 import { formatWeight } from '../../utils/weightUtils'
+import { sanitise } from '../../utils/pdfUtils'
+import { pdf } from '@react-pdf/renderer'
+import { PrescriptionPDF } from '../../components/therapist/PrescriptionPDF'
 import { ClientDataTab } from './ClientDataTab'
 
 const TAB_LABELS = { prescriptions: 'Prescribed Sessions', history: 'Session History', clientData: 'Client Data' }
@@ -111,6 +115,7 @@ export default function Prescribe() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const weightUnit = useWeightUnit()
+  const clinicName = useClinicName()
 
   const [client, setClient] = useState(null)
   const [sessions, setSessions] = useState([])
@@ -129,6 +134,9 @@ export default function Prescribe() {
   const [historyTabLogs, setHistoryTabLogs] = useState([])
   const [historyTabLoading, setHistoryTabLoading] = useState(false)
   const [historyTabLoaded, setHistoryTabLoaded] = useState(false)
+
+  const [pdfLoadingId, setPdfLoadingId] = useState(null)
+  const [pdfError, setPdfError] = useState(null)
 
   useEffect(() => {
     if (profile?.id) fetchData()
@@ -261,6 +269,49 @@ export default function Prescribe() {
     }
   }
 
+  async function downloadPDF(prescription) {
+    setPdfLoadingId(prescription.id)
+    setPdfError(null)
+    try {
+      const { data: peData, error: peError } = await supabase
+        .from('prescription_exercises')
+        .select('sets, reps, weight, therapist_notes, exercises(name)')
+        .eq('prescription_id', prescription.id)
+        .order('created_at', { ascending: true })
+      if (peError) throw peError
+
+      const exercises = peData.map(pe => ({
+        name: pe.exercises?.name ?? 'Exercise',
+        sets: pe.sets,
+        reps: pe.reps,
+        weight: pe.weight,
+        therapist_notes: pe.therapist_notes,
+      }))
+
+      const blob = await pdf(
+        <PrescriptionPDF
+          clinicName={clinicName}
+          clientName={client?.name ?? 'Client'}
+          prescriptionName={prescription.name}
+          exercises={exercises}
+          weightUnit={weightUnit}
+        />
+      ).toBlob()
+
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${sanitise(client?.name ?? 'client')}-${sanitise(prescription.name)}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('PDF generation failed:', err)
+      setPdfError(prescription.id)
+    } finally {
+      setPdfLoadingId(null)
+    }
+  }
+
   // Active first, then inactive; within each group sort by created_at ascending
   const sortedSessions = [...sessions].sort((a, b) => {
     const aActive = isActive(a), bActive = isActive(b)
@@ -383,6 +434,18 @@ export default function Prescribe() {
                           {reactivating === s.id ? 'Copying…' : 'Reactivate'}
                         </button>
                       )}
+                      <div className="flex flex-col items-end gap-0.5">
+                        <button
+                          onClick={() => downloadPDF(s)}
+                          disabled={pdfLoadingId === s.id}
+                          className="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        >
+                          {pdfLoadingId === s.id ? 'Generating…' : 'Download PDF'}
+                        </button>
+                        {pdfError === s.id && (
+                          <span className="text-xs text-red-500">PDF failed — try again</span>
+                        )}
+                      </div>
                       <button
                         onClick={() => deleteSession(s.id, s.name)}
                         className="rounded border border-red-200 px-3 py-1 text-sm text-red-500 hover:bg-red-50"
