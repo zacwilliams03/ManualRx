@@ -6,8 +6,9 @@ import TherapistNav from '../../components/therapist/TherapistNav'
 import ApplyTemplateModal from '../../components/therapist/ApplyTemplateModal'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
 import { formatWeight } from '../../utils/weightUtils'
+import { ClientDataTab } from './ClientDataTab'
 
-const TAB_LABELS = { prescriptions: 'Prescribed Sessions', history: 'Session History' }
+const TAB_LABELS = { prescriptions: 'Prescribed Sessions', history: 'Session History', clientData: 'Client Data' }
 
 function frequencyLabel(days) {
   if (!days) return 'No repeat'
@@ -312,7 +313,7 @@ export default function Prescribe() {
 
         {/* Tab switcher */}
         <div className="mt-5 max-w-2xl flex gap-6 border-b border-gray-200">
-          {['prescriptions', 'history'].map(tab => (
+          {['prescriptions', 'history', 'clientData'].map(tab => (
             <button
               key={tab}
               onClick={() => { setActiveTab(tab); setExpandedLogId(null) }}
@@ -458,6 +459,11 @@ export default function Prescribe() {
               </div>
             ))}
           </div>
+        )}
+
+        {/* ── Client Data tab ───────────────────────────────────────────────── */}
+        {activeTab === 'clientData' && (
+          <ClientDataTab prescriptions={sessions} />
         )}
       </div>
 
