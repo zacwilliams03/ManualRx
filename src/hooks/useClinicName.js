@@ -22,6 +22,8 @@ export function useClinicName() {
         .from('clients')
         .select('therapist_id')
         .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single()
         .then(({ data: clientData }) => {
           if (!clientData?.therapist_id) return

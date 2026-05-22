@@ -32,6 +32,8 @@ export default function ClientSettings() {
         .from('clients')
         .select('id, weight_unit')
         .eq('user_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single()
 
       if (error) {

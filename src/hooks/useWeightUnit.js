@@ -13,6 +13,8 @@ export function useWeightUnit() {
       .from(table)
       .select('weight_unit')
       .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single()
       .then(({ data }) => { if (data?.weight_unit) setWeightUnit(data.weight_unit) })
   }, [user, profile])

@@ -47,6 +47,8 @@ export default function ClientDashboard() {
       .from('clients')
       .select('id')
       .eq('user_id', profile.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single()
 
     if (clientError || !clientRecord) {
