@@ -126,7 +126,7 @@ export default function ExerciseLibrary() {
                     </div>
                     {ex.video_url && (
                       <span className="shrink-0 rounded-full bg-dark-accent-bg px-2.5 py-0.5 text-xs font-medium text-dark-accent">
-                        Video
+                        Video attached
                       </span>
                     )}
                   </Link>
