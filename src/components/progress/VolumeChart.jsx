@@ -7,7 +7,7 @@ function fmtDate(str) {
 export function VolumeChart({ data, weightUnit }) {
   if (!data || data.length < 2) {
     return (
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-dark-muted">
         Not enough data to display volume chart (minimum 2 sessions with weighted exercises needed).
       </p>
     )
@@ -15,9 +15,9 @@ export function VolumeChart({ data, weightUnit }) {
   return (
     <ResponsiveContainer width="100%" height={180}>
       <LineChart data={data} margin={{ top: 4, right: 16, bottom: 0, left: -16 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-        <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fontSize: 11, fill: '#9ca3af' }} />
-        <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+        <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fontSize: 11, fill: '#888888' }} />
+        <YAxis tick={{ fontSize: 11, fill: '#888888' }} />
         <Tooltip formatter={v => [`${v} ${weightUnit}`, 'Total volume']} labelFormatter={fmtDate} />
         <Line
           type="monotone"

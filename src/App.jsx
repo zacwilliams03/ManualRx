@@ -28,7 +28,7 @@ function ProtectedRoute({ children, requiredRole }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
+      <div className="min-h-screen flex items-center justify-center text-dark-muted bg-dark-bg">
         Loading…
       </div>
     )
@@ -39,7 +39,7 @@ function ProtectedRoute({ children, requiredRole }) {
   // Wait until profile loads (very brief gap between user and profile)
   if (!profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
+      <div className="min-h-screen flex items-center justify-center text-dark-muted bg-dark-bg">
         Loading profile…
       </div>
     )

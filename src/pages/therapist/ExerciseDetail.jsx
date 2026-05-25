@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import TherapistNav from '../../components/therapist/TherapistNav'
+import SidebarLayout from '../../components/therapist/SidebarLayout'
 
 function VideoPlayer({ url }) {
   if (!url) {
     return (
-      <div className="flex h-64 w-full items-center justify-center rounded bg-gray-100">
-        <p className="text-sm text-gray-400">No video available</p>
+      <div className="flex h-64 w-full items-center justify-center rounded bg-dark-elevated">
+        <p className="text-sm text-dark-subtle">No video available</p>
       </div>
     )
   }
@@ -88,49 +88,46 @@ export default function ExerciseDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <TherapistNav />
+      <SidebarLayout>
         <div className="flex items-center justify-center h-64">
-          <p className="text-sm text-gray-500">Loading…</p>
+          <p className="text-sm text-dark-muted">Loading…</p>
         </div>
-      </div>
+      </SidebarLayout>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <TherapistNav />
+      <SidebarLayout>
         <div className="max-w-2xl mx-auto px-6 py-8">
-          <p className="text-sm text-red-600">{error}</p>
-          <Link to="/therapist/exercises" className="mt-2 inline-block text-sm text-brand-primary hover:underline">
+          <p className="text-sm text-red-400">{error}</p>
+          <Link to="/therapist/exercises" className="mt-2 inline-block text-sm text-dark-accent hover:underline">
             Back to library
           </Link>
         </div>
-      </div>
+      </SidebarLayout>
     )
   }
 
   const isOwn = exercise.is_custom && exercise.created_by === profile?.id
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <TherapistNav />
+    <SidebarLayout>
       <div className="max-w-2xl mx-auto px-6 py-8">
-        <Link to="/therapist/exercises" className="text-sm text-gray-500 hover:text-gray-700">
+        <Link to="/therapist/exercises" className="text-sm text-dark-muted hover:text-dark-text">
           ← Back to library
         </Link>
 
         <div className="mt-4">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-semibold text-gray-900">{exercise.name}</h1>
+              <h1 className="text-2xl font-semibold text-dark-text">{exercise.name}</h1>
               <div className="mt-1 flex items-center gap-2">
-                <span className="rounded-full bg-gray-100 px-3 py-0.5 text-xs text-gray-600">
+                <span className="rounded-full bg-dark-elevated px-3 py-0.5 text-xs text-dark-muted">
                   {exercise.category}
                 </span>
                 {exercise.is_custom && (
-                  <span className="rounded-full bg-brand-primary-light px-3 py-0.5 text-xs text-brand-primary-dark">
+                  <span className="rounded-full bg-dark-accent-bg px-3 py-0.5 text-xs text-dark-accent">
                     Custom
                   </span>
                 )}
@@ -140,7 +137,7 @@ export default function ExerciseDetail() {
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="rounded border border-red-200 px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                className="rounded border border-red-800/40 px-3 py-1 text-sm text-red-400 hover:bg-red-900/20 disabled:opacity-50 cursor-pointer transition-colors duration-150"
               >
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>
@@ -152,18 +149,18 @@ export default function ExerciseDetail() {
           </div>
 
           {(exercise.default_sets || exercise.default_reps) && (
-            <p className="mt-4 text-sm text-gray-600">
-              <span className="font-medium">{exercise.default_sets} sets</span>
+            <p className="mt-4 text-sm text-dark-muted">
+              <span className="font-medium text-dark-text">{exercise.default_sets} sets</span>
               {' × '}
-              <span className="font-medium">{exercise.default_reps} reps</span>
+              <span className="font-medium text-dark-text">{exercise.default_reps} reps</span>
             </p>
           )}
 
           {exercise.description && (
-            <p className="mt-4 text-sm text-gray-700 leading-relaxed">{exercise.description}</p>
+            <p className="mt-4 text-sm text-dark-muted leading-relaxed">{exercise.description}</p>
           )}
         </div>
       </div>
-    </div>
+    </SidebarLayout>
   )
 }

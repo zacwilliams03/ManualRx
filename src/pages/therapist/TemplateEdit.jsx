@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import TherapistNav from '../../components/therapist/TherapistNav'
+import SidebarLayout from '../../components/therapist/SidebarLayout'
 import ExercisePicker from '../../components/therapist/ExercisePicker'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
 import { formatWeight } from '../../utils/weightUtils'
@@ -127,55 +127,54 @@ export default function TemplateEdit() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <TherapistNav />
+      <SidebarLayout>
         <div className="flex items-center justify-center h-64">
-          <p className="text-sm text-gray-500">Loading…</p>
+          <p className="text-sm text-dark-muted">Loading…</p>
         </div>
-      </div>
+      </SidebarLayout>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <TherapistNav />
+      <SidebarLayout>
         <div className="max-w-4xl mx-auto px-6 py-8">
-          <p className="text-sm text-red-600">{error}</p>
-          <Link to="/therapist/templates" className="mt-2 inline-block text-sm text-brand-primary hover:underline">
+          <p className="text-sm text-red-400">{error}</p>
+          <Link to="/therapist/templates" className="mt-2 inline-block text-sm text-dark-accent hover:underline">
             Back to templates
           </Link>
         </div>
-      </div>
+      </SidebarLayout>
     )
   }
 
+  const inputClass = 'mt-1 block w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:border-dark-accent focus:outline-none'
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <TherapistNav />
+    <SidebarLayout>
       <div className="max-w-4xl mx-auto px-6 py-8">
-        <Link to="/therapist/templates" className="text-sm text-gray-500 hover:text-gray-700">
+        <Link to="/therapist/templates" className="text-sm text-dark-muted hover:text-dark-text">
           ← Back to templates
         </Link>
 
         {/* Template details */}
-        <div className="mt-4 max-w-lg bg-white rounded-lg border border-gray-200 p-5">
-          <h2 className="text-sm font-medium text-gray-700 mb-3">Template details</h2>
+        <div className="mt-4 max-w-lg bg-dark-surface rounded-lg border border-dark-border p-5">
+          <h2 className="text-sm font-medium text-dark-text mb-3">Template details</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-dark-text">
                 Name <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+                className={inputClass}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Category <span className="font-normal text-gray-400">(optional — e.g. Rotator Cuff, Lumbar Rehab)</span>
+              <label className="block text-sm font-medium text-dark-text">
+                Category <span className="font-normal text-dark-subtle">(optional — e.g. Rotator Cuff, Lumbar Rehab)</span>
               </label>
               <input
                 type="text"
@@ -183,7 +182,7 @@ export default function TemplateEdit() {
                 onChange={e => setCategory(e.target.value)}
                 placeholder="e.g. Rotator Cuff"
                 list="template-categories"
-                className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+                className={inputClass}
               />
               <datalist id="template-categories">
                 {existingCategories.map(cat => (
@@ -192,8 +191,8 @@ export default function TemplateEdit() {
               </datalist>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Duration <span className="font-normal text-gray-400">(optional default — applied when template is used)</span>
+              <label className="block text-sm font-medium text-dark-text mb-2">
+                Duration <span className="font-normal text-dark-subtle">(optional default — applied when template is used)</span>
               </label>
               <div className="flex flex-wrap gap-2">
                 {[
@@ -210,10 +209,10 @@ export default function TemplateEdit() {
                     key={String(opt.value)}
                     type="button"
                     onClick={() => setDurationWeeks(opt.value)}
-                    className={`rounded-full px-3 py-1 text-sm ${
+                    className={`rounded-full px-3 py-1 text-sm cursor-pointer transition-colors duration-150 ${
                       durationWeeks === opt.value
                         ? 'bg-brand-primary text-white'
-                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                        : 'bg-dark-elevated border border-dark-border text-dark-muted hover:text-dark-text'
                     }`}
                   >
                     {opt.label}
@@ -226,16 +225,16 @@ export default function TemplateEdit() {
                     type="number" min="1" value={customWeeks}
                     onChange={e => setCustomWeeks(e.target.value)}
                     placeholder="e.g. 3"
-                    className="w-20 rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-gray-500 focus:outline-none"
+                    className="w-20 rounded border border-dark-border bg-dark-elevated px-3 py-1.5 text-sm text-dark-text focus:border-dark-accent focus:outline-none"
                   />
-                  <span className="text-sm text-gray-500">weeks</span>
+                  <span className="text-sm text-dark-muted">weeks</span>
                 </div>
               )}
             </div>
             <button
               onClick={saveMeta}
               disabled={saving || !name.trim()}
-              className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
+              className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
             >
               {saving ? 'Saving…' : 'Save Template & Exit'}
             </button>
@@ -244,35 +243,35 @@ export default function TemplateEdit() {
 
         <div className="mt-6 max-w-lg space-y-4">
           {/* Exercise list */}
-          <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100">
-              <h2 className="text-sm font-semibold text-gray-800">
+          <div className="rounded-lg border border-dark-border bg-dark-surface overflow-hidden">
+            <div className="px-4 py-3 border-b border-dark-border">
+              <h2 className="text-sm font-semibold text-dark-text">
                 Exercises
                 {exercises.length > 0 && (
-                  <span className="ml-1 font-normal text-gray-400">({exercises.length})</span>
+                  <span className="ml-1 font-normal text-dark-subtle">({exercises.length})</span>
                 )}
               </h2>
             </div>
             {exercises.length === 0 ? (
-              <p className="px-4 py-4 text-sm text-gray-400">No exercises added yet.</p>
+              <p className="px-4 py-4 text-sm text-dark-subtle">No exercises added yet.</p>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-dark-border">
                 {exercises.map(te => (
                   <div key={te.id} className="px-4 py-3">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{te.exercises?.name}</p>
-                        <p className="mt-0.5 text-xs text-gray-500">
+                        <p className="text-sm font-medium text-dark-text">{te.exercises?.name}</p>
+                        <p className="mt-0.5 text-xs text-dark-muted">
                           {te.sets} sets × {te.reps} reps
                           {te.weight ? ` · ${formatWeight(te.weight, weightUnit)}` : ''}
                         </p>
                         {te.therapist_notes && (
-                          <p className="mt-0.5 text-xs text-gray-400 italic">{te.therapist_notes}</p>
+                          <p className="mt-0.5 text-xs text-dark-subtle italic">{te.therapist_notes}</p>
                         )}
                       </div>
                       <button
                         onClick={() => removeExercise(te.id)}
-                        className="shrink-0 text-xs text-red-500 hover:text-red-700"
+                        className="shrink-0 text-xs text-red-400 hover:text-red-300 cursor-pointer transition-colors duration-150"
                       >
                         Remove
                       </button>
@@ -293,6 +292,6 @@ export default function TemplateEdit() {
           />
         </div>
       </div>
-    </div>
+    </SidebarLayout>
   )
 }

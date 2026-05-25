@@ -92,14 +92,16 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
     }
   }
 
+  const inputClass = 'block w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:border-dark-accent focus:outline-none'
+
   return (
-    <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100">
-        <p className="text-sm font-semibold text-gray-800">Add exercise</p>
+    <div className="rounded-lg border border-dark-border bg-dark-surface overflow-hidden">
+      <div className="px-4 py-3 border-b border-dark-border">
+        <p className="text-sm font-semibold text-dark-text">Add exercise</p>
       </div>
 
       {pickerView !== 'configure' && (
-        <div className="px-4 pt-3 pb-2 border-b border-gray-100">
+        <div className="px-4 pt-3 pb-2 border-b border-dark-border">
           <input
             type="text"
             value={search}
@@ -109,7 +111,7 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
             }}
             placeholder="Search exercises…"
             disabled={disabled}
-            className="block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+            className={inputClass}
           />
         </div>
       )}
@@ -118,42 +120,42 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
         <>
           {debouncedSearch.trim().length >= 2 ? (
             <div>
-              {searching && <p className="px-4 py-3 text-sm text-gray-400">Searching…</p>}
+              {searching && <p className="px-4 py-3 text-sm text-dark-subtle">Searching…</p>}
               {!searching && searchResults.length === 0 && (
-                <p className="px-4 py-3 text-sm text-gray-400">No results for "{debouncedSearch}".</p>
+                <p className="px-4 py-3 text-sm text-dark-subtle">No results for "{debouncedSearch}".</p>
               )}
               {!searching && searchResults.length > 0 && (
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-dark-border">
                   {searchResults.map(ex => (
                     <button
                       key={ex.id}
                       onClick={() => selectExercise(ex)}
-                      className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50"
+                      className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-dark-elevated transition-colors cursor-pointer"
                     >
                       <div className="flex flex-col">
-                        <span className="text-sm text-gray-900">{ex.name}</span>
+                        <span className="text-sm text-dark-text">{ex.name}</span>
                         {ex.video_url && (
-                          <span className="text-xs text-gray-400 mt-0.5">Video attached</span>
+                          <span className="text-xs text-dark-subtle mt-0.5">Video attached</span>
                         )}
                       </div>
-                      <span className="text-xs text-gray-400 ml-3 shrink-0">{ex.category}</span>
+                      <span className="text-xs text-dark-subtle ml-3 shrink-0">{ex.category}</span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-dark-border">
               {CATEGORIES.map(cat => (
                 <button
                   key={cat}
                   onClick={() => selectCategory(cat)}
-                  className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50"
+                  className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-dark-elevated transition-colors cursor-pointer"
                 >
-                  <span className={`text-sm ${cat === 'Custom' ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
+                  <span className={`text-sm ${cat === 'Custom' ? 'font-medium text-dark-text' : 'text-dark-muted'}`}>
                     {cat}
                   </span>
-                  <span className="text-gray-400">›</span>
+                  <span className="text-dark-subtle">›</span>
                 </button>
               ))}
             </div>
@@ -165,27 +167,27 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
         <div>
           <button
             onClick={() => setPickerView('browse')}
-            className="flex w-full items-center gap-1 px-4 py-3 text-sm text-gray-500 hover:text-gray-800 border-b border-gray-100 text-left"
+            className="flex w-full items-center gap-1 px-4 py-3 text-sm text-dark-muted hover:text-dark-text border-b border-dark-border text-left cursor-pointer transition-colors"
           >
             ‹ Back to categories
           </button>
-          {categoryLoading && <p className="px-4 py-3 text-sm text-gray-400">Loading…</p>}
+          {categoryLoading && <p className="px-4 py-3 text-sm text-dark-subtle">Loading…</p>}
           {!categoryLoading && categoryExercises.length === 0 && (
-            <p className="px-4 py-3 text-sm text-gray-400">No exercises in this category.</p>
+            <p className="px-4 py-3 text-sm text-dark-subtle">No exercises in this category.</p>
           )}
           {!categoryLoading && categoryExercises.map(ex => (
             <button
               key={ex.id}
               onClick={() => selectExercise(ex)}
-              className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-0"
+              className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-dark-elevated border-b border-dark-border last:border-0 transition-colors cursor-pointer"
             >
               <div className="flex flex-col">
-                <span className="text-sm text-gray-900">{ex.name}</span>
+                <span className="text-sm text-dark-text">{ex.name}</span>
                 {ex.video_url && (
-                  <span className="text-xs text-gray-400 mt-0.5">Video attached</span>
+                  <span className="text-xs text-dark-subtle mt-0.5">Video attached</span>
                 )}
               </div>
-              <span className="text-xs text-gray-400 ml-3 shrink-0">
+              <span className="text-xs text-dark-subtle ml-3 shrink-0">
                 {ex.default_sets ?? 3} × {ex.default_reps ?? 10}
               </span>
             </button>
@@ -197,61 +199,61 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
         <div>
           <button
             onClick={() => setPickerView('browse')}
-            className="flex w-full items-center gap-1 px-4 py-3 text-sm text-gray-500 hover:text-gray-800 border-b border-gray-100 text-left"
+            className="flex w-full items-center gap-1 px-4 py-3 text-sm text-dark-muted hover:text-dark-text border-b border-dark-border text-left cursor-pointer transition-colors"
           >
             ‹ Back
           </button>
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
-            <p className="text-sm font-medium text-gray-900">{pickerExercise.name}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{pickerExercise.category}</p>
+          <div className="px-4 py-3 bg-dark-elevated border-b border-dark-border">
+            <p className="text-sm font-medium text-dark-text">{pickerExercise.name}</p>
+            <p className="text-xs text-dark-subtle mt-0.5">{pickerExercise.category}</p>
             {pickerExercise.video_url && (
-              <p className="text-xs text-gray-400 mt-0.5">Video attached</p>
+              <p className="text-xs text-dark-subtle mt-0.5">Video attached</p>
             )}
           </div>
           <div className="p-4 space-y-4">
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600">Sets</label>
+                <label className="block text-xs font-medium text-dark-muted">Sets</label>
                 <input
                   type="number" min="1" value={configSets}
                   onChange={e => setConfigSets(e.target.value)}
-                  className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+                  className={`mt-1 ${inputClass}`}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600">Reps</label>
+                <label className="block text-xs font-medium text-dark-muted">Reps</label>
                 <input
                   type="number" min="1" value={configReps}
                   onChange={e => setConfigReps(e.target.value)}
-                  className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+                  className={`mt-1 ${inputClass}`}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600">Weight ({weightUnit})</label>
+                <label className="block text-xs font-medium text-dark-muted">Weight ({weightUnit})</label>
                 <input
                   type="number" min="0" step="0.5" value={configWeight}
                   onChange={e => setConfigWeight(e.target.value)}
                   placeholder="optional"
-                  className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none placeholder:text-gray-300"
+                  className={`mt-1 ${inputClass}`}
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600">
-                Notes for client <span className="font-normal text-gray-400">(optional)</span>
+              <label className="block text-xs font-medium text-dark-muted">
+                Notes for client <span className="font-normal text-dark-subtle">(optional)</span>
               </label>
               <input
                 type="text" value={configNotes}
                 onChange={e => setConfigNotes(e.target.value)}
                 placeholder="e.g. keep back straight, stop if painful"
-                className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+                className={`mt-1 ${inputClass}`}
               />
             </div>
-            {addError && <p className="text-sm text-red-600">{addError}</p>}
+            {addError && <p className="text-sm text-red-400">{addError}</p>}
             <button
               onClick={handleConfirmAdd}
               disabled={adding || disabled || !configSets || !configReps}
-              className="w-full rounded bg-brand-primary py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
+              className="w-full rounded bg-brand-primary py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
             >
               {adding ? 'Adding…' : confirmLabel}
             </button>

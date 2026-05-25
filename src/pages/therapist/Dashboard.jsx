@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import TherapistNav from '../../components/therapist/TherapistNav'
+import SidebarLayout from '../../components/therapist/SidebarLayout'
 import { useClinicName } from '../../hooks/useClinicName'
 
 function greeting() {
@@ -27,18 +27,17 @@ export default function TherapistDashboard() {
   }, [profile?.id])
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <TherapistNav />
+    <SidebarLayout>
       <div className="max-w-2xl mx-auto px-6 py-10">
-        <h1 className="text-2xl font-semibold text-gray-900">
+        <h1 className="text-2xl font-semibold text-dark-text">
           {greeting()}, {firstName}!
         </h1>
         {clientCount !== null && (
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-dark-muted">
             {clinicName ? `${clinicName} · ` : ''}{clientCount} active {clientCount === 1 ? 'client' : 'clients'}
           </p>
         )}
       </div>
-    </div>
+    </SidebarLayout>
   )
 }

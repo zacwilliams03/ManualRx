@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import TherapistNav from '../../components/therapist/TherapistNav'
+import SidebarLayout from '../../components/therapist/SidebarLayout'
 
 export default function Clients() {
   const { profile } = useAuth()
@@ -177,31 +177,31 @@ export default function Clients() {
       >
         <div>
           <div className="flex items-center gap-2">
-            <p className="text-sm font-medium text-gray-900">{client.name}</p>
+            <p className="text-sm font-medium text-dark-text">{client.name}</p>
             {showBadge && (
-              <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600">
+              <span className="rounded-full bg-dark-elevated px-2 py-0.5 text-xs text-dark-muted">
                 Inactive
               </span>
             )}
           </div>
-          <p className="text-sm text-gray-500">{client.email}</p>
+          <p className="text-sm text-dark-muted">{client.email}</p>
         </div>
         <div className="flex items-center gap-2">
           <Link
             to={`/therapist/prescribe/${client.id}`}
-            className="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+            className="rounded border border-dark-accent px-3 py-1 text-sm text-dark-accent hover:bg-dark-accent-bg transition-colors duration-150"
           >
             Details
           </Link>
           <button
             onClick={() => toggleActive(client)}
-            className="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+            className="rounded border border-dark-border px-3 py-1 text-sm text-dark-muted hover:bg-dark-elevated hover:text-dark-text cursor-pointer transition-colors duration-150"
           >
             {client.is_active ? 'Mark inactive' : 'Reactivate'}
           </button>
           <button
             onClick={() => deleteClient(client)}
-            className="rounded border border-red-200 px-3 py-1 text-sm text-red-600 hover:bg-red-50"
+            className="rounded border border-red-800/40 px-3 py-1 text-sm text-red-400 hover:bg-red-900/20 cursor-pointer transition-colors duration-150"
           >
             Delete
           </button>
@@ -211,13 +211,12 @@ export default function Clients() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <TherapistNav />
+    <SidebarLayout>
       <div className="max-w-4xl mx-auto px-6 py-8">
 
-        <h1 className="text-2xl font-semibold text-gray-900">Clients</h1>
+        <h1 className="text-2xl font-semibold text-dark-text">Clients</h1>
         {therapistSince && (
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-dark-muted">
             {totalCount} {totalCount === 1 ? 'patient' : 'patients'} treated since {therapistSince}
           </p>
         )}
@@ -228,43 +227,43 @@ export default function Clients() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search clients…"
-            className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+            className="flex-1 rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:border-dark-accent focus:outline-none"
           />
           <button
             onClick={() => setShowModal(true)}
-            className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark"
+            className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark cursor-pointer"
           >
             Add Client
           </button>
         </div>
 
         <div className="mt-6">
-          {listLoading && <p className="text-sm text-gray-500">Loading…</p>}
-          {listError && <p className="text-sm text-red-600">{listError}</p>}
+          {listLoading && <p className="text-sm text-dark-muted">Loading…</p>}
+          {listError && <p className="text-sm text-red-400">{listError}</p>}
           {!listLoading && !listError && (
             searchResults !== null ? (
               searchResults.length === 0 ? (
-                <p className="text-sm text-gray-500">No clients match your search.</p>
+                <p className="text-sm text-dark-muted">No clients match your search.</p>
               ) : (
-                <ul className="divide-y divide-gray-200 rounded border border-gray-200 bg-white">
+                <ul className="divide-y divide-dark-border rounded border border-dark-border bg-dark-surface">
                   {searchResults.map(c => renderClientRow(c, !c.is_active))}
                 </ul>
               )
             ) : (
               <>
                 {totalCount === 0 ? (
-                  <p className="text-sm text-gray-500">No clients yet.</p>
+                  <p className="text-sm text-dark-muted">No clients yet.</p>
                 ) : (
                   <>
                     {activeClients.length > 0 && (
-                      <ul className="divide-y divide-gray-200 rounded border border-gray-200 bg-white">
+                      <ul className="divide-y divide-dark-border rounded border border-dark-border bg-dark-surface">
                         {activeClients.map(c => renderClientRow(c, false))}
                       </ul>
                     )}
                     {inactiveClients.length > 0 && (
                       <button
                         onClick={() => setShowInactive(v => !v)}
-                        className="mt-4 text-sm text-gray-500 underline hover:text-gray-700"
+                        className="mt-4 text-sm text-dark-muted underline hover:text-dark-text cursor-pointer"
                       >
                         {showInactive
                           ? 'Hide inactive clients'
@@ -274,13 +273,13 @@ export default function Clients() {
                     {showInactive && inactiveClients.length > 0 && (
                       <>
                         <div className="mt-4 flex items-center gap-3">
-                          <div className="flex-1 border-t border-gray-200" />
-                          <span className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                          <div className="flex-1 border-t border-dark-border" />
+                          <span className="text-xs font-medium uppercase tracking-wide text-dark-subtle">
                             Inactive
                           </span>
-                          <div className="flex-1 border-t border-gray-200" />
+                          <div className="flex-1 border-t border-dark-border" />
                         </div>
-                        <ul className="mt-3 divide-y divide-gray-200 rounded border border-gray-200 bg-white">
+                        <ul className="mt-3 divide-y divide-dark-border rounded border border-dark-border bg-dark-surface">
                           {inactiveClients.map(c => renderClientRow(c, true))}
                         </ul>
                       </>
@@ -295,16 +294,16 @@ export default function Clients() {
 
       {showModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
           onClick={e => { if (e.target === e.currentTarget && !submitLoading) closeModal() }}
         >
-          <div className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-              <h2 className="text-sm font-semibold text-gray-900">Add client</h2>
+          <div className="w-full max-w-md overflow-hidden rounded-xl bg-dark-surface border border-dark-border shadow-xl">
+            <div className="flex items-center justify-between border-b border-dark-border px-5 py-4">
+              <h2 className="text-sm font-semibold text-dark-text">Add client</h2>
               <button
                 onClick={closeModal}
                 disabled={submitLoading}
-                className="text-lg text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                className="text-lg text-dark-muted hover:text-dark-text disabled:opacity-50 cursor-pointer transition-colors duration-150"
               >
                 ×
               </button>
@@ -314,31 +313,31 @@ export default function Clients() {
               <>
                 <form onSubmit={handleSubmit} id="add-client-form" className="space-y-3 px-5 py-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Name</label>
+                    <label className="block text-sm font-medium text-dark-text">Name</label>
                     <input
                       type="text"
                       value={name}
                       onChange={e => setName(e.target.value)}
-                      className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+                      className="mt-1 block w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:border-dark-accent focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Email</label>
+                    <label className="block text-sm font-medium text-dark-text">Email</label>
                     <input
                       type="email"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+                      className="mt-1 block w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:border-dark-accent focus:outline-none"
                     />
                   </div>
-                  {formError && <p className="text-sm text-red-600">{formError}</p>}
+                  {formError && <p className="text-sm text-red-400">{formError}</p>}
                 </form>
-                <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-4">
+                <div className="flex justify-end gap-2 border-t border-dark-border px-5 py-4">
                   <button
                     type="button"
                     onClick={closeModal}
                     disabled={submitLoading}
-                    className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    className="rounded border border-dark-border px-4 py-2 text-sm text-dark-muted hover:bg-dark-elevated hover:text-dark-text disabled:opacity-50 cursor-pointer transition-colors duration-150"
                   >
                     Cancel
                   </button>
@@ -346,7 +345,7 @@ export default function Clients() {
                     type="submit"
                     form="add-client-form"
                     disabled={submitLoading}
-                    className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
+                    className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
                   >
                     {submitLoading ? 'Adding…' : 'Add client'}
                   </button>
@@ -355,28 +354,28 @@ export default function Clients() {
             ) : (
               <div className="space-y-4 px-5 py-4">
                 {lastInvite.emailSent ? (
-                  <div className="rounded border border-green-200 bg-green-50 p-4">
-                    <p className="text-sm font-medium text-green-800">
+                  <div className="rounded border border-green-800/30 bg-green-900/20 p-4">
+                    <p className="text-sm font-medium text-green-400">
                       Invite sent to {lastInvite.email}
                     </p>
-                    <p className="mt-3 text-sm text-gray-500">
+                    <p className="mt-3 text-sm text-dark-muted">
                       Didn't arrive?{' '}
-                      <button onClick={copyLink} className="text-green-700 underline">
+                      <button onClick={copyLink} className="text-green-400 underline cursor-pointer">
                         {copied ? 'Copied!' : 'Copy link'}
                       </button>
                     </p>
                   </div>
                 ) : (
-                  <div className="rounded border border-amber-200 bg-amber-50 p-4">
-                    <p className="text-sm font-medium text-amber-800">
+                  <div className="rounded border border-amber-800/30 bg-amber-900/20 p-4">
+                    <p className="text-sm font-medium text-amber-400">
                       Couldn't send email — share this link manually:
                     </p>
-                    <p className="mt-1 break-all font-mono text-sm text-amber-700">
+                    <p className="mt-1 break-all font-mono text-sm text-amber-400/80">
                       {window.location.origin}/join/{lastInvite.code}
                     </p>
                     <button
                       onClick={copyLink}
-                      className="mt-2 rounded border border-amber-300 bg-white px-3 py-1 text-sm text-amber-800 hover:bg-amber-100"
+                      className="mt-2 rounded border border-amber-800/40 bg-dark-elevated px-3 py-1 text-sm text-amber-400 hover:bg-amber-900/30 cursor-pointer transition-colors duration-150"
                     >
                       {copied ? 'Copied!' : 'Copy link'}
                     </button>
@@ -385,7 +384,7 @@ export default function Clients() {
                 <div className="flex justify-end">
                   <button
                     onClick={closeModal}
-                    className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark"
+                    className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark cursor-pointer"
                   >
                     Done
                   </button>
@@ -395,6 +394,6 @@ export default function Clients() {
           </div>
         </div>
       )}
-    </div>
+    </SidebarLayout>
   )
 }

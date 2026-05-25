@@ -17,32 +17,32 @@ export function PrescriptionProgressSection({ prescription, sessionLogs, weightU
     : `${completion.completed} session${completion.completed !== 1 ? 's' : ''} completed`
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+    <div className="rounded-lg border border-dark-border bg-dark-surface overflow-hidden">
       <button
         onClick={() => setExpanded(e => !e)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-dark-elevated transition-colors cursor-pointer"
       >
         <div>
-          <p className="text-sm font-semibold text-gray-900">{prescription.name}</p>
-          <p className="mt-0.5 text-xs text-gray-500">{completionSummary}</p>
+          <p className="text-sm font-semibold text-dark-text">{prescription.name}</p>
+          <p className="mt-0.5 text-xs text-dark-muted">{completionSummary}</p>
         </div>
-        <span className="ml-4 shrink-0 text-xs text-gray-400">{expanded ? '▲' : '▼'}</span>
+        <span className="ml-4 shrink-0 text-xs text-dark-subtle">{expanded ? '▲' : '▼'}</span>
       </button>
 
       {expanded && (
-        <div className="border-t border-gray-100 px-4 py-4 space-y-5">
+        <div className="border-t border-dark-border px-4 py-4 space-y-5">
           <div>
-            <p className="text-xs font-medium text-gray-500 mb-1">Completion</p>
+            <p className="text-xs font-medium text-dark-muted mb-1">Completion</p>
             <CompletionStat completed={completion.completed} expected={completion.expected} />
           </div>
 
           <div>
-            <p className="text-xs font-medium text-gray-500 mb-2">Average Pain per Session (0–10)</p>
+            <p className="text-xs font-medium text-dark-muted mb-2">Average Pain per Session (0–10)</p>
             <PainChart data={painData} />
           </div>
 
           <div>
-            <p className="text-xs font-medium text-gray-500 mb-2">Total Volume per Session ({weightUnit})</p>
+            <p className="text-xs font-medium text-dark-muted mb-2">Total Volume per Session ({weightUnit})</p>
             <VolumeChart data={volumeData} weightUnit={weightUnit} />
           </div>
         </div>

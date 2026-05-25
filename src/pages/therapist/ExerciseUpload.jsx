@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import TherapistNav from '../../components/therapist/TherapistNav'
+import SidebarLayout from '../../components/therapist/SidebarLayout'
 
 const CATEGORIES = ['Cervical', 'Thoracic', 'Lumbar', 'Shoulder', 'Hip', 'Knee', 'Ankle / Foot', 'General']
 
@@ -90,14 +90,15 @@ export default function ExerciseUpload() {
     setUploadProgress(0)
   }
 
+  const inputClass = 'mt-1 block w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:border-dark-accent focus:outline-none'
+
   if (uploadedId) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <TherapistNav />
+      <SidebarLayout>
         <div className="flex flex-col items-center justify-center px-4 py-16">
-          <div className="max-w-md w-full bg-white rounded-lg shadow p-8 text-center">
-            <h2 className="text-xl font-semibold text-gray-900">Exercise added</h2>
-            <p className="mt-2 text-sm text-gray-500">Your custom exercise has been saved to the library.</p>
+          <div className="max-w-md w-full bg-dark-surface rounded-lg border border-dark-border p-8 text-center">
+            <h2 className="text-xl font-semibold text-dark-text">Exercise added</h2>
+            <p className="mt-2 text-sm text-dark-muted">Your custom exercise has been saved to the library.</p>
             <div className="mt-6 flex justify-center gap-3">
               <Link
                 to={`/therapist/exercises/${uploadedId}`}
@@ -107,45 +108,44 @@ export default function ExerciseUpload() {
               </Link>
               <button
                 onClick={resetForm}
-                className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                className="rounded border border-dark-border px-4 py-2 text-sm text-dark-muted hover:bg-dark-elevated hover:text-dark-text cursor-pointer transition-colors duration-150"
               >
                 Add another
               </button>
             </div>
           </div>
         </div>
-      </div>
+      </SidebarLayout>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <TherapistNav />
+    <SidebarLayout>
       <div className="max-w-2xl mx-auto px-6 py-8">
-        <Link to="/therapist/exercises" className="text-sm text-gray-500 hover:text-gray-700">
+        <Link to="/therapist/exercises" className="text-sm text-dark-muted hover:text-dark-text">
           ← Back to library
         </Link>
 
-        <div className="mt-4 max-w-lg bg-white rounded-lg border border-gray-200 p-6">
-          <h1 className="text-xl font-semibold text-gray-900">Add custom exercise</h1>
+        <div className="mt-4 max-w-lg bg-dark-surface rounded-lg border border-dark-border p-6">
+          <h1 className="text-xl font-semibold text-dark-text">Add custom exercise</h1>
 
           <form onSubmit={handleSubmit} className="mt-5 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Exercise name</label>
+              <label className="block text-sm font-medium text-dark-text">Exercise name</label>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+                className={inputClass}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Category</label>
+              <label className="block text-sm font-medium text-dark-text">Category</label>
               <select
                 value={category}
                 onChange={e => setCategory(e.target.value)}
-                className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+                className={inputClass}
               >
                 <option value="">Select a category…</option>
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -153,65 +153,65 @@ export default function ExerciseUpload() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-dark-text">
                 Description{' '}
-                <span className="font-normal text-gray-400">(optional)</span>
+                <span className="font-normal text-dark-subtle">(optional)</span>
               </label>
               <textarea
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 rows={3}
-                className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+                className={inputClass}
               />
             </div>
 
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700">Default sets</label>
+                <label className="block text-sm font-medium text-dark-text">Default sets</label>
                 <input
                   type="number"
                   min="1"
                   value={defaultSets}
                   onChange={e => setDefaultSets(e.target.value)}
-                  className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+                  className={inputClass}
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700">Default reps</label>
+                <label className="block text-sm font-medium text-dark-text">Default reps</label>
                 <input
                   type="number"
                   min="1"
                   value={defaultReps}
                   onChange={e => setDefaultReps(e.target.value)}
-                  className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+                  className={inputClass}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Video file</label>
+              <label className="block text-sm font-medium text-dark-text">Video file</label>
               <input
                 type="file"
                 accept="video/*"
                 onChange={e => setVideoFile(e.target.files[0] ?? null)}
-                className="mt-1 block w-full text-sm text-gray-700 file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-sm file:font-medium"
+                className="mt-1 block w-full text-sm text-dark-muted file:mr-3 file:rounded file:border-0 file:bg-dark-elevated file:px-3 file:py-1 file:text-sm file:font-medium file:text-dark-text cursor-pointer"
               />
-              <p className="mt-1 text-xs text-gray-400">MP4, MOV, or WebM recommended</p>
+              <p className="mt-1 text-xs text-dark-subtle">MP4, MOV, or WebM recommended</p>
             </div>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-red-400">{error}</p>}
 
             <button
               type="submit"
               disabled={uploading}
-              className="w-full rounded bg-brand-primary py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
+              className="w-full rounded bg-brand-primary py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
             >
               {uploading ? `Uploading… ${uploadProgress}%` : 'Save exercise'}
             </button>
 
             {uploading && (
               <div>
-                <div className="w-full rounded-full bg-gray-200 h-2">
+                <div className="w-full rounded-full bg-dark-elevated h-2">
                   <div
                     className="h-2 rounded-full bg-brand-primary transition-all duration-200"
                     style={{ width: `${uploadProgress}%` }}
@@ -222,6 +222,6 @@ export default function ExerciseUpload() {
           </form>
         </div>
       </div>
-    </div>
+    </SidebarLayout>
   )
 }

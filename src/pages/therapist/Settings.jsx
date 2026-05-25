@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import TherapistNav from '../../components/therapist/TherapistNav'
+import SidebarLayout from '../../components/therapist/SidebarLayout'
 
 export default function Settings() {
   const { user, profile } = useAuth()
@@ -159,42 +159,51 @@ export default function Settings() {
     setPasswordError(null)
   }
 
+  const inputClass = 'mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:outline-none focus:ring-2 focus:ring-brand-primary'
+  const toggleBtnClass = (active) =>
+    `flex-1 py-2 rounded border text-sm font-medium transition-colors cursor-pointer ${
+      active
+        ? 'bg-brand-primary text-white border-brand-primary'
+        : 'border-dark-border text-dark-muted hover:border-dark-muted'
+    }`
+  const gridBtnClass = (active) =>
+    `py-2 rounded border text-sm font-medium transition-colors cursor-pointer ${
+      active
+        ? 'bg-brand-primary text-white border-brand-primary'
+        : 'border-dark-border text-dark-muted hover:border-dark-muted'
+    }`
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <TherapistNav />
+    <SidebarLayout>
       <div className="max-w-lg mx-auto px-4 py-8">
-        <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
+        <h1 className="text-2xl font-semibold text-dark-text">Settings</h1>
 
         {fetching ? (
-          <p className="mt-6 text-gray-500">Loading…</p>
+          <p className="mt-6 text-dark-muted">Loading…</p>
         ) : fetchError ? (
-          <p className="mt-6 text-sm text-red-600">{fetchError}</p>
+          <p className="mt-6 text-sm text-red-400">{fetchError}</p>
         ) : (
           <form onSubmit={handleSave} className="mt-6 space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Clinic name</label>
+              <label className="block text-sm font-medium text-dark-text">Clinic name</label>
               <input
                 type="text"
                 value={clinicName}
                 onChange={(e) => setClinicName(e.target.value)}
                 placeholder="e.g. City Physio"
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                className={inputClass}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Weight unit</label>
+              <label className="block text-sm font-medium text-dark-text">Weight unit</label>
               <div className="mt-1 flex gap-2">
                 {['kg', 'lb'].map((unit) => (
                   <button
                     key={unit}
                     type="button"
                     onClick={() => setWeightUnit(unit)}
-                    className={`flex-1 py-2 rounded border text-sm font-medium transition-colors ${
-                      weightUnit === unit
-                        ? 'bg-brand-primary text-white border-brand-primary'
-                        : 'border-gray-300 text-gray-700 hover:border-gray-400'
-                    }`}
+                    className={toggleBtnClass(weightUnit === unit)}
                   >
                     {unit}
                   </button>
@@ -203,7 +212,7 @@ export default function Settings() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Default session frequency</label>
+              <label className="block text-sm font-medium text-dark-text">Default session frequency</label>
               <div className="mt-1 grid grid-cols-2 gap-2">
                 {[
                   { value: 'none', label: 'No repeat' },
@@ -215,11 +224,7 @@ export default function Settings() {
                     key={value}
                     type="button"
                     onClick={() => setFrequencyMode(value)}
-                    className={`py-2 rounded border text-sm font-medium transition-colors ${
-                      frequencyMode === value
-                        ? 'bg-brand-primary text-white border-brand-primary'
-                        : 'border-gray-300 text-gray-700 hover:border-gray-400'
-                    }`}
+                    className={gridBtnClass(frequencyMode === value)}
                   >
                     {label}
                   </button>
@@ -233,20 +238,20 @@ export default function Settings() {
                     value={customDays}
                     onChange={(e) => setCustomDays(e.target.value)}
                     placeholder="e.g. 3"
-                    className="w-24 rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                    className="w-24 rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text focus:outline-none focus:ring-2 focus:ring-brand-primary"
                   />
-                  <span className="text-sm text-gray-500">days between sessions</span>
+                  <span className="text-sm text-dark-muted">days between sessions</span>
                 </div>
               )}
             </div>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            {success && <p className="text-sm text-green-600">Settings saved.</p>}
+            {error && <p className="text-sm text-red-400">{error}</p>}
+            {success && <p className="text-sm text-green-400">Settings saved.</p>}
 
             <button
               type="submit"
               disabled={saving}
-              className="w-full rounded bg-brand-primary text-white py-2 font-medium hover:bg-brand-primary-dark disabled:opacity-50"
+              className="w-full rounded bg-brand-primary text-white py-2 font-medium hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
             >
               {saving ? 'Saving…' : 'Save changes'}
             </button>
@@ -255,17 +260,17 @@ export default function Settings() {
 
         {!fetching && !fetchError && (
           <div className="mt-6">
-            <hr className="border-gray-200" />
+            <hr className="border-dark-border" />
             <div className="mt-6">
-              <h2 className="text-sm font-medium text-gray-700">Password</h2>
+              <h2 className="text-sm font-medium text-dark-text">Password</h2>
               {passwordSuccess && (
-                <p className="mt-2 text-sm text-green-600">Password updated successfully.</p>
+                <p className="mt-2 text-sm text-green-400">Password updated successfully.</p>
               )}
               {!showPasswordForm && (
                 <button
                   type="button"
                   onClick={() => { setPasswordSuccess(false); setShowPasswordForm(true) }}
-                  className="mt-3 rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="mt-3 rounded border border-dark-border px-4 py-2 text-sm font-medium text-dark-muted hover:bg-dark-elevated hover:text-dark-text cursor-pointer transition-colors duration-150"
                 >
                   Change password
                 </button>
@@ -273,48 +278,48 @@ export default function Settings() {
               {showPasswordForm && (
                 <form onSubmit={handlePasswordSave} className="mt-3 space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Current password</label>
+                    <label className="block text-sm font-medium text-dark-text">Current password</label>
                     <input
                       type="password"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       required
-                      className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      className={inputClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">New password</label>
+                    <label className="block text-sm font-medium text-dark-text">New password</label>
                     <input
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       required
-                      className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      className={inputClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Confirm new password</label>
+                    <label className="block text-sm font-medium text-dark-text">Confirm new password</label>
                     <input
                       type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
-                      className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      className={inputClass}
                     />
                   </div>
-                  {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
+                  {passwordError && <p className="text-sm text-red-400">{passwordError}</p>}
                   <div className="flex items-center gap-4">
                     <button
                       type="submit"
                       disabled={passwordLoading}
-                      className="rounded bg-brand-primary text-white px-4 py-2 text-sm font-medium hover:bg-brand-primary-dark disabled:opacity-50"
+                      className="rounded bg-brand-primary text-white px-4 py-2 text-sm font-medium hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
                     >
                       {passwordLoading ? 'Updating…' : 'Update password'}
                     </button>
                     <button
                       type="button"
                       onClick={cancelPasswordForm}
-                      className="text-sm text-gray-500 hover:underline"
+                      className="text-sm text-dark-muted hover:underline cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -325,6 +330,6 @@ export default function Settings() {
           </div>
         )}
       </div>
-    </div>
+    </SidebarLayout>
   )
 }

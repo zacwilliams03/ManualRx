@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import TherapistNav from '../../components/therapist/TherapistNav'
+import SidebarLayout from '../../components/therapist/SidebarLayout'
 
 export default function Templates() {
   const { profile } = useAuth()
@@ -58,34 +58,33 @@ export default function Templates() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <TherapistNav />
+    <SidebarLayout>
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Templates</h1>
-            <p className="mt-1 text-sm text-gray-500">Save reusable exercise programs and apply them to any client.</p>
+            <h1 className="text-2xl font-semibold text-dark-text">Templates</h1>
+            <p className="mt-1 text-sm text-dark-muted">Save reusable exercise programs and apply them to any client.</p>
           </div>
           <button
             onClick={createTemplate}
             disabled={creating}
-            className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
+            className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
           >
             {creating ? 'Creating…' : 'Add Template'}
           </button>
         </div>
 
-        {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
 
         {loading && (
           <div className="mt-8 flex items-center justify-center h-32">
-            <p className="text-sm text-gray-500">Loading…</p>
+            <p className="text-sm text-dark-muted">Loading…</p>
           </div>
         )}
 
         {!loading && templates.length === 0 && !error && (
           <div className="mt-12 text-center">
-            <p className="text-sm text-gray-500">No templates yet. Create your first one.</p>
+            <p className="text-sm text-dark-muted">No templates yet. Create your first one.</p>
           </div>
         )}
 
@@ -98,25 +97,25 @@ export default function Templates() {
                 .filter(Boolean)
 
               return (
-                <div key={t.id} className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+                <div key={t.id} className="rounded-lg border border-dark-border bg-dark-surface overflow-hidden">
                   <div className="px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-medium text-gray-900">{t.name}</p>
+                          <p className="text-sm font-medium text-dark-text">{t.name}</p>
                           {t.category && (
-                            <span className="inline-block rounded-full bg-brand-primary-light px-2 py-0.5 text-xs font-medium text-brand-primary-dark">
+                            <span className="inline-block rounded-full bg-dark-accent-bg px-2 py-0.5 text-xs font-medium text-dark-accent">
                               {t.category}
                             </span>
                           )}
                         </div>
-                        <p className="mt-0.5 text-xs text-gray-500">
+                        <p className="mt-0.5 text-xs text-dark-muted">
                           {exerciseCount === 0
                             ? 'No exercises'
                             : `${exerciseCount} exercise${exerciseCount !== 1 ? 's' : ''}`}
                         </p>
                         {exerciseNames.length > 0 && (
-                          <p className="mt-1 text-xs text-gray-400">
+                          <p className="mt-1 text-xs text-dark-subtle">
                             {exerciseNames.join(' · ')}
                           </p>
                         )}
@@ -124,13 +123,13 @@ export default function Templates() {
                       <div className="flex items-center gap-2 shrink-0">
                         <button
                           onClick={() => deleteTemplate(t.id, t.name)}
-                          className="rounded border border-red-200 px-3 py-1 text-sm text-red-500 hover:bg-red-50"
+                          className="rounded border border-red-800/40 px-3 py-1 text-sm text-red-400 hover:bg-red-900/20 cursor-pointer transition-colors duration-150"
                         >
                           Delete
                         </button>
                         <button
                           onClick={() => navigate(`/therapist/templates/${t.id}`)}
-                          className="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+                          className="rounded border border-dark-border px-3 py-1 text-sm text-dark-muted hover:bg-dark-elevated hover:text-dark-text cursor-pointer transition-colors duration-150"
                         >
                           Edit
                         </button>
@@ -143,6 +142,6 @@ export default function Templates() {
           </div>
         )}
       </div>
-    </div>
+    </SidebarLayout>
   )
 }

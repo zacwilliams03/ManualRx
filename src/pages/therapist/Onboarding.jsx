@@ -10,15 +10,14 @@ export default function Onboarding() {
   const [checking, setChecking] = useState(true)
   const [clinicName, setClinicName] = useState('')
   const [weightUnit, setWeightUnit] = useState('kg')
-  const [frequencyMode, setFrequencyMode] = useState('none') // 'none' | 'daily' | 'weekly' | 'custom'
+  const [frequencyMode, setFrequencyMode] = useState('none')
   const [customDays, setCustomDays] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (authLoading) return  // auth still resolving
+    if (authLoading) return
     if (!profile) {
-      // ProtectedRoute handles redirect, but clear checking state defensively
       setChecking(false)
       return
     }
@@ -99,47 +98,57 @@ export default function Onboarding() {
     navigate('/therapist', { replace: true })
   }
 
+  const inputClass = 'mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:outline-none focus:ring-2 focus:ring-brand-primary'
+  const toggleBtnClass = (active) =>
+    `flex-1 py-2 rounded border text-sm font-medium transition-colors cursor-pointer ${
+      active
+        ? 'bg-brand-primary text-white border-brand-primary'
+        : 'border-dark-border text-dark-muted hover:border-dark-muted'
+    }`
+  const gridBtnClass = (active) =>
+    `py-2 rounded border text-sm font-medium transition-colors cursor-pointer ${
+      active
+        ? 'bg-brand-primary text-white border-brand-primary'
+        : 'border-dark-border text-dark-muted hover:border-dark-muted'
+    }`
+
   if (checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500">
+      <div className="min-h-screen flex items-center justify-center bg-dark-bg text-dark-muted">
         Loading…
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow p-8">
-        <h1 className="text-2xl font-semibold text-gray-900">Welcome to ManualRx</h1>
-        <p className="mt-1 text-sm text-gray-500">
+    <div className="min-h-screen flex items-center justify-center bg-dark-bg px-4">
+      <div className="max-w-md w-full bg-dark-surface rounded-lg border border-dark-border p-8">
+        <h1 className="text-2xl font-semibold text-dark-text">Welcome to ManualRx</h1>
+        <p className="mt-1 text-sm text-dark-muted">
           Let's get you set up. This takes 30 seconds — you can change any of this later in Settings.
         </p>
 
         <form onSubmit={handleSave} className="mt-6 space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Clinic name</label>
+            <label className="block text-sm font-medium text-dark-text">Clinic name</label>
             <input
               type="text"
               value={clinicName}
               onChange={(e) => setClinicName(e.target.value)}
               placeholder="e.g. City Physio"
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              className={inputClass}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Weight unit</label>
+            <label className="block text-sm font-medium text-dark-text">Weight unit</label>
             <div className="mt-1 flex gap-2">
               {['kg', 'lb'].map((unit) => (
                 <button
                   key={unit}
                   type="button"
                   onClick={() => setWeightUnit(unit)}
-                  className={`flex-1 py-2 rounded border text-sm font-medium transition-colors ${
-                    weightUnit === unit
-                      ? 'bg-brand-primary text-white border-brand-primary'
-                      : 'border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
+                  className={toggleBtnClass(weightUnit === unit)}
                 >
                   {unit}
                 </button>
@@ -148,7 +157,7 @@ export default function Onboarding() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Default session frequency</label>
+            <label className="block text-sm font-medium text-dark-text">Default session frequency</label>
             <div className="mt-1 grid grid-cols-2 gap-2">
               {[
                 { value: 'none', label: 'No repeat' },
@@ -160,11 +169,7 @@ export default function Onboarding() {
                   key={value}
                   type="button"
                   onClick={() => setFrequencyMode(value)}
-                  className={`py-2 rounded border text-sm font-medium transition-colors ${
-                    frequencyMode === value
-                      ? 'bg-brand-primary text-white border-brand-primary'
-                      : 'border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
+                  className={gridBtnClass(frequencyMode === value)}
                 >
                   {label}
                 </button>
@@ -178,19 +183,19 @@ export default function Onboarding() {
                   value={customDays}
                   onChange={(e) => setCustomDays(e.target.value)}
                   placeholder="e.g. 3"
-                  className="w-24 rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  className="w-24 rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text focus:outline-none focus:ring-2 focus:ring-brand-primary"
                 />
-                <span className="text-sm text-gray-500">days between sessions</span>
+                <span className="text-sm text-dark-muted">days between sessions</span>
               </div>
             )}
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-400">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded bg-brand-primary text-white py-2 font-medium hover:bg-brand-primary-dark disabled:opacity-50"
+            className="w-full rounded bg-brand-primary text-white py-2 font-medium hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
           >
             {loading ? 'Saving…' : 'Save and continue'}
           </button>
@@ -201,7 +206,7 @@ export default function Onboarding() {
             type="button"
             onClick={handleSkip}
             disabled={loading}
-            className="text-sm text-gray-500 hover:underline disabled:opacity-50"
+            className="text-sm text-dark-muted hover:underline disabled:opacity-50 cursor-pointer"
           >
             Skip for now
           </button>

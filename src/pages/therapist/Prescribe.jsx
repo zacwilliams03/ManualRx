@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import TherapistNav from '../../components/therapist/TherapistNav'
+import SidebarLayout from '../../components/therapist/SidebarLayout'
 import ApplyTemplateModal from '../../components/therapist/ApplyTemplateModal'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
 import { useClinicName } from '../../hooks/useClinicName'
@@ -52,12 +52,12 @@ function ExerciseLogDetail({ el, videoUrls, onPlayVideo, weightUnit }) {
 
   return (
     <div className="px-3 py-2.5">
-      <p className="text-xs font-medium text-gray-800">
+      <p className="text-xs font-medium text-dark-text">
         {pe?.exercises?.name ?? 'Exercise'}
       </p>
 
       {pe && (
-        <p className="mt-0.5 text-xs text-gray-400">
+        <p className="mt-0.5 text-xs text-dark-muted">
           Prescribed: {pe.sets} sets × {pe.reps} reps{pe.weight ? ` @ ${formatWeight(pe.weight, weightUnit)}` : ''}
         </p>
       )}
@@ -65,24 +65,24 @@ function ExerciseLogDetail({ el, videoUrls, onPlayVideo, weightUnit }) {
       {hasPerSetData ? (
         <div className="mt-1 space-y-0.5">
           {el.sets_data.map((s, si) => (
-            <p key={si} className="text-xs text-gray-500">
+            <p key={si} className="text-xs text-dark-muted">
               Set {si + 1}: {s.reps} reps{s.weight ? ` @ ${formatWeight(parseFloat(s.weight), weightUnit)}` : ''}
             </p>
           ))}
         </div>
       ) : (
-        <p className="mt-0.5 text-xs text-gray-500">
+        <p className="mt-0.5 text-xs text-dark-muted">
           {el.sets_completed ?? '—'} sets × {el.reps_completed ?? '—'} reps
           {el.weight_completed ? ` @ ${formatWeight(el.weight_completed, weightUnit)}` : ''}
         </p>
       )}
 
       {el.pain_rating != null && (
-        <p className="mt-0.5 text-xs text-gray-500">Pain: {el.pain_rating}/10</p>
+        <p className="mt-0.5 text-xs text-dark-muted">Pain: {el.pain_rating}/10</p>
       )}
 
       {el.client_notes && (
-        <p className="mt-1 text-xs text-gray-600">
+        <p className="mt-1 text-xs text-dark-muted">
           Comment: {el.client_notes}
         </p>
       )}
@@ -99,7 +99,7 @@ function ExerciseLogDetail({ el, videoUrls, onPlayVideo, weightUnit }) {
           ) : (
             <button
               onClick={() => onPlayVideo(el.id, el.video_url)}
-              className="text-xs text-brand-primary hover:underline"
+              className="text-xs text-dark-accent hover:underline cursor-pointer"
             >
               ▶ Play feedback video
             </button>
@@ -321,40 +321,38 @@ export default function Prescribe() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <TherapistNav />
+      <SidebarLayout>
         <div className="flex items-center justify-center h-64">
-          <p className="text-sm text-gray-500">Loading…</p>
+          <p className="text-sm text-dark-muted">Loading…</p>
         </div>
-      </div>
+      </SidebarLayout>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <TherapistNav />
+    <SidebarLayout>
       <div className="max-w-4xl mx-auto px-6 py-8">
-        <Link to="/therapist/clients" className="text-sm text-gray-500 hover:text-gray-700">
+        <Link to="/therapist/clients" className="text-sm text-dark-muted hover:text-dark-text">
           ← Back to clients
         </Link>
 
         <div className="mt-4 flex items-start justify-between max-w-2xl">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">{client?.name}</h1>
-            <p className="text-sm text-gray-500">{client?.email}</p>
+            <h1 className="text-2xl font-semibold text-dark-text">{client?.name}</h1>
+            <p className="text-sm text-dark-muted">{client?.email}</p>
           </div>
           {activeTab === 'prescriptions' && (
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowApplyModal(true)}
-                className="rounded border border-brand-primary px-4 py-2 text-sm text-brand-primary hover:bg-brand-primary-light"
+                className="rounded border border-dark-accent px-4 py-2 text-sm text-dark-accent hover:bg-dark-accent-bg cursor-pointer transition-colors duration-150"
               >
                 Apply Template
               </button>
               <button
                 onClick={createSession}
                 disabled={creating}
-                className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
+                className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
               >
                 {creating ? 'Creating…' : 'New session'}
               </button>
@@ -363,15 +361,15 @@ export default function Prescribe() {
         </div>
 
         {/* Tab switcher */}
-        <div className="mt-5 max-w-2xl flex gap-6 border-b border-gray-200">
+        <div className="mt-5 max-w-2xl flex gap-6 border-b border-dark-border">
           {['prescriptions', 'history', 'clientData'].map(tab => (
             <button
               key={tab}
               onClick={() => { setActiveTab(tab); setExpandedLogId(null) }}
-              className={`pb-2 text-sm font-medium transition-colors ${
+              className={`pb-2 text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === tab
                   ? 'border-b-2 border-brand-primary text-brand-primary'
-                  : 'text-gray-400 hover:text-gray-600'
+                  : 'text-dark-subtle hover:text-dark-muted'
               }`}
             >
               {TAB_LABELS[tab]}
@@ -379,13 +377,13 @@ export default function Prescribe() {
           ))}
         </div>
 
-        {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
 
         {/* ── Prescribed Sessions tab ───────────────────────────────────────── */}
         {activeTab === 'prescriptions' && (
           <div className="mt-6 max-w-2xl space-y-3">
             {!error && sessions.length === 0 && (
-              <p className="text-sm text-gray-500">No sessions yet. Create the first one.</p>
+              <p className="text-sm text-dark-muted">No sessions yet. Create the first one.</p>
             )}
 
             {sortedSessions.map(s => {
@@ -397,28 +395,28 @@ export default function Prescribe() {
                 <div
                   key={s.id}
                   className={`rounded-lg border overflow-hidden ${
-                    active ? 'border-gray-200 bg-white' : 'border-gray-200 bg-gray-50 opacity-50'
+                    active ? 'border-dark-border bg-dark-surface' : 'border-dark-border bg-dark-elevated opacity-50'
                   }`}
                 >
                   <div className="flex items-center justify-between px-4 py-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-gray-900">{s.name}</p>
+                        <p className="text-sm font-medium text-dark-text">{s.name}</p>
                         {!active && (
-                          <span className="inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600">
+                          <span className="inline-flex items-center rounded-full bg-dark-elevated px-2 py-0.5 text-xs font-medium text-dark-muted">
                             Inactive
                           </span>
                         )}
                       </div>
-                      <p className="mt-0.5 text-xs text-gray-500">
+                      <p className="mt-0.5 text-xs text-dark-muted">
                         {s.prescription_exercises[0]?.count ?? 0} exercises · {frequencyLabel(s.frequency_days)}
                       </p>
                       {active && s.duration_weeks && s.start_date && (
-                        <p className="mt-0.5 text-xs text-gray-400">
+                        <p className="mt-0.5 text-xs text-dark-subtle">
                           Active until {formatExpiryDate(s.start_date, s.duration_weeks)}
                         </p>
                       )}
-                      <p className="mt-0.5 text-xs text-gray-400">
+                      <p className="mt-0.5 text-xs text-dark-subtle">
                         {expected != null
                           ? `${completedCount} / ${expected} sessions completed`
                           : `${completedCount} session${completedCount !== 1 ? 's' : ''} completed`}
@@ -429,7 +427,7 @@ export default function Prescribe() {
                         <button
                           onClick={() => reactivatePrescription(s)}
                           disabled={reactivating === s.id}
-                          className="rounded border border-brand-primary px-3 py-1 text-sm text-brand-primary hover:bg-brand-primary-light disabled:opacity-50"
+                          className="rounded border border-dark-accent px-3 py-1 text-sm text-dark-accent hover:bg-dark-accent-bg disabled:opacity-50 cursor-pointer transition-colors duration-150"
                         >
                           {reactivating === s.id ? 'Copying…' : 'Reactivate'}
                         </button>
@@ -438,23 +436,23 @@ export default function Prescribe() {
                         <button
                           onClick={() => downloadPDF(s)}
                           disabled={pdfLoadingId === s.id}
-                          className="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                          className="rounded border border-dark-border px-3 py-1 text-sm text-dark-muted hover:bg-dark-elevated hover:text-dark-text disabled:opacity-50 cursor-pointer transition-colors duration-150"
                         >
                           {pdfLoadingId === s.id ? 'Generating…' : 'Download PDF'}
                         </button>
                         {pdfError === s.id && (
-                          <span className="text-xs text-red-500">PDF failed — try again</span>
+                          <span className="text-xs text-red-400">PDF failed — try again</span>
                         )}
                       </div>
                       <button
                         onClick={() => deleteSession(s.id, s.name)}
-                        className="rounded border border-red-200 px-3 py-1 text-sm text-red-500 hover:bg-red-50"
+                        className="rounded border border-red-800/40 px-3 py-1 text-sm text-red-400 hover:bg-red-900/20 cursor-pointer transition-colors duration-150"
                       >
                         Delete
                       </button>
                       <Link
                         to={`/therapist/prescribe/${clientId}/sessions/${s.id}`}
-                        className="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+                        className="rounded border border-dark-accent px-3 py-1 text-sm text-dark-accent hover:bg-dark-accent-bg transition-colors duration-150"
                       >
                         Edit
                       </Link>
@@ -470,40 +468,40 @@ export default function Prescribe() {
         {activeTab === 'history' && (
           <div className="mt-6 max-w-2xl space-y-3">
             {historyTabLoading && (
-              <p className="text-sm text-gray-500">Loading history…</p>
+              <p className="text-sm text-dark-muted">Loading history…</p>
             )}
 
             {historyTabLoaded && historyTabLogs.length === 0 && (
-              <p className="text-sm text-gray-500">No sessions completed yet.</p>
+              <p className="text-sm text-dark-muted">No sessions completed yet.</p>
             )}
 
             {historyTabLogs.map(log => (
-              <div key={log.id} className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+              <div key={log.id} className="rounded-lg border border-dark-border bg-dark-surface overflow-hidden">
                 <button
-                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-dark-elevated transition-colors cursor-pointer"
                   onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
                 >
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-dark-text">
                       {log.prescriptions?.name ?? 'Session'} · {formatDate(log.completed_at)}
                     </p>
-                    <p className="mt-0.5 text-xs text-gray-500">
+                    <p className="mt-0.5 text-xs text-dark-muted">
                       {log.session_rpe != null ? `RPE: ${log.session_rpe}/10` : 'No RPE recorded'}
                     </p>
                   </div>
-                  <span className="ml-4 text-xs text-gray-400 shrink-0">
+                  <span className="ml-4 text-xs text-dark-subtle shrink-0">
                     {expandedLogId === log.id ? '▲' : '▼'}
                   </span>
                 </button>
 
                 {expandedLogId === log.id && (
-                  <div className="border-t border-gray-100">
+                  <div className="border-t border-dark-border">
                     {log.session_notes && (
-                      <p className="px-4 py-2 text-xs text-gray-600 border-b border-gray-50">
+                      <p className="px-4 py-2 text-xs text-dark-muted border-b border-dark-border">
                         {log.session_notes}
                       </p>
                     )}
-                    <div className="divide-y divide-gray-50">
+                    <div className="divide-y divide-dark-border">
                       {(log.exercise_logs ?? []).map(el => (
                         <ExerciseLogDetail
                           key={el.id}
@@ -514,7 +512,7 @@ export default function Prescribe() {
                         />
                       ))}
                       {(log.exercise_logs ?? []).length === 0 && (
-                        <p className="px-4 py-3 text-xs text-gray-400">No exercise detail recorded.</p>
+                        <p className="px-4 py-3 text-xs text-dark-subtle">No exercise detail recorded.</p>
                       )}
                     </div>
                   </div>
@@ -542,6 +540,6 @@ export default function Prescribe() {
           }}
         />
       )}
-    </div>
+    </SidebarLayout>
   )
 }

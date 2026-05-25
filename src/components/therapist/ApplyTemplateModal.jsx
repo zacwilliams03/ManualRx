@@ -145,48 +145,50 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
     return matchesSearch && matchesCategory
   })
 
+  const inputClass = 'w-full rounded border border-dark-border bg-dark-elevated px-2 py-1.5 text-sm text-dark-text placeholder-dark-subtle focus:border-dark-accent focus:outline-none'
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-md rounded-xl bg-white shadow-xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+      <div className="w-full max-w-md rounded-xl bg-dark-surface border border-dark-border shadow-xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-semibold text-gray-900">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">
+          <h2 className="text-sm font-semibold text-dark-text">
             {step === 'customise' ? 'Customise Template' : 'Apply Template'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+          <button onClick={onClose} className="text-dark-muted hover:text-dark-text text-lg leading-none cursor-pointer transition-colors duration-150">×</button>
         </div>
 
         {/* Step 1: Pick a template */}
         {step === 'pick' && (
           <div className="flex flex-col">
-            {loadingTemplates && <p className="px-5 py-4 text-sm text-gray-500">Loading templates…</p>}
+            {loadingTemplates && <p className="px-5 py-4 text-sm text-dark-muted">Loading templates…</p>}
 
             {!loadingTemplates && templates.length === 0 && (
-              <p className="px-5 py-4 text-sm text-gray-500">No templates yet. Create one from the Templates tab.</p>
+              <p className="px-5 py-4 text-sm text-dark-muted">No templates yet. Create one from the Templates tab.</p>
             )}
 
             {!loadingTemplates && templates.length > 0 && (
               <>
                 {/* Search bar */}
-                <div className="px-4 pt-3 pb-2 border-b border-gray-100">
+                <div className="px-4 pt-3 pb-2 border-b border-dark-border">
                   <input
                     type="text"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="Search templates…"
-                    className="block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+                    className="block w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:border-dark-accent focus:outline-none"
                   />
                 </div>
 
                 {/* Category filter pills — only shown if any templates have a category */}
                 {categories.length > 0 && (
-                  <div className="px-4 py-2 flex flex-wrap gap-1.5 border-b border-gray-100">
+                  <div className="px-4 py-2 flex flex-wrap gap-1.5 border-b border-dark-border">
                     <button
                       onClick={() => setSelectedCategory(null)}
-                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
                         selectedCategory === null
                           ? 'bg-brand-primary text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          : 'bg-dark-elevated text-dark-muted hover:bg-dark-elevated hover:text-dark-text'
                       }`}
                     >
                       All
@@ -195,10 +197,10 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
                       <button
                         key={cat}
                         onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
-                        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
                           selectedCategory === cat
                             ? 'bg-brand-primary text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            : 'bg-dark-elevated text-dark-muted hover:text-dark-text'
                         }`}
                       >
                         {cat}
@@ -208,9 +210,9 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
                 )}
 
                 {/* Template list */}
-                <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
+                <div className="divide-y divide-dark-border max-h-64 overflow-y-auto">
                   {filteredTemplates.length === 0 && (
-                    <p className="px-5 py-4 text-sm text-gray-400">No templates match.</p>
+                    <p className="px-5 py-4 text-sm text-dark-subtle">No templates match.</p>
                   )}
                   {filteredTemplates.map(t => {
                     const count = t.template_exercises?.length ?? 0
@@ -218,15 +220,15 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
                       <button
                         key={t.id}
                         onClick={() => selectTemplate(t)}
-                        className="w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-gray-50"
+                        className="w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-dark-elevated transition-colors cursor-pointer"
                       >
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{t.name}</p>
-                          <p className="mt-0.5 text-xs text-gray-500">
+                          <p className="text-sm font-medium text-dark-text">{t.name}</p>
+                          <p className="mt-0.5 text-xs text-dark-muted">
                             {t.category ? `${t.category} · ` : ''}{count} exercise{count !== 1 ? 's' : ''}
                           </p>
                         </div>
-                        <span className="text-gray-400 ml-3">›</span>
+                        <span className="text-dark-subtle ml-3">›</span>
                       </button>
                     )
                   })}
@@ -239,12 +241,12 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
         {/* Step 2: Apply as-is or customise */}
         {step === 'options' && selectedTemplate && (
           <div className="px-5 py-4 space-y-4">
-            <div className="rounded-lg bg-gray-50 px-4 py-3">
-              <p className="text-sm font-medium text-gray-900">{selectedTemplate.name}</p>
+            <div className="rounded-lg bg-dark-elevated px-4 py-3">
+              <p className="text-sm font-medium text-dark-text">{selectedTemplate.name}</p>
               {selectedTemplate.category && (
-                <p className="text-xs text-gray-500 mt-0.5">{selectedTemplate.category}</p>
+                <p className="text-xs text-dark-muted mt-0.5">{selectedTemplate.category}</p>
               )}
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-dark-subtle mt-1">
                 {(selectedTemplate.template_exercises ?? [])
                   .map(te => te.exercises?.name)
                   .filter(Boolean)
@@ -252,27 +254,27 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
               </p>
             </div>
 
-            {applyError && <p className="text-sm text-red-600">{applyError}</p>}
+            {applyError && <p className="text-sm text-red-400">{applyError}</p>}
 
             <div className="space-y-2">
               <button
                 onClick={applyAsIs}
                 disabled={applying}
-                className="w-full rounded bg-brand-primary px-4 py-2.5 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
+                className="w-full rounded bg-brand-primary px-4 py-2.5 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
               >
                 {applying ? 'Applying…' : 'Apply as-is'}
               </button>
               <button
                 onClick={startCustomise}
                 disabled={applying}
-                className="w-full rounded border border-gray-300 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className="w-full rounded border border-dark-border px-4 py-2.5 text-sm text-dark-muted hover:bg-dark-elevated hover:text-dark-text disabled:opacity-50 cursor-pointer transition-colors duration-150"
               >
                 Customise first
               </button>
               <button
                 onClick={() => { setStep('pick'); setApplyError(null) }}
                 disabled={applying}
-                className="w-full text-sm text-gray-400 hover:text-gray-600 py-1"
+                className="w-full text-sm text-dark-subtle hover:text-dark-muted py-1 cursor-pointer transition-colors duration-150"
               >
                 ← Back
               </button>
@@ -283,34 +285,34 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
         {/* Step 3: Customise exercise values */}
         {step === 'customise' && (
           <div>
-            <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
+            <div className="max-h-72 overflow-y-auto divide-y divide-dark-border">
               {customExercises.map((ex, i) => (
                 <div key={ex.id} className="px-5 py-3 space-y-2">
-                  <p className="text-sm font-medium text-gray-900">{ex.name}</p>
+                  <p className="text-sm font-medium text-dark-text">{ex.name}</p>
                   <div className="grid grid-cols-3 gap-2">
                     <div>
-                      <label className="block text-xs text-gray-500">Sets</label>
+                      <label className="block text-xs text-dark-muted">Sets</label>
                       <input
                         type="number" min="1" value={ex.sets}
                         onChange={e => updateCustomExercise(i, 'sets', e.target.value)}
-                        className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-500 focus:outline-none"
+                        className={`mt-1 ${inputClass}`}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500">Reps</label>
+                      <label className="block text-xs text-dark-muted">Reps</label>
                       <input
                         type="number" min="1" value={ex.reps}
                         onChange={e => updateCustomExercise(i, 'reps', e.target.value)}
-                        className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-500 focus:outline-none"
+                        className={`mt-1 ${inputClass}`}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500">Wt ({weightUnit})</label>
+                      <label className="block text-xs text-dark-muted">Wt ({weightUnit})</label>
                       <input
                         type="number" min="0" step="0.5" value={ex.weight}
                         onChange={e => updateCustomExercise(i, 'weight', e.target.value)}
                         placeholder="opt."
-                        className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-500 focus:outline-none placeholder:text-gray-300"
+                        className={`mt-1 ${inputClass}`}
                       />
                     </div>
                   </div>
@@ -318,25 +320,25 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
                     type="text" value={ex.notes}
                     onChange={e => updateCustomExercise(i, 'notes', e.target.value)}
                     placeholder="Notes (optional)"
-                    className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-500 focus:outline-none"
+                    className={inputClass}
                   />
                 </div>
               ))}
             </div>
 
-            <div className="px-5 py-4 border-t border-gray-100 space-y-2">
-              {applyError && <p className="text-sm text-red-600">{applyError}</p>}
+            <div className="px-5 py-4 border-t border-dark-border space-y-2">
+              {applyError && <p className="text-sm text-red-400">{applyError}</p>}
               <button
                 onClick={applyCustomised}
                 disabled={applying}
-                className="w-full rounded bg-brand-primary px-4 py-2.5 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50"
+                className="w-full rounded bg-brand-primary px-4 py-2.5 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
               >
                 {applying ? 'Applying…' : 'Apply'}
               </button>
               <button
                 onClick={() => { setStep('options'); setApplyError(null) }}
                 disabled={applying}
-                className="w-full text-sm text-gray-400 hover:text-gray-600 py-1"
+                className="w-full text-sm text-dark-subtle hover:text-dark-muted py-1 cursor-pointer transition-colors duration-150"
               >
                 ← Back
               </button>

@@ -295,7 +295,7 @@ A therapist-facing "client notes" page (free-text clinical observations) would c
 - [x] Session delete — therapists can delete prescriptions with full cascade (prescription_exercises, session_logs, exercise_logs)
 - [x] Client exercise visibility — clients can now see exercise names and videos in the wizard
 - [x] Mobile polish pass (client side) — iOS input zoom fix, 44px touch targets, dvh viewport, safe area insets
-- [x] Therapist persistent nav — top bar with Clients + Exercises links, time-of-day greeting on dashboard, live client count
+- [x] Therapist persistent nav — replaced with dark fixed-left sidebar (see Session 31)
 - [ ] Video content for built-in exercise library (decision pending)
 - [ ] Stripe integration
 - [x] Password reset / email flows
@@ -449,7 +449,7 @@ All tokens are defined in `tailwind.config.js` under `theme.extend.colors.brand`
 - Confirm contact email — currently `mailto:hello@manualrx.app` (`{/* TODO: replace mailto with confirmed address before launch */}`)
 - Add real Privacy policy, Terms, Contact pages for footer links
 
-**Build order:** ~~Logo~~ → ~~Homepage~~ → App UI dark mode sweep
+**Build order:** ~~Logo~~ → ~~Homepage~~ → ~~App UI dark mode sweep~~
 
 ---
 
@@ -1155,4 +1155,95 @@ Most-recently-created therapist relationship wins. Proper therapist-picker UI is
 **Build verified:** `npm run build` exits 0. Chunk size warning is pre-existing (Framer Motion) — not an error.
 
 Note for Claude — always tell me if I should switch models to something more powerful, or if a lighter model is okay.
+
+---
+
+### Session 31 — Dark sidebar + full app UI dark mode sweep
+
+**Goal:** Replace the light-theme `TherapistNav` top bar with a dark fixed-left sidebar that matches the homepage's Linear-inspired aesthetic, then sweep all therapist pages to a cohesive dark theme.
+
+---
+
+**Phase 1 — New components**
+
+**New dependency:** `lucide-react` (tree-shakeable icon library)
+
+Icons used: `LayoutDashboard`, `Users`, `FileText`, `Dumbbell`, `Settings`, `ChevronUp`, `LogOut`, `KeyRound`
+
+**`tailwind.config.js`** — added `dark.*` token set alongside existing `brand.*`:
+```js
+dark: {
+  bg:          '#0a0a0a',   // page background
+  surface:     '#111111',   // card / sidebar background
+  elevated:    '#1a1a1a',   // hover / input fill
+  border:      'rgba(255,255,255,0.06)',
+  text:        '#f0f0f0',
+  muted:       '#888888',
+  subtle:      '#555555',
+  accent:      '#29B5CC',   // teal — same as brand.primary
+  'accent-bg': 'rgba(41,181,204,0.10)',
+}
+```
+
+**`src/components/therapist/AppSidebar.jsx`** — fixed-left sidebar (240px, `z-40`):
+- `Logo` — 3px teal bar + "Manual" white + "Rx" teal (Outfit Bold 17px — matches homepage)
+- `NavItem` — active detection via `exact` flag or `activePrefixes[]`; 44px min touch target; `transition-colors duration-150`
+  - Dashboard: exact match `/therapist`
+  - Clients: activePrefixes `['/therapist/clients', '/therapist/prescribe']` — stays highlighted during session editing
+  - Templates, Exercise Library, Settings
+- `AccountSection` — bottom panel with `panelRef` on the **outer wrapper** (covers both trigger button and AnimatePresence panel — critical: if ref only covers the panel, outside-click handler conflicts with toggle onClick and panel never opens). Panel animates `{ opacity: 0, y: 8 } → { opacity: 1, y: 0 }` in 0.18s, respects `useReducedMotion`. Contains:
+  - Change password: inline expand, calls `supabase.auth.updateUser({ password })` (no current password needed — live session)
+  - Log out: two-step confirm before calling `signOut()`
+
+**`src/components/therapist/SidebarLayout.jsx`** — layout wrapper used by all therapist pages:
+```jsx
+<div className="flex min-h-screen bg-dark-bg">
+  <AppSidebar />
+  <main className="flex-1 min-h-screen" style={{ marginLeft: '240px' }}>
+    {children}
+  </main>
+</div>
+```
+
+---
+
+**Phase 2 — Dark mode sweep (all therapist pages)**
+
+All 11 therapist pages migrated from `TherapistNav` → `SidebarLayout` and fully dark-themed. Color mapping applied consistently across all files:
+
+| Light class | Dark replacement |
+|---|---|
+| `bg-white`, `bg-gray-50` | `bg-dark-surface`, `bg-dark-elevated` |
+| `border-gray-200`, `border-gray-100` | `border-dark-border` |
+| `text-gray-900` | `text-dark-text` |
+| `text-gray-500`, `text-gray-600`, `text-gray-700` | `text-dark-muted` |
+| `text-gray-400` | `text-dark-subtle` |
+| `hover:bg-gray-50` | `hover:bg-dark-elevated` |
+| `border-brand-primary text-brand-primary hover:bg-brand-primary-light` | `border-dark-accent text-dark-accent hover:bg-dark-accent-bg` |
+| `border-red-200 text-red-500 hover:bg-red-50` | `border-red-800/40 text-red-400 hover:bg-red-900/20` |
+| `text-red-600` | `text-red-400` |
+| Success banners | `bg-green-900/20 border-green-800/30 text-green-400` |
+| Warning banners | `bg-amber-900/20 border-amber-800/30 text-amber-400` |
+| Inactive badge `bg-gray-200 text-gray-600` | `bg-dark-elevated text-dark-muted` |
+
+**Pages updated:** Dashboard, ExerciseLibrary, ExerciseDetail, Templates, TemplateEdit, SessionEdit, ExerciseUpload, Settings, Onboarding, Clients, Prescribe
+
+Special cases:
+- `Onboarding.jsx` — no TherapistNav was present (pre-login page); SidebarLayout not added; card and form darked only
+- `App.jsx` — ProtectedRoute loading states: `text-gray-500` → `text-dark-muted bg-dark-bg`
+- `TherapistNav.jsx` — **deleted** (no longer used)
+
+**Components updated:**
+- `ExercisePicker.jsx` — full dark sweep (card, search input, category list, configure view, all form inputs)
+- `ApplyTemplateModal.jsx` — full dark sweep (overlay, card, search, category pills, template list, options step, customise step inputs)
+- `ClientDataTab.jsx` — loading/error text updated
+- `PrescriptionProgressSection.jsx` — card, hover, text, expand/collapse
+- `CompletionStat.jsx` — text colors
+- `PainChart.jsx`, `VolumeChart.jsx` — CartesianGrid stroke `#f0f0f0` → `rgba(255,255,255,0.06)`, tick labels `#9ca3af` → `#888888`
+
+**UI polish:**
+- Details button on Clients page: `border-dark-accent text-dark-accent hover:bg-dark-accent-bg` (teal border)
+- Edit button on Prescribe page: same teal border treatment as Details
+
+**Build verified:** `npm run build` exits 0. No new errors. Pre-existing chunk size warning from `@react-pdf/renderer` unchanged.
 
