@@ -21,10 +21,10 @@ export function ProgressTab({ prescriptions }) {
   const prescriptionIds = (prescriptions ?? []).map(p => p.id)
   const { data: sessionLogs, loading, error } = useProgressData(prescriptionIds)
 
-  if (loading) return <p className="text-sm text-gray-500">Loading progress…</p>
-  if (error) return <p className="text-sm text-red-600">Failed to load progress data.</p>
+  if (loading) return <p className="text-sm text-dark-muted">Loading progress…</p>
+  if (error) return <p className="text-sm text-red-400">Failed to load progress data.</p>
   if (!prescriptions || prescriptions.length === 0) {
-    return <p className="text-sm text-gray-500">No active prescriptions to show progress for.</p>
+    return <p className="text-sm text-dark-muted">No active prescriptions to show progress for.</p>
   }
 
   return (

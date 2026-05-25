@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { useClinicName } from '../../hooks/useClinicName'
-import { ProgressTab } from './ProgressTab'
+import BottomNav from '../../components/client/BottomNav'
 
 function frequencyLabel(days) {
   if (!days) return 'No repeat'
@@ -36,7 +36,6 @@ export default function ClientDashboard() {
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [activeTab, setActiveTab] = useState('sessions')
 
   useEffect(() => {
     if (profile?.id) fetchSessions()
@@ -69,52 +68,22 @@ export default function ClientDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-dark-bg p-6 pb-20">
       <div className="flex flex-wrap items-center justify-between gap-y-3 mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">My Sessions</h1>
-          <p className="mt-0.5 text-sm text-gray-500">
+          <h1 className="text-2xl font-semibold text-dark-text">My Sessions</h1>
+          <p className="mt-0.5 text-sm text-dark-muted">
             {profile?.name}{clinicName ? ` · ${clinicName}` : ''}
           </p>
         </div>
-        <Link
-          to="/client/history"
-          className="rounded border border-gray-300 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-        >
-          History
-        </Link>
-        <Link
-          to="/client/settings"
-          className="rounded border border-gray-300 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-        >
-          Settings
-        </Link>
       </div>
 
-      {/* Tab switcher */}
-      <div className="max-w-lg flex gap-6 border-b border-gray-200 mb-6">
-        {[['sessions', 'Sessions'], ['progress', 'Progress']].map(([tab, label]) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`pb-2 text-sm font-medium transition-colors ${
-              activeTab === tab
-                ? 'border-b-2 border-brand-primary text-brand-primary'
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {loading && <p className="text-sm text-gray-500">Loading…</p>}
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {activeTab === 'sessions' && !loading && !error && sessions.filter(isActive).length === 0 && (
-        <p className="text-sm text-gray-500">Your therapist hasn't added any sessions yet.</p>
+      {loading && <p className="text-sm text-dark-muted">Loading…</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
+      {!loading && !error && sessions.filter(isActive).length === 0 && (
+        <p className="text-sm text-dark-muted">Your therapist hasn't added any sessions yet.</p>
       )}
 
-      {activeTab === 'sessions' && (
       <div className="space-y-3 max-w-lg">
         {sessions.filter(isActive).map(s => {
           const completions = s.session_logs ?? []
@@ -128,22 +97,22 @@ export default function ClientDashboard() {
           return (
             <div
               key={s.id}
-              className="flex items-start justify-between rounded-lg border border-gray-200 bg-white p-4 gap-3"
+              className="flex items-start justify-between rounded-lg border border-dark-border bg-dark-surface p-4 gap-3"
             >
               <div>
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-gray-900">{s.name}</p>
+                  <p className="text-sm font-semibold text-dark-text">{s.name}</p>
                   {isRecentlyCompleted(s) && (
-                    <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                    <span className="inline-flex items-center rounded-full bg-dark-accent-bg px-2 py-0.5 text-xs font-medium text-dark-accent">
                       Completed
                     </span>
                   )}
                 </div>
-                <p className="mt-0.5 text-xs text-gray-500">
+                <p className="mt-0.5 text-xs text-dark-muted">
                   {s.prescription_exercises[0]?.count ?? 0} exercises · {frequencyLabel(s.frequency_days)}
                 </p>
                 {lastDone && (
-                  <p className="mt-0.5 text-xs text-gray-400">Last completed: {lastDone}</p>
+                  <p className="mt-0.5 text-xs text-dark-subtle">Last completed: {lastDone}</p>
                 )}
               </div>
               <Link
@@ -156,11 +125,8 @@ export default function ClientDashboard() {
           )
         })}
       </div>
-      )}
 
-      {activeTab === 'progress' && !loading && !error && (
-        <ProgressTab prescriptions={sessions.filter(isActive)} />
-      )}
+      <BottomNav />
     </div>
   )
 }

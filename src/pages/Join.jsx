@@ -2,6 +2,18 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
+function Logo() {
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ width: '3px', height: '20px', background: '#29B5CC', borderRadius: '2px', flexShrink: 0 }} />
+      <span style={{ fontFamily: '"Outfit", sans-serif', fontWeight: 700, fontSize: '17px', letterSpacing: '-0.01em', lineHeight: 1 }}>
+        <span style={{ color: '#f0f0f0' }}>Manual</span>
+        <span style={{ color: '#29B5CC' }}>Rx</span>
+      </span>
+    </div>
+  )
+}
+
 export default function Join() {
   const { code } = useParams()
 
@@ -112,18 +124,18 @@ export default function Join() {
 
   if (checkLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500 text-sm">Checking invite…</p>
+      <div className="min-h-screen flex items-center justify-center bg-dark-bg">
+        <p className="text-dark-muted text-sm">Checking invite…</p>
       </div>
     )
   }
 
   if (checkError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow p-8 text-center">
-          <p className="text-gray-800 font-medium">{checkError}</p>
-          <Link to="/login" className="mt-4 inline-block text-sm text-brand-primary hover:underline">
+      <div className="min-h-screen flex items-center justify-center bg-dark-bg px-4">
+        <div className="max-w-md w-full bg-dark-surface rounded-xl border border-dark-border p-8 text-center">
+          <p className="text-dark-text font-medium">{checkError}</p>
+          <Link to="/login" className="mt-4 inline-block text-sm text-dark-accent hover:underline">
             Back to login
           </Link>
         </div>
@@ -133,12 +145,12 @@ export default function Join() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow p-8 text-center">
-          <h2 className="text-xl font-semibold text-gray-900">You're all set</h2>
-          <p className="mt-3 text-gray-600">
+      <div className="min-h-screen flex items-center justify-center bg-dark-bg px-4">
+        <div className="max-w-md w-full bg-dark-surface rounded-xl border border-dark-border p-8 text-center">
+          <h2 className="text-xl font-semibold text-dark-text">You're all set</h2>
+          <p className="mt-3 text-dark-muted">
             Your account has been created. You can now log in with{' '}
-            <strong>{invite.email}</strong>.
+            <strong className="text-dark-text">{invite.email}</strong>.
           </p>
           <Link
             to="/login"
@@ -152,47 +164,50 @@ export default function Join() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow p-8">
-        <h1 className="text-2xl font-semibold text-gray-900">Set up your account</h1>
-        <p className="mt-1 text-sm text-gray-500">
+    <div className="min-h-screen flex items-center justify-center bg-dark-bg px-4">
+      <div className="max-w-md w-full bg-dark-surface rounded-xl border border-dark-border p-8">
+        <div className="mb-6">
+          <Logo />
+        </div>
+        <h1 className="text-2xl font-semibold text-dark-text">Set up your account</h1>
+        <p className="mt-1 text-sm text-dark-muted">
           {therapistFirstName ? `${therapistFirstName} has invited you to join.` : 'Welcome, set a password to activate your account.'}
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
+            <label className="block text-sm font-medium text-dark-muted">Email</label>
             <input
               type="email"
               value={invite.email}
               disabled
-              className="mt-1 w-full rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500"
+              className="mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-subtle"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Password</label>
+            <label className="block text-sm font-medium text-dark-muted">Password</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               minLength={6}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+              className="mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text focus:border-dark-accent focus:outline-none"
             />
-            <p className="mt-1 text-xs text-gray-500">Minimum 6 characters</p>
+            <p className="mt-1 text-xs text-dark-muted">Minimum 6 characters</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Confirm password</label>
+            <label className="block text-sm font-medium text-dark-muted">Confirm password</label>
             <input
               type="password"
               value={confirmPwd}
               onChange={e => setConfirmPwd(e.target.value)}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+              className="mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text focus:border-dark-accent focus:outline-none"
             />
           </div>
 
-          {formError && <p className="text-sm text-red-600">{formError}</p>}
+          {formError && <p className="text-sm text-red-400">{formError}</p>}
 
           <button
             type="submit"

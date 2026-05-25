@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useClinicName } from '../../hooks/useClinicName'
+import BottomNav from '../../components/client/BottomNav'
 
 export default function ClientSettings() {
   const { user, profile, signOut } = useAuth()
@@ -22,6 +23,8 @@ export default function ClientSettings() {
   const [passwordError, setPasswordError] = useState(null)
   const [passwordSuccess, setPasswordSuccess] = useState(false)
   const [passwordLoading, setPasswordLoading] = useState(false)
+
+  const [logoutStep, setLogoutStep] = useState('idle')
 
   const hasFetchedRef = useRef(false)
   const saveTimerRef = useRef(null)
@@ -130,30 +133,21 @@ export default function ClientSettings() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-dark-bg p-6 pb-20">
       <div className="max-w-lg mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <Link to="/client" className="text-sm text-gray-500 hover:text-gray-700">
-            ← My Sessions
-          </Link>
-          <h1 className="text-xl font-semibold text-gray-900">Settings</h1>
-          <button
-            onClick={signOut}
-            className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            Log out
-          </button>
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold text-dark-text">Settings</h1>
         </div>
 
         {fetching ? (
-          <p className="text-sm text-gray-500">Loading…</p>
+          <p className="text-sm text-dark-muted">Loading…</p>
         ) : fetchError ? (
-          <p className="text-sm text-red-600">{fetchError}</p>
+          <p className="text-sm text-red-400">{fetchError}</p>
         ) : (
           <>
-            <form onSubmit={handleSave} className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+            <form onSubmit={handleSave} className="bg-dark-surface rounded-lg border border-dark-border p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Weight unit</label>
+                <label className="block text-sm font-medium text-dark-muted">Weight unit</label>
                 <div className="mt-1 flex gap-2">
                   {['kg', 'lb'].map((unit) => (
                     <button
@@ -163,7 +157,7 @@ export default function ClientSettings() {
                       className={`flex-1 py-2 rounded border text-sm font-medium transition-colors ${
                         weightUnit === unit
                           ? 'bg-brand-primary text-white border-brand-primary'
-                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                          : 'border-dark-border text-dark-muted hover:border-dark-accent hover:text-dark-text'
                       }`}
                     >
                       {unit}
@@ -174,13 +168,13 @@ export default function ClientSettings() {
 
               {clinicName && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Your clinic</label>
-                  <p className="mt-1 text-sm text-gray-900">{clinicName}</p>
+                  <label className="block text-sm font-medium text-dark-muted">Your clinic</label>
+                  <p className="mt-1 text-sm text-dark-text">{clinicName}</p>
                 </div>
               )}
 
-              {saveError && <p className="text-sm text-red-600">{saveError}</p>}
-              {saveSuccess && <p className="text-sm text-green-600">Settings saved.</p>}
+              {saveError && <p className="text-sm text-red-400">{saveError}</p>}
+              {saveSuccess && <p className="text-sm text-green-400">Settings saved.</p>}
 
               <button
                 type="submit"
@@ -191,16 +185,16 @@ export default function ClientSettings() {
               </button>
             </form>
 
-            <div className="bg-white rounded-lg border border-gray-200 p-6 mt-4">
-              <h2 className="text-sm font-medium text-gray-700">Password</h2>
+            <div className="bg-dark-surface rounded-lg border border-dark-border p-6 mt-4">
+              <h2 className="text-sm font-medium text-dark-muted">Password</h2>
               {passwordSuccess && (
-                <p className="mt-2 text-sm text-green-600">Password updated successfully.</p>
+                <p className="mt-2 text-sm text-green-400">Password updated successfully.</p>
               )}
               {!showPasswordForm && (
                 <button
                   type="button"
                   onClick={() => { setPasswordSuccess(false); setShowPasswordForm(true) }}
-                  className="mt-3 rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="mt-3 rounded border border-dark-border px-4 py-2 text-sm font-medium text-dark-muted hover:bg-dark-elevated hover:text-dark-text"
                 >
                   Change password
                 </button>
@@ -208,36 +202,36 @@ export default function ClientSettings() {
               {showPasswordForm && (
                 <form onSubmit={handlePasswordSave} className="mt-3 space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Current password</label>
+                    <label className="block text-sm font-medium text-dark-muted">Current password</label>
                     <input
                       type="password"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       required
-                      className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      className="mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-dark-text focus:outline-none focus:ring-1 focus:ring-dark-accent"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">New password</label>
+                    <label className="block text-sm font-medium text-dark-muted">New password</label>
                     <input
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       required
-                      className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      className="mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-dark-text focus:outline-none focus:ring-1 focus:ring-dark-accent"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Confirm new password</label>
+                    <label className="block text-sm font-medium text-dark-muted">Confirm new password</label>
                     <input
                       type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
-                      className="mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      className="mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-dark-text focus:outline-none focus:ring-1 focus:ring-dark-accent"
                     />
                   </div>
-                  {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
+                  {passwordError && <p className="text-sm text-red-400">{passwordError}</p>}
                   <div className="flex items-center gap-4">
                     <button
                       type="submit"
@@ -249,7 +243,7 @@ export default function ClientSettings() {
                     <button
                       type="button"
                       onClick={cancelPasswordForm}
-                      className="text-sm text-gray-500 hover:underline"
+                      className="text-sm text-dark-muted hover:underline"
                     >
                       Cancel
                     </button>
@@ -262,9 +256,41 @@ export default function ClientSettings() {
                 </Link>
               </p>
             </div>
+
+            <div className="bg-dark-surface rounded-lg border border-dark-border p-6 mt-4">
+              {logoutStep === 'idle' ? (
+                <button
+                  type="button"
+                  onClick={() => setLogoutStep('confirming')}
+                  className="rounded border border-dark-border px-4 py-2 text-sm text-dark-muted hover:bg-dark-elevated hover:text-dark-text transition-colors"
+                >
+                  Log out
+                </button>
+              ) : (
+                <div className="flex items-center gap-3 flex-wrap">
+                  <p className="text-sm text-dark-muted">Log out of ManualRx?</p>
+                  <button
+                    type="button"
+                    onClick={signOut}
+                    className="rounded border border-red-800/40 px-3 py-1.5 text-sm text-red-400 hover:bg-red-900/20 transition-colors"
+                  >
+                    Yes, log out
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLogoutStep('idle')}
+                    className="text-sm text-dark-subtle hover:text-dark-muted"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
+
+      <BottomNav />
     </div>
   )
 }

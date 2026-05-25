@@ -34,7 +34,7 @@ function VideoPlayer({ url }) {
 function ScaleSelector({ label, value, onChange }) {
   return (
     <div>
-      <p className="text-xs font-medium text-gray-600 mb-2">{label}</p>
+      <p className="text-xs font-medium text-dark-muted mb-2">{label}</p>
       <div className="flex flex-wrap gap-1.5">
         {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
           <button
@@ -44,7 +44,7 @@ function ScaleSelector({ label, value, onChange }) {
             className={`w-11 h-11 rounded text-sm font-medium transition-colors ${
               value === n
                 ? 'bg-brand-primary text-white'
-                : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                : 'border border-dark-border text-dark-muted hover:bg-dark-elevated hover:text-dark-text'
             }`}
           >
             {n}
@@ -218,16 +218,16 @@ export default function SessionWizard() {
 
   if (loading) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">Loading…</p>
+      <div className="min-h-[100dvh] flex items-center justify-center bg-dark-bg">
+        <p className="text-sm text-dark-muted">Loading…</p>
       </div>
     )
   }
 
   if (error && step !== 'summary') {
     return (
-      <div className="min-h-[100dvh] bg-gray-50 p-8">
-        <p className="text-sm text-red-600">{error}</p>
+      <div className="min-h-[100dvh] bg-dark-bg p-8">
+        <p className="text-sm text-red-400">{error}</p>
         <Link to="/client" className="mt-2 inline-block text-sm text-brand-primary hover:underline">
           Back
         </Link>
@@ -238,15 +238,15 @@ export default function SessionWizard() {
   // ── Done ──────────────────────────────────────────────────────────────────
   if (step === 'done') {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-gray-50 px-4">
-        <div className="max-w-sm w-full bg-white rounded-lg shadow p-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-dark-bg px-4">
+        <div className="max-w-sm w-full bg-dark-surface rounded-xl border border-dark-border p-8 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-900/20">
+            <svg className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-xl font-semibold text-gray-900">Great work!</h2>
-          <p className="mt-2 text-sm text-gray-500">
+          <h2 className="text-xl font-semibold text-dark-text">Great work!</h2>
+          <p className="mt-2 text-sm text-dark-muted">
             {exercises.length} exercise{exercises.length !== 1 ? 's' : ''} completed and logged.
           </p>
           <Link
@@ -263,11 +263,11 @@ export default function SessionWizard() {
   // ── Intro ─────────────────────────────────────────────────────────────────
   if (step === 'intro') {
     return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gray-50 px-4">
-        <div className="max-w-sm w-full bg-white rounded-lg shadow p-8 text-center">
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">Session</p>
-          <h1 className="text-2xl font-semibold text-gray-900">{session.name}</h1>
-          <p className="mt-2 text-sm text-gray-500">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-dark-bg px-4">
+        <div className="max-w-sm w-full bg-dark-surface rounded-xl border border-dark-border p-8 text-center">
+          <p className="text-xs font-medium uppercase tracking-wider text-dark-subtle mb-2">Session</p>
+          <h1 className="text-2xl font-semibold text-dark-text">{session.name}</h1>
+          <p className="mt-2 text-sm text-dark-muted">
             {exercises.length} exercise{exercises.length !== 1 ? 's' : ''}
           </p>
           <button
@@ -276,7 +276,7 @@ export default function SessionWizard() {
           >
             Start session
           </button>
-          <Link to="/client" className="mt-3 block text-sm text-gray-400 hover:text-gray-600">
+          <Link to="/client" className="mt-3 block text-sm text-dark-subtle hover:text-dark-muted">
             Back to sessions
           </Link>
         </div>
@@ -306,12 +306,12 @@ export default function SessionWizard() {
     }
 
     return (
-      <div className="min-h-[100dvh] bg-gray-50">
+      <div className="min-h-[100dvh] bg-dark-bg">
         {/* Sticky progress header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+        <div className="sticky top-0 z-10 bg-dark-surface border-b border-dark-border px-4 py-3 flex items-center justify-between">
           <button
             onClick={handleBack}
-            className="text-sm text-gray-500 hover:text-gray-700"
+            className="text-sm text-dark-muted hover:text-dark-text"
           >
             ← Back
           </button>
@@ -321,11 +321,11 @@ export default function SessionWizard() {
                 key={i}
                 className={`h-1.5 rounded-full transition-colors ${
                   exercises.length > 8 ? 'w-3' : 'w-5'
-                } ${i < step ? 'bg-gray-400' : i === step ? 'bg-brand-primary' : 'bg-gray-200'}`}
+                } ${i < step ? 'bg-dark-subtle' : i === step ? 'bg-brand-primary' : 'bg-dark-elevated'}`}
               />
             ))}
           </div>
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-dark-subtle">
             {step + 1} / {exercises.length}
           </span>
         </div>
@@ -333,9 +333,9 @@ export default function SessionWizard() {
         <div className="max-w-lg mx-auto px-4 py-5 space-y-5 pb-[max(2rem,env(safe-area-inset-bottom))]">
           {/* Exercise identity */}
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">{ex.exercises?.name ?? 'Exercise'}</h2>
+            <h2 className="text-xl font-semibold text-dark-text">{ex.exercises?.name ?? 'Exercise'}</h2>
             {ex.exercises?.category && (
-              <span className="mt-1 inline-block rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-600">
+              <span className="mt-1 inline-block rounded-full bg-dark-elevated px-2.5 py-0.5 text-xs text-dark-muted">
                 {ex.exercises.category}
               </span>
             )}
@@ -344,15 +344,15 @@ export default function SessionWizard() {
           {ex.exercises?.video_url && <VideoPlayer url={ex.exercises.video_url} />}
 
           {/* Prescribed target */}
-          <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Target</p>
-            <p className="text-sm font-medium text-gray-800">
+          <div className="rounded-lg border border-dark-border bg-dark-elevated px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-dark-subtle mb-1">Target</p>
+            <p className="text-sm font-medium text-dark-text">
               {ex.sets} sets × {ex.reps} reps{ex.weight ? ` @ ${formatWeight(ex.weight, weightUnit)}` : ''}
             </p>
           </div>
 
           {ex.therapist_notes && (
-            <p className="rounded bg-brand-note-bg border border-brand-note-border px-3 py-2 text-sm text-brand-note-text">
+            <p className="rounded bg-dark-accent-bg border border-dark-border px-3 py-2 text-sm text-dark-accent">
               {ex.therapist_notes}
             </p>
           )}
@@ -360,13 +360,13 @@ export default function SessionWizard() {
           {/* Per-set inputs */}
           {!allSetsDone ? (
             <div className="space-y-4">
-              <p className="text-sm font-semibold text-gray-800">
+              <p className="text-sm font-semibold text-dark-text">
                 Set {currentSet + 1} of {setsData.length}
               </p>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600">Reps</label>
+                  <label className="block text-xs font-medium text-dark-muted">Reps</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -374,12 +374,12 @@ export default function SessionWizard() {
                     value={currentSetData.reps}
                     onChange={e => updateSetField(step, currentSet, 'reps', e.target.value)}
                     placeholder={ex.reps ? String(ex.reps) : '—'}
-                    className="mt-1 w-full rounded border border-gray-300 px-3 py-2.5 text-sm focus:border-gray-500 focus:outline-none"
+                    className="mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2.5 text-sm text-dark-text focus:border-dark-accent focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600">
-                    Weight <span className="font-normal text-gray-400">({weightUnit}, optional)</span>
+                  <label className="block text-xs font-medium text-dark-muted">
+                    Weight <span className="font-normal text-dark-subtle">({weightUnit}, optional)</span>
                   </label>
                   <input
                     type="text"
@@ -388,7 +388,7 @@ export default function SessionWizard() {
                     value={currentSetData.weight}
                     onChange={e => updateSetField(step, currentSet, 'weight', e.target.value)}
                     placeholder={ex.weight ? String(parseFloat(fromCanonical(ex.weight, weightUnit).toFixed(1))) : '—'}
-                    className="mt-1 w-full rounded border border-gray-300 px-3 py-2.5 text-sm focus:border-gray-500 focus:outline-none"
+                    className="mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2.5 text-sm text-dark-text focus:border-dark-accent focus:outline-none"
                   />
                 </div>
               </div>
@@ -404,9 +404,9 @@ export default function SessionWizard() {
 
               {/* Compact summary of already-done sets */}
               {currentSet > 0 && (
-                <div className="rounded border border-gray-100 bg-white px-3 py-2 space-y-1">
+                <div className="rounded border border-dark-border bg-dark-surface px-3 py-2 space-y-1">
                   {setsData.slice(0, currentSet).map((s, i) => (
-                    <p key={i} className="text-xs text-gray-500">
+                    <p key={i} className="text-xs text-dark-muted">
                       Set {i + 1}: {s.reps} reps{s.weight ? ` @ ${s.weight} ${weightUnit}` : ''}
                     </p>
                   ))}
@@ -417,9 +417,9 @@ export default function SessionWizard() {
             /* All sets done — show pain + notes */
             <div className="space-y-4">
               {/* Recap of completed sets */}
-              <div className="rounded border border-gray-100 bg-white px-3 py-2 space-y-1">
+              <div className="rounded border border-dark-border bg-dark-surface px-3 py-2 space-y-1">
                 {setsData.map((s, i) => (
-                  <p key={i} className="text-xs text-gray-500">
+                  <p key={i} className="text-xs text-dark-muted">
                     Set {i + 1}: {s.reps} reps{s.weight ? ` @ ${s.weight} ${weightUnit}` : ''}
                   </p>
                 ))}
@@ -432,36 +432,36 @@ export default function SessionWizard() {
               />
 
               <div>
-                <label className="block text-xs font-medium text-gray-600">
-                  Notes for therapist <span className="font-normal text-gray-400">(optional)</span>
+                <label className="block text-xs font-medium text-dark-muted">
+                  Notes for therapist <span className="font-normal text-dark-subtle">(optional)</span>
                 </label>
                 <textarea
                   rows={2}
                   value={ex.clientNotes}
                   onChange={e => updateEx(step, 'clientNotes', e.target.value)}
                   placeholder="e.g. felt tight on rep 3"
-                  className="mt-1 w-full rounded border border-gray-300 px-3 py-2.5 text-sm focus:border-gray-500 focus:outline-none"
+                  className="mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2.5 text-sm text-dark-text focus:border-dark-accent focus:outline-none"
                 />
               </div>
 
               {/* Feedback video */}
               <div>
-                <label className="block text-xs font-medium text-gray-600">
-                  Feedback video <span className="font-normal text-gray-400">(optional)</span>
+                <label className="block text-xs font-medium text-dark-muted">
+                  Feedback video <span className="font-normal text-dark-subtle">(optional)</span>
                 </label>
                 {ex.videoFile ? (
-                  <div className="mt-1 flex items-center justify-between rounded border border-gray-300 px-3 py-1.5 text-sm">
-                    <span className="text-gray-700 truncate">{ex.videoFile.name}</span>
+                  <div className="mt-1 flex items-center justify-between rounded border border-dark-border px-3 py-1.5 text-sm">
+                    <span className="text-dark-text truncate">{ex.videoFile.name}</span>
                     <button
                       type="button"
                       onClick={() => updateEx(step, 'videoFile', null)}
-                      className="ml-2 shrink-0 text-gray-400 hover:text-gray-600"
+                      className="ml-2 shrink-0 text-dark-subtle hover:text-dark-muted"
                     >
                       Remove
                     </button>
                   </div>
                 ) : (
-                  <label className="mt-1 flex cursor-pointer items-center gap-2 rounded border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 hover:border-gray-400">
+                  <label className="mt-1 flex cursor-pointer items-center gap-2 rounded border border-dashed border-dark-border px-3 py-2 text-sm text-dark-muted hover:border-dark-accent">
                     <span>+ Add video</span>
                     <input
                       type="file"
@@ -491,34 +491,34 @@ export default function SessionWizard() {
 
   // ── Summary ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-[100dvh] bg-gray-50">
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
+    <div className="min-h-[100dvh] bg-dark-bg">
+      <div className="sticky top-0 z-10 bg-dark-surface border-b border-dark-border px-4 py-3">
         <button
           onClick={() => setStep(exercises.length - 1)}
-          className="text-sm text-gray-500 hover:text-gray-700"
+          className="text-sm text-dark-muted hover:text-dark-text"
         >
           ← Back
         </button>
       </div>
 
       <div className="max-w-lg mx-auto px-4 py-5 space-y-5 pb-[max(2rem,env(safe-area-inset-bottom))]">
-        <h2 className="text-xl font-semibold text-gray-900">Session summary</h2>
+        <h2 className="text-xl font-semibold text-dark-text">Session summary</h2>
 
-        <div className="rounded-lg border border-gray-200 bg-white divide-y divide-gray-100">
+        <div className="rounded-lg border border-dark-border bg-dark-surface divide-y divide-dark-border">
           {exercises.map((ex, i) => (
             <div key={ex.id} className="px-4 py-3 flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{ex.exercises?.name ?? 'Exercise'}</p>
-                <p className="mt-0.5 text-xs text-gray-500">
+                <p className="text-sm font-medium text-dark-text truncate">{ex.exercises?.name ?? 'Exercise'}</p>
+                <p className="mt-0.5 text-xs text-dark-muted">
                   {ex.setsData.length} set{ex.setsData.length !== 1 ? 's' : ''} completed
                 </p>
               </div>
               <div className="text-right shrink-0">
                 {ex.painRating !== null && (
-                  <p className="text-xs text-gray-500">Pain: {ex.painRating}/10</p>
+                  <p className="text-xs text-dark-muted">Pain: {ex.painRating}/10</p>
                 )}
                 {ex.videoFile && (
-                  <p className="mt-0.5 text-xs text-green-600">Video attached</p>
+                  <p className="mt-0.5 text-xs text-green-400">Video attached</p>
                 )}
                 <button
                   onClick={() => setStep(i)}
@@ -538,19 +538,19 @@ export default function SessionWizard() {
         />
 
         <div>
-          <label className="block text-xs font-medium text-gray-600">
-            Session notes <span className="font-normal text-gray-400">(optional)</span>
+          <label className="block text-xs font-medium text-dark-muted">
+            Session notes <span className="font-normal text-dark-subtle">(optional)</span>
           </label>
           <textarea
             rows={3}
             value={sessionNotes}
             onChange={e => setSessionNotes(e.target.value)}
             placeholder="How did the session feel overall?"
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2.5 text-sm focus:border-gray-500 focus:outline-none"
+            className="mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2.5 text-sm text-dark-text focus:border-dark-accent focus:outline-none"
           />
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-400">{error}</p>}
 
         <button
           onClick={handleComplete}

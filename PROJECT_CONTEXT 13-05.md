@@ -1247,3 +1247,108 @@ Special cases:
 
 **Build verified:** `npm run build` exits 0. No new errors. Pre-existing chunk size warning from `@react-pdf/renderer` unchanged.
 
+---
+
+### Session 32 — Client + auth dark mode sweep + client BottomNav
+
+**Goal:** Apply the dark theme (same `dark.*` token set established in Session 31) uniformly to all client pages, all auth pages, and the `/join/:code` page. Add a fixed bottom navigation bar to the client interface.
+
+---
+
+**Phase 1 — BottomNav component**
+
+**New file:** `src/components/client/BottomNav.jsx`
+
+Fixed bottom tab nav for the client interface. Three tabs: Sessions (→ `/client`), History (→ `/client/history`), Settings (→ `/client/settings`).
+
+Key details:
+- Sessions tab uses **exact** pathname match (`pathname === '/client'`) — prevents false-active highlight during SessionWizard at `/client/sessions/:id`
+- `paddingBottom: 'env(safe-area-inset-bottom)'` as inline style (iOS home indicator clearance)
+- `minHeight: 56px` per tab (exceeds 44px touch target requirement)
+- `useReducedMotion` from framer-motion gates `transition-colors`
+- `lucide-react` icons: `LayoutList`, `History`, `Settings`
+- Active: `text-dark-accent`; inactive: `text-dark-muted hover:text-dark-text`
+- `bg-dark-surface border-t border-dark-border z-40`
+
+---
+
+**Phase 2 — Client pages dark sweep**
+
+Color mapping identical to Session 31 therapist sweep. Applied to all client pages.
+
+**`src/pages/client/Dashboard.jsx`:**
+- Full dark sweep
+- Removed top-right History + Settings link buttons (BottomNav replaces them)
+- Progress tab removed — moved to History page (see below)
+- "Completed" badge: `bg-green-900/30 text-green-400` → `bg-dark-accent-bg text-dark-accent` (teal, matching brand accent)
+- `<BottomNav />` added; `pb-20` for clearance
+
+**`src/pages/client/ProgressTab.jsx`:**
+- Loading/error text: `text-gray-500` → `text-dark-muted`, `text-red-600` → `text-red-400`
+
+**`src/pages/client/MyExercises.jsx`:**
+- Full rewrite of 9-line stub: dark theme + `<BottomNav />`
+
+**`src/pages/client/SessionWizard.jsx`:**
+- Full dark sweep across all 5 states: loading, error, done, intro, per-exercise step, summary
+- **No BottomNav** — focused full-screen flow; retains its own sticky header
+- Therapist note block: `bg-brand-note-bg border-brand-note-border text-brand-note-text` → `bg-dark-accent-bg border-dark-border text-dark-accent`
+- Category badge: `bg-gray-100 text-gray-600` → `bg-dark-elevated text-dark-muted`
+- Progress dots: past `bg-gray-400` → `bg-dark-subtle`, future `bg-gray-200` → `bg-dark-elevated`
+
+**`src/pages/client/History.jsx`:**
+- Full dark sweep
+- Back link header removed (BottomNav replaces it)
+- **Progress tab added** — History page now has a History / Progress tab switcher
+  - Prescriptions fetched lazily on first switch to Progress tab (no overhead on initial load)
+  - `clients.id` lookup → prescriptions fetch chain, same as Dashboard; only active prescriptions passed to `ProgressTab`
+- `<BottomNav />` added; `pb-20`
+
+**`src/pages/client/Settings.jsx`:**
+- Full dark sweep
+- Header simplified to title-only (removed back link and top-right logout button)
+- Logout moved into page body as a standalone card section below the password card
+- Logout uses **2-step confirmation** pattern: idle state shows "Log out" button → confirming state shows "Log out of ManualRx?" + red "Yes, log out" + "Cancel" — matches therapist sidebar's `AccountSection` pattern
+- `<BottomNav />` added; `pb-20`
+
+---
+
+**Phase 3 — Auth + Join pages dark sweep**
+
+All five pages follow the same dark pattern: full-screen `bg-dark-bg`, centred card `bg-dark-surface border border-dark-border rounded-xl`, teal `Logo` component (3px bar + "ManualRx" in Outfit 700 — same as homepage and sidebar), dark inputs, teal primary button text `text-[#0a0a0a]` (ensures contrast on teal bg).
+
+Inline `Logo` function added to each file (not shared import — auth/join pages don't import therapist components):
+```jsx
+function Logo() {
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ width: '3px', height: '20px', background: '#29B5CC', borderRadius: '2px', flexShrink: 0 }} />
+      <span style={{ fontFamily: '"Outfit", sans-serif', fontWeight: 700, fontSize: '17px', letterSpacing: '-0.01em', lineHeight: 1 }}>
+        <span style={{ color: '#f0f0f0' }}>Manual</span>
+        <span style={{ color: '#29B5CC' }}>Rx</span>
+      </span>
+    </div>
+  )
+}
+```
+
+**Pages updated:** `Login.jsx`, `Signup.jsx`, `ForgotPassword.jsx`, `ResetPassword.jsx`, `Join.jsx`
+
+`ResetPassword.jsx` has three internal states (checking/invalid/form) — all three dark-themed.
+
+`Join.jsx` has four states (loading/error/success/form) — all four dark-themed. Disabled email input uses `text-dark-subtle` to visually distinguish from editable fields.
+
+---
+
+**Phase 4 — Favicon**
+
+**`index.html`** — SVG favicon added as data URI in `<head>`:
+```html
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23111111'/><text x='4' y='23' font-family='Georgia,serif' font-weight='700' font-size='18' fill='%2329B5CC'>Rx</text></svg>" />
+```
+Georgia used instead of Outfit — custom fonts cannot be used in SVG data URIs rendered in browser chrome. Georgia serif gives a similar script quality for "Rx" at small sizes. `rx='6'` gives rounded corners matching iOS icon convention.
+
+---
+
+**Build verified:** `npm run build` exits 0. No new errors.
+
