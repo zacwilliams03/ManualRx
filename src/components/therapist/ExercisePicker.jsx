@@ -4,7 +4,7 @@ import { toCanonical } from '../../utils/weightUtils'
 
 const CATEGORIES = [
   'Custom', 'Cervical', 'Thoracic', 'Lumbar',
-  'Shoulder', 'Hip', 'Knee', 'Ankle / Foot', 'General',
+  'Shoulder', 'Elbow', 'Hand / Wrist', 'Hip', 'Knee', 'Ankle / Foot', 'General',
 ]
 
 // confirmLabel: text shown on the Add button — defaults to 'Add to session'; pass 'Add to template' in TemplateEdit
