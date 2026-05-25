@@ -33,31 +33,36 @@ export default function ExerciseUpload() {
 
     if (!name.trim()) { setError('Name is required.'); return }
     if (categories.length === 0) { setError('Select at least one category.'); return }
-    if (!videoFile) { setError('A video file is required.'); return }
 
     setUploading(true)
 
-    const ext = videoFile.name.split('.').pop()
-    const filename = `${Date.now()}.${ext}`
-    const path = `therapist-videos/${profile.id}/${filename}`
+    let publicUrl = null
 
-    const { error: uploadError } = await supabase.storage
-      .from('exercise-videos')
-      .upload(path, videoFile, {
-        onUploadProgress: (event) => {
-          setUploadProgress(Math.round((event.loaded / event.total) * 100))
-        },
-      })
+    if (videoFile) {
+      const ext = videoFile.name.split('.').pop()
+      const filename = `${Date.now()}.${ext}`
+      const path = `therapist-videos/${profile.id}/${filename}`
 
-    if (uploadError) {
-      setError('Video upload failed: ' + uploadError.message)
-      setUploading(false)
-      return
+      const { error: uploadError } = await supabase.storage
+        .from('exercise-videos')
+        .upload(path, videoFile, {
+          onUploadProgress: (event) => {
+            setUploadProgress(Math.round((event.loaded / event.total) * 100))
+          },
+        })
+
+      if (uploadError) {
+        setError('Video upload failed: ' + uploadError.message)
+        setUploading(false)
+        return
+      }
+
+      const { data: { publicUrl: url } } = supabase.storage
+        .from('exercise-videos')
+        .getPublicUrl(path)
+
+      publicUrl = url
     }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('exercise-videos')
-      .getPublicUrl(path)
 
     const { data, error: insertError } = await supabase
       .from('exercises')
