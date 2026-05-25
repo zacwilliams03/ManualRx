@@ -60,7 +60,7 @@ export default function ExerciseDetail() {
     async function fetchExercise() {
       const { data, error } = await supabase
         .from('exercises')
-        .select('id, name, description, category, video_url, thumbnail_url, is_custom, created_by, default_sets, default_reps')
+        .select('id, name, description, category, categories, video_url, thumbnail_url, is_custom, created_by, default_sets, default_reps')
         .eq('id', id)
         .single()
 
@@ -123,9 +123,11 @@ export default function ExerciseDetail() {
             <div>
               <h1 className="text-2xl font-semibold text-dark-text">{exercise.name}</h1>
               <div className="mt-1 flex items-center gap-2">
-                <span className="rounded-full bg-dark-elevated px-3 py-0.5 text-xs text-dark-muted">
-                  {exercise.category}
-                </span>
+                {(exercise.categories?.length ? exercise.categories : [exercise.category]).filter(Boolean).map(cat => (
+                  <span key={cat} className="rounded-full bg-dark-elevated px-3 py-0.5 text-xs text-dark-muted">
+                    {cat}
+                  </span>
+                ))}
                 {exercise.is_custom && (
                   <span className="rounded-full bg-dark-accent-bg px-3 py-0.5 text-xs text-dark-accent">
                     Custom
