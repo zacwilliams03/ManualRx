@@ -39,7 +39,7 @@ export default function ExerciseLibrary() {
 
     let query = supabase
       .from('exercises')
-      .select('id, name, category, categories, video_url, is_custom', { count: 'exact' })
+      .select('id, name, category, categories, video_url, is_custom, created_by', { count: 'exact' })
 
     if (debouncedSearch.trim()) {
       query = query.textSearch('fts', debouncedSearch.trim(), { type: 'websearch', config: 'english' })
@@ -63,6 +63,16 @@ export default function ExerciseLibrary() {
       setTotalCount(count ?? 0)
     }
     setLoading(false)
+  }
+
+  async function handleDelete(id) {
+    if (!window.confirm('Delete this exercise? This cannot be undone.')) return
+    const { error } = await supabase.from('exercises').delete().eq('id', id)
+    if (error) {
+      alert('Failed to delete: ' + error.message)
+      return
+    }
+    setExercises(prev => prev.filter(e => e.id !== id))
   }
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
@@ -115,21 +125,30 @@ export default function ExerciseLibrary() {
             <>
               <div className="rounded-lg border border-dark-border bg-dark-surface divide-y divide-dark-border">
                 {exercises.map(ex => (
-                  <Link
-                    key={ex.id}
-                    to={`/therapist/exercises/${ex.id}`}
-                    className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-dark-elevated transition-colors"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-dark-text">{ex.name}</p>
-                      <p className="text-xs text-dark-muted">{ex.category}{ex.is_custom ? ' · Custom' : ''}</p>
-                    </div>
-                    {ex.video_url && (
-                      <span className="shrink-0 rounded-full bg-dark-accent-bg px-2.5 py-0.5 text-xs font-medium text-dark-accent">
-                        Video attached
-                      </span>
+                  <div key={ex.id} className="flex items-center">
+                    <Link
+                      to={`/therapist/exercises/${ex.id}`}
+                      className="flex flex-1 items-center justify-between gap-3 px-4 py-3 hover:bg-dark-elevated transition-colors min-w-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-dark-text">{ex.name}</p>
+                        <p className="text-xs text-dark-muted">{ex.category}{ex.is_custom ? ' · Custom' : ''}</p>
+                      </div>
+                      {ex.video_url && (
+                        <span className="shrink-0 rounded-full bg-dark-accent-bg px-2.5 py-0.5 text-xs font-medium text-dark-accent">
+                          Video attached
+                        </span>
+                      )}
+                    </Link>
+                    {ex.is_custom && ex.created_by === profile?.id && (
+                      <button
+                        onClick={() => handleDelete(ex.id)}
+                        className="shrink-0 mr-3 rounded border border-red-800/40 px-2 py-1 text-xs text-red-400 hover:bg-red-900/20 cursor-pointer transition-colors"
+                      >
+                        Delete
+                      </button>
                     )}
-                  </Link>
+                  </div>
                 ))}
               </div>
 
