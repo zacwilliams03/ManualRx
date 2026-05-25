@@ -1009,5 +1009,51 @@ NOTIFY pgrst, 'reload schema';
 
 ---
 
+### Session 29 — Returning-client auto-link
+
+**Problem:** The `on_client_account_link` trigger fires on `AFTER INSERT ON auth.users` (new signups only). When an existing client receives an invite from a second therapist and logs in, no trigger fires — `clients.user_id` stays NULL and `client_invites.consumed_at` is never set.
+
+**Fix — new SQL function:**
+```sql
+CREATE OR REPLACE FUNCTION public.claim_pending_invites()
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  UPDATE clients SET user_id = auth.uid()
+  WHERE lower(email) = lower((SELECT email FROM auth.users WHERE id = auth.uid()))
+    AND user_id IS NULL;
+  UPDATE client_invites SET consumed_at = now()
+  WHERE lower(email) = lower((SELECT email FROM auth.users WHERE id = auth.uid()))
+    AND consumed_at IS NULL;
+END; $$;
+GRANT EXECUTE ON FUNCTION public.claim_pending_invites() TO authenticated;
+```
+Run in Supabase SQL Editor. No migration file — project has no tracked migrations.
+
+**AuthContext change:** `onAuthStateChange` now fires `claim_pending_invites()` on `SIGNED_IN` events only (not token refreshes or page reloads). Uses async IIFE — fire-and-forget, errors only logged to console.
+
+```javascript
+if (event === 'SIGNED_IN') {
+  ;(async () => {
+    const { error } = await supabase.rpc('claim_pending_invites')
+    if (error) console.error('claim_pending_invites failed:', error)
+  })()
+}
+```
+
+**Dashboard query hardening:** A client can now have multiple `clients` rows (one per therapist). Five files used `.single()` on `clients WHERE user_id = ?` — this throws when multiple rows exist. Fix applied to all five: `Dashboard.jsx`, `Settings.jsx`, `SessionWizard.jsx`, `useWeightUnit.js`, `useClinicName.js`:
+```javascript
+.eq('user_id', profile.id)
+.order('created_at', { ascending: false })
+.limit(1)
+.single()
+```
+Most-recently-created therapist relationship wins. Proper therapist-picker UI is out of scope for now.
+
+**Join.jsx message:** Updated "already registered" error from "An account with this email already exists. Please log in." → "You already have an account. Just log in and you'll be connected to your new therapist automatically."
+
+**Key gotchas discovered:**
+- `supabase.rpc()` returns a PromiseLike (thenable), not a full Promise — `.catch()` does not exist on it and calling it throws a TypeError that crashes the login flow. Always use `await` inside an async IIFE, or `.then(null, handler)`.
+- `claim_pending_invites()` consumes ALL unconsumed invites for the email in one login — if two therapists have pending invites simultaneously, both get consumed. Known limitation, acceptable for now.
+
 Note for Claude — always tell me if I should switch models to something more powerful, or if a lighter model is okay.
 
