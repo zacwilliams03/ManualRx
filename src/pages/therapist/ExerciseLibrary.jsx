@@ -39,7 +39,7 @@ export default function ExerciseLibrary() {
 
     let query = supabase
       .from('exercises')
-      .select('id, name, category, thumbnail_url, is_custom, default_sets, default_reps', { count: 'exact' })
+      .select('id, name, category, video_url, is_custom', { count: 'exact' })
 
     if (debouncedSearch.trim()) {
       query = query.textSearch('fts', debouncedSearch.trim(), { type: 'websearch', config: 'english' })
@@ -51,7 +51,6 @@ export default function ExerciseLibrary() {
     }
 
     query = query
-      .order('is_custom', { ascending: true })
       .order('name', { ascending: true })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
@@ -114,33 +113,21 @@ export default function ExerciseLibrary() {
           )}
           {!loading && !error && exercises.length > 0 && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="rounded-lg border border-dark-border bg-dark-surface divide-y divide-dark-border">
                 {exercises.map(ex => (
                   <Link
                     key={ex.id}
                     to={`/therapist/exercises/${ex.id}`}
-                    className="block rounded-lg border border-dark-border bg-dark-surface p-4 hover:border-dark-muted transition-colors"
+                    className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-dark-elevated transition-colors"
                   >
-                    <div className="h-32 w-full rounded bg-dark-elevated overflow-hidden mb-3 flex items-center justify-center">
-                      {ex.thumbnail_url ? (
-                        <img src={ex.thumbnail_url} alt={ex.name} className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="text-xs text-dark-subtle">No thumbnail</span>
-                      )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-dark-text">{ex.name}</p>
+                      <p className="text-xs text-dark-muted">{ex.category}{ex.is_custom ? ' · Custom' : ''}</p>
                     </div>
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium text-dark-text leading-snug">{ex.name}</p>
-                      {ex.is_custom && (
-                        <span className="shrink-0 rounded-full bg-dark-accent-bg px-2 py-0.5 text-xs text-dark-accent">
-                          Custom
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 text-xs text-dark-muted">{ex.category}</p>
-                    {(ex.default_sets || ex.default_reps) && (
-                      <p className="mt-1 text-xs text-dark-subtle">
-                        {ex.default_sets} sets × {ex.default_reps} reps
-                      </p>
+                    {ex.video_url && (
+                      <span className="shrink-0 rounded-full bg-dark-accent-bg px-2.5 py-0.5 text-xs font-medium text-dark-accent">
+                        Video
+                      </span>
                     )}
                   </Link>
                 ))}
