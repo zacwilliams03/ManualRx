@@ -12,7 +12,7 @@ export default function ExerciseUpload() {
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [category, setCategory] = useState('')
+  const [categories, setCategories] = useState([])
   const [defaultSets, setDefaultSets] = useState('')
   const [defaultReps, setDefaultReps] = useState('')
   const [videoFile, setVideoFile] = useState(null)
@@ -21,12 +21,18 @@ export default function ExerciseUpload() {
   const [error, setError] = useState(null)
   const [uploadedId, setUploadedId] = useState(null)
 
+  function toggleCategory(cat) {
+    setCategories(prev =>
+      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    )
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError(null)
 
     if (!name.trim()) { setError('Name is required.'); return }
-    if (!category) { setError('Category is required.'); return }
+    if (categories.length === 0) { setError('Select at least one category.'); return }
     if (!videoFile) { setError('A video file is required.'); return }
 
     setUploading(true)
@@ -58,7 +64,8 @@ export default function ExerciseUpload() {
       .insert({
         name: name.trim(),
         description: description.trim() || null,
-        category,
+        category: categories[0],
+        categories,
         video_url: publicUrl,
         is_custom: true,
         created_by: profile.id,
@@ -81,7 +88,7 @@ export default function ExerciseUpload() {
   function resetForm() {
     setName('')
     setDescription('')
-    setCategory('')
+    setCategories([])
     setDefaultSets('')
     setDefaultReps('')
     setVideoFile(null)
@@ -141,15 +148,22 @@ export default function ExerciseUpload() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-dark-text">Category</label>
-              <select
-                value={category}
-                onChange={e => setCategory(e.target.value)}
-                className={inputClass}
-              >
-                <option value="">Select a category…</option>
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <label className="block text-sm font-medium text-dark-text">
+                Categories <span className="font-normal text-dark-subtle">(select all that apply)</span>
+              </label>
+              <div className="mt-2 grid grid-cols-2 gap-y-2 gap-x-4">
+                {CATEGORIES.map(c => (
+                  <label key={c} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={categories.includes(c)}
+                      onChange={() => toggleCategory(c)}
+                      className="rounded border-dark-border text-brand-primary focus:ring-brand-primary focus:ring-offset-0 bg-dark-elevated"
+                    />
+                    <span className="text-sm text-dark-text">{c}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             <div>
