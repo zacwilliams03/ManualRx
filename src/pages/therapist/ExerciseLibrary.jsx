@@ -39,7 +39,7 @@ export default function ExerciseLibrary() {
 
     let query = supabase
       .from('exercises')
-      .select('id, name, category, video_url, is_custom', { count: 'exact' })
+      .select('id, name, category, categories, video_url, is_custom', { count: 'exact' })
 
     if (debouncedSearch.trim()) {
       query = query.textSearch('fts', debouncedSearch.trim(), { type: 'websearch', config: 'english' })
@@ -47,7 +47,7 @@ export default function ExerciseLibrary() {
     if (category === 'Custom') {
       query = query.eq('is_custom', true)
     } else if (category !== 'All') {
-      query = query.eq('category', category)
+      query = query.contains('categories', [category])
     }
 
     query = query
