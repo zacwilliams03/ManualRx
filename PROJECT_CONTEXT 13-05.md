@@ -313,6 +313,7 @@ A therapist-facing "client notes" page (free-text clinical observations) would c
 - [x] Reusable session templates — Templates tab in nav; therapists create/edit/delete named exercise programs with optional category tag; ExercisePicker extracted as shared component (used by SessionEdit and TemplateEdit); Apply Template modal on Prescribe page with search + category filter pills; applying creates a fresh prescription, template is never modified
 - [x] Prescription duration + active/inactive state — `start_date` and `duration_weeks` added to prescriptions; `duration_weeks` added to templates as a default; active/inactive derived client-side (+7 grace period); inactive cards shown dimmed with Inactive badge + Reactivate button (duplicates prescription with today as new start_date, navigates to SessionEdit); clients only see active prescriptions; applying a template copies its duration_weeks + sets start_date = today
 - [x] PDF export — therapist can download a PDF of any prescription; "Download PDF" button on each session card; client-side generation via `@react-pdf/renderer`; lazy-fetches exercise data on click; filename sanitised; loading + error state per card; clinic name branding (falls back to "ManualRx"); weight in therapist's unit; bodyweight exercises shown as "Bodyweight"
+- [x] Marketing homepage — dark-theme, 7-section landing page at `/` route (`src/pages/HomePage.jsx`); DM Serif Display headings, Lenis smooth scroll, Framer Motion animations with `prefers-reduced-motion` support; Logo Option 1 (F1 Bar) implemented; sections: Nav, Hero, Features, How It Works, Pricing, CTA Banner, Footer
 
 ---
 
@@ -423,6 +424,63 @@ All tokens are defined in `tailwind.config.js` under `theme.extend.colors.brand`
 - **Key principle:** Restraint. Whitespace and consistency do the heavy lifting. Colour is used intentionally, not decoratively.
 - **Avoid:** Wellness app aesthetic, hospital system aesthetic, generic health crosses or abstract human figures in any future logo work.
 
+### Homepage — Design Direction (decided)
+
+- Dark theme committed — near-black background (`#0a0a0a`), primary accent `#29B5CC`
+- Reference aesthetic: Linear.app — restrained motion, dark, single accent colour
+- Typography: DM Serif Display (headings/hero) paired with DM Sans (body) — font contrast
+  signals premium without being ornate
+- No light/dark toggle — committing to dark mode for both homepage and app UI
+- App UI dark mode sweep to follow after homepage is finalised
+
+**Homepage sections (built — Session 30):**
+1. Nav — fixed, blur backdrop, Logo Option 1 + links + CTA buttons
+2. Hero — "Exercise prescription, made easy." — DM Serif Display, teal glow, grid texture, app mockup (hidden on mobile)
+3. Features — 3-column card grid: Prescribe in minutes, Your own video library (featured), Client progress tracking
+4. How it works — "Simple for you. Simple for them." — 3 numbered steps
+5. Pricing — 3 tiers: Solo $29, Clinic $70, Practice $120 (figures TBC before launch)
+6. CTA banner — "Give your clients a better experience — starting today."
+7. Footer — logo, legal links (placeholder), copyright
+
+**Removed:** "Trusted by" logo strip — no customers yet, add closer to launch
+
+**Pending (TODOs in code):**
+- Confirm pricing figures before launch (`{/* TODO: confirm pricing before launch */}`)
+- Confirm contact email — currently `mailto:hello@manualrx.app` (`{/* TODO: replace mailto with confirmed address before launch */}`)
+- Add real Privacy policy, Terms, Contact pages for footer links
+
+**Build order:** ~~Logo~~ → ~~Homepage~~ → App UI dark mode sweep
+
+---
+
+### Logo — Shortlisted Options (not yet decided)
+
+Two finalists identified. Both use `#29B5CC` teal for "Rx".
+
+**Option 1 — F1 Bar (Outfit Bold) ✅ SELECTED & IMPLEMENTED**
+- "ManualRx" in Outfit Bold, thin teal vertical bar on left edge
+- Implemented in `src/pages/HomePage.jsx` as the `<Logo />` component
+- 3px teal (`#29B5CC`) vertical bar + "Manual" white + "Rx" teal, Outfit Bold 700, 17px
+- Also needs implementing in the app UI (TherapistNav, client pages) — currently still text-only
+
+**Option 2 — H1 Bracket (RedHat Mono)** — ruled out. See above.
+
+**Favicon:** Not yet done. Approach: "Rx" in teal on dark bg once app UI logo is implemented.
+
+---
+
+### Pricing — Structure Decision
+
+Solo-only at launch. Clinic tier deferred.
+
+**Reason:** If Solo = unlimited clients, there is no forcing function for a clinic to
+upgrade — they'd just buy multiple Solo plans. The Clinic tier requires a multi-therapist
+shared library system (shared video ownership, per-seat billing, permissions) which is a
+non-trivial build. Do not sell it before it exists.
+
+**Roadmap:** Solo → validate → talk to clinic customers → build what they ask for → add
+Clinic tier. Pricing to be confirmed at launch; current placeholders: Solo $29/mo.
+
 ### Still needed before launch
 
 **Logo / favicon:**
@@ -436,8 +494,10 @@ All tokens are defined in `tailwind.config.js` under `theme.extend.colors.brand`
 - Supabase sender name shows "Supabase" — change to "ManualRx" in dashboard before launch
 
 **Pages:**
-- Marketing/home page — does not exist yet. Required before launch.
-- Privacy policy page — required before launch (AU Privacy Act). Can live on the marketing site.
+- ~~Marketing/home page~~ — ✅ done (Session 30). Live at `/`.
+- Privacy policy page — required before launch (AU Privacy Act). Footer link is a placeholder.
+- Terms of service page — required before launch. Footer link is a placeholder.
+- Contact page — footer link is a placeholder.
 ---
 
 ## Session Log
@@ -1054,6 +1114,45 @@ Most-recently-created therapist relationship wins. Proper therapist-picker UI is
 **Key gotchas discovered:**
 - `supabase.rpc()` returns a PromiseLike (thenable), not a full Promise — `.catch()` does not exist on it and calling it throws a TypeError that crashes the login flow. Always use `await` inside an async IIFE, or `.then(null, handler)`.
 - `claim_pending_invites()` consumes ALL unconsumed invites for the email in one login — if two therapists have pending invites simultaneously, both get consumed. Known limitation, acceptable for now.
+
+---
+
+### Session 30 — Marketing homepage
+
+**New dependency:** `lenis` (smooth scroll library)
+
+**New files:**
+- `src/pages/HomePage.jsx` (~800 lines) — full dark-theme marketing landing page. Seven sections: Nav, Hero, Features, HowItWorks, Pricing, CTABanner, Footer. All defined as named functions in a single file. Data arrays (`NAV_LINKS`, `FEATURES`, `STEPS`, `PLANS`) defined as `const` at file top for easy future edits.
+
+**Files modified:**
+- `index.html` — Google Fonts link extended to include DM Serif Display (regular + italic) and Outfit Bold (for logo)
+- `src/App.jsx` — `/` route changed from `<Navigate to="/login">` to `<HomePage />`; catch-all `*` route changed from `/login` to `/`; `HomePage` import added
+
+**Design tokens (raw hex — no `brand-*` Tailwind tokens used on homepage):**
+- bg `#0a0a0a`, surface `#111111`, primary `#29B5CC`, text `#f0f0f0`, text-muted `#888888`
+
+**Key implementation decisions:**
+- Logo: Option 1 (F1 Bar) — 3px teal bar + "Manual" white + "Rx" teal, Outfit Bold
+- Hero headline: "Exercise prescription, made easy." (DM Serif Display, teal italic emphasis)
+- Lenis stored in `useRef` so nav links can call `lenisRef.current.scrollTo(id)` — bare `href="#id"` anchors conflict with Lenis and are not used
+- `useReducedMotion()` from Framer Motion called in each section; `fw()` (whileInView) and `fa()` (animate on mount) helpers return `{ initial: false }` when reduced motion is preferred
+- `minHeight: '100dvh'` (not `100vh`) in Hero — iOS Safari `100vh` includes browser chrome
+- Decorative elements have `aria-hidden="true"`; nav has `aria-label="Main"`
+- Footer links use `onClick={e => e.preventDefault()}` — bare `href="#"` causes scroll-to-top
+- FEATURES data stores `Icon: ComponentReference` not `icon: <JSX />` — avoids hoisting fragility
+- CTA banner copy: "Give your clients a better experience — starting today." (no false social proof)
+
+**Pricing tiers (placeholders — confirm before launch):**
+- Solo $29/mo: 1 therapist, unlimited clients, full exercise library, custom video uploads, PDF export
+- Clinic $70/mo: up to 5 therapists, shared video library, full exercise library, PDF export
+- Practice $120/mo: unlimited therapists, shared library, PDF export, priority support
+- Analytics dashboard and white-label branding NOT listed (features don't exist yet)
+
+**TODOs left in code:**
+- `{/* TODO: confirm pricing before launch */}` on pricing figures
+- `{/* TODO: replace mailto with confirmed address before launch */}` on CTA banner demo link
+
+**Build verified:** `npm run build` exits 0. Chunk size warning is pre-existing (Framer Motion) — not an error.
 
 Note for Claude — always tell me if I should switch models to something more powerful, or if a lighter model is okay.
 

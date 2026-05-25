@@ -21,6 +21,7 @@ import History from './pages/client/History'
 import Join from './pages/Join'
 import Onboarding from './pages/therapist/Onboarding'
 import Settings from './pages/therapist/Settings'
+import HomePage from './pages/HomePage'
 
 function ProtectedRoute({ children, requiredRole }) {
   const { user, profile, loading } = useAuth()
@@ -66,7 +67,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
           <Route path="/signup" element={<PublicOnlyRoute><Signup /></PublicOnlyRoute>} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -94,7 +95,7 @@ export default function App() {
           <Route path="/client/history" element={<ProtectedRoute requiredRole="client"><History /></ProtectedRoute>} />
 
           {/* Anything else */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
