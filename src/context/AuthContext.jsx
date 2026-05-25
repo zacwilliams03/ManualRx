@@ -28,9 +28,10 @@ export function AuthProvider({ children }) {
       if (session?.user) {
         loadProfile(session.user.id)
         if (event === 'SIGNED_IN') {
-          supabase.rpc('claim_pending_invites').catch(err =>
-            console.error('claim_pending_invites failed:', err)
-          )
+          ;(async () => {
+            const { error } = await supabase.rpc('claim_pending_invites')
+            if (error) console.error('claim_pending_invites failed:', error)
+          })()
         }
       } else {
         setProfile(null)
