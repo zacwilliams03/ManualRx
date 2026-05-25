@@ -42,7 +42,7 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
     setSearching(true)
     const { data } = await supabase
       .from('exercises')
-      .select('id, name, category, default_sets, default_reps, video_url')
+      .select('id, name, category, categories, default_sets, default_reps, video_url')
       .textSearch('fts', debouncedSearch.trim(), { type: 'websearch', config: 'english' })
       .limit(10)
     setSearchResults(data ?? [])
@@ -53,9 +53,9 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
     setCategoryLoading(true)
     setPickerCategory(cat)
     setPickerView('category')
-    let query = supabase.from('exercises').select('id, name, category, default_sets, default_reps, video_url')
+    let query = supabase.from('exercises').select('id, name, category, categories, default_sets, default_reps, video_url')
     if (cat === 'Custom') query = query.eq('is_custom', true)
-    else query = query.eq('category', cat)
+    else query = query.contains('categories', [cat])
     const { data } = await query.order('name', { ascending: true })
     setCategoryExercises(data ?? [])
     setCategoryLoading(false)
@@ -205,7 +205,9 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
           </button>
           <div className="px-4 py-3 bg-dark-elevated border-b border-dark-border">
             <p className="text-sm font-medium text-dark-text">{pickerExercise.name}</p>
-            <p className="text-xs text-dark-subtle mt-0.5">{pickerExercise.category}</p>
+            <p className="text-xs text-dark-subtle mt-0.5">
+              {(pickerExercise.categories?.length ? pickerExercise.categories : [pickerExercise.category]).filter(Boolean).join(' · ')}
+            </p>
             {pickerExercise.video_url && (
               <p className="text-xs text-dark-subtle mt-0.5">Video attached</p>
             )}
