@@ -12,6 +12,16 @@ export default function Templates() {
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState(null)
+  const [search, setSearch] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState(null)
+
+  const categories = [...new Set(templates.map(t => t.category).filter(Boolean))].sort()
+
+  const filteredTemplates = templates.filter(t => {
+    const matchesSearch = search.trim() === '' || t.name.toLowerCase().includes(search.trim().toLowerCase())
+    const matchesCategory = selectedCategory === null || t.category === selectedCategory
+    return matchesSearch && matchesCategory
+  })
 
   useEffect(() => {
     if (profile?.id) fetchTemplates()
@@ -74,6 +84,43 @@ export default function Templates() {
           </button>
         </div>
 
+        <div className="mt-6 max-w-2xl space-y-2">
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search templates…"
+            className="w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:border-dark-accent focus:outline-none"
+          />
+          {categories.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                  selectedCategory === null
+                    ? 'bg-brand-primary text-white'
+                    : 'bg-dark-elevated text-dark-muted hover:text-dark-text'
+                }`}
+              >
+                All
+              </button>
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                    selectedCategory === cat
+                      ? 'bg-brand-primary text-white'
+                      : 'bg-dark-elevated text-dark-muted hover:text-dark-text'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
 
         {loading && (
@@ -88,9 +135,13 @@ export default function Templates() {
           </div>
         )}
 
-        {!loading && templates.length > 0 && (
+        {!loading && templates.length > 0 && filteredTemplates.length === 0 && (
+          <p className="mt-6 text-sm text-dark-muted">No templates match your search.</p>
+        )}
+
+        {!loading && filteredTemplates.length > 0 && (
           <div className="mt-6 space-y-3 max-w-2xl">
-            {templates.map(t => {
+            {filteredTemplates.map(t => {
               const exerciseCount = t.template_exercises?.length ?? 0
               const exerciseNames = (t.template_exercises ?? [])
                 .map(te => te.exercises?.name)
@@ -129,7 +180,7 @@ export default function Templates() {
                         </button>
                         <button
                           onClick={() => navigate(`/therapist/templates/${t.id}`)}
-                          className="rounded border border-dark-border px-3 py-1 text-sm text-dark-muted hover:bg-dark-elevated hover:text-dark-text cursor-pointer transition-colors duration-150"
+                          className="rounded border border-dark-accent px-3 py-1 text-sm text-dark-accent hover:bg-dark-accent-bg cursor-pointer transition-colors duration-150"
                         >
                           Edit
                         </button>
