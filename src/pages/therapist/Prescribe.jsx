@@ -290,6 +290,7 @@ export default function Prescribe() {
 
       const blob = await pdf(
         <PrescriptionPDF
+          clinicName={clinicName}
           clientName={client?.name ?? 'Client'}
           prescriptionName={prescription.name}
           exercises={exercises}

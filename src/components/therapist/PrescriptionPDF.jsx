@@ -103,7 +103,7 @@ function formatDate(date) {
   return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export function PrescriptionPDF({ clientName, prescriptionName, exercises, weightUnit }) {
+export function PrescriptionPDF({ clinicName, clientName, prescriptionName, exercises, weightUnit }) {
   const today = formatDate(new Date())
 
   return (
@@ -114,7 +114,7 @@ export function PrescriptionPDF({ clientName, prescriptionName, exercises, weigh
             <View style={styles.logoBar} />
             <Text style={styles.logoManual}>Manual<Text style={styles.logoRx}>Rx</Text></Text>
           </View>
-          <Text style={styles.subtitle}>EXERCISE PROGRAM</Text>
+          <Text style={styles.subtitle}>EXERCISE PROGRAM — {clinicName}</Text>
         </View>
 
         <View style={styles.metaRow}>
