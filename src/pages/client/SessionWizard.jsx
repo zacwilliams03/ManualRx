@@ -66,6 +66,7 @@ export default function SessionWizard() {
   const [step, setStep] = useState('intro')
   const [sessionEffort, setSessionEffort] = useState(null)
   const [sessionNotes, setSessionNotes] = useState('')
+  const [clinicBrand, setClinicBrand] = useState(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -78,7 +79,7 @@ export default function SessionWizard() {
   useEffect(() => {
     async function fetchData() {
       const [sessionRes, exercisesRes, clientRes] = await Promise.all([
-        supabase.from('prescriptions').select('id, name').eq('id', sessionId).single(),
+        supabase.from('prescriptions').select('id, name, therapist_id').eq('id', sessionId).single(),
         supabase
           .from('prescription_exercises')
           .select('id, sets, reps, weight, therapist_notes, exercises(id, name, category, video_url)')
@@ -120,6 +121,16 @@ export default function SessionWizard() {
           videoFile: null,
         }))
       )
+
+      if (sessionRes.data.therapist_id) {
+        const { data: brand } = await supabase
+          .from('therapist_profiles')
+          .select('clinic_name, logo_url')
+          .eq('user_id', sessionRes.data.therapist_id)
+          .single()
+        if (brand) setClinicBrand(brand)
+      }
+
       setLoading(false)
     }
     fetchData()
@@ -320,19 +331,32 @@ export default function SessionWizard() {
           >
             ← Back
           </button>
-          <div className="flex items-center gap-1.5">
-            {exercises.map((_, i) => (
-              <div
-                key={i}
-                className={`h-1.5 rounded-full transition-colors ${
-                  exercises.length > 8 ? 'w-3' : 'w-5'
-                } ${i < step ? 'bg-dark-subtle' : i === step ? 'bg-brand-primary' : 'bg-dark-elevated'}`}
-              />
-            ))}
+          <div className="flex flex-col items-center">
+            <div className="flex items-center gap-1.5">
+              {exercises.map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 rounded-full transition-colors ${
+                    exercises.length > 8 ? 'w-3' : 'w-5'
+                  } ${i < step ? 'bg-dark-subtle' : i === step ? 'bg-brand-primary' : 'bg-dark-elevated'}`}
+                />
+              ))}
+            </div>
+            <span className="mt-1 text-xs text-dark-subtle">
+              {step + 1} / {exercises.length}
+            </span>
           </div>
-          <span className="text-xs text-dark-subtle">
-            {step + 1} / {exercises.length}
-          </span>
+          <div className="flex-shrink-0 overflow-hidden">
+            {clinicBrand?.logo_url ? (
+              <img
+                src={clinicBrand.logo_url}
+                alt=""
+                style={{ maxHeight: '24px', maxWidth: '80px', objectFit: 'contain' }}
+              />
+            ) : clinicBrand?.clinic_name ? (
+              <span className="text-xs text-dark-subtle">{clinicBrand.clinic_name}</span>
+            ) : null}
+          </div>
         </div>
 
         <div className="max-w-lg mx-auto px-4 py-5 space-y-5 pb-[max(2rem,env(safe-area-inset-bottom))]">

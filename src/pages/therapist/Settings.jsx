@@ -11,6 +11,9 @@ export default function Settings() {
   const [weightUnit, setWeightUnit] = useState('kg')
   const [frequencyMode, setFrequencyMode] = useState('none')
   const [customDays, setCustomDays] = useState('')
+  const [logoUrl, setLogoUrl] = useState(null)
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [logoError, setLogoError] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [fetchError, setFetchError] = useState(null)
@@ -31,7 +34,7 @@ export default function Settings() {
     async function fetchSettings() {
       const { data, error } = await supabase
         .from('therapist_profiles')
-        .select('clinic_name, weight_unit, default_frequency_days')
+        .select('clinic_name, weight_unit, default_frequency_days, logo_url')
         .eq('user_id', profile.id)
         .maybeSingle()
 
@@ -43,6 +46,7 @@ export default function Settings() {
       if (data) {
         setClinicName(data.clinic_name ?? '')
         setWeightUnit(data.weight_unit ?? 'kg')
+        setLogoUrl(data.logo_url ?? null)
 
         const d = data.default_frequency_days
         if (d === null || d === undefined) setFrequencyMode('none')
@@ -70,6 +74,37 @@ export default function Settings() {
     if (frequencyMode === 'weekly') return 7
     const n = parseInt(customDays, 10)
     return Number.isFinite(n) && n > 0 ? n : null
+  }
+
+  async function handleLogoUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setLogoError(null)
+    setLogoUploading(true)
+    const ext = file.name.split('.').pop()
+    const path = `${profile.id}/${Date.now()}.${ext}`
+    // NOTE: The 'clinic-logos' bucket must be created manually in the
+    // Supabase Storage dashboard with public access enabled before this works.
+    const { error: upErr } = await supabase.storage
+      .from('clinic-logos')
+      .upload(path, file, { upsert: true })
+    if (upErr) {
+      setLogoError('Logo upload failed. Please try again.')
+      setLogoUploading(false)
+      return
+    }
+    const { data: urlData } = supabase.storage.from('clinic-logos').getPublicUrl(path)
+    const publicUrl = urlData.publicUrl
+    const { error: dbErr } = await supabase
+      .from('therapist_profiles')
+      .upsert({ user_id: profile.id, logo_url: publicUrl }, { onConflict: 'user_id' })
+    if (dbErr) {
+      setLogoError('Logo upload failed. Please try again.')
+      setLogoUploading(false)
+      return
+    }
+    setLogoUrl(publicUrl)
+    setLogoUploading(false)
   }
 
   async function handleSave(e) {
@@ -184,6 +219,30 @@ export default function Settings() {
           <p className="mt-6 text-sm text-red-400">{fetchError}</p>
         ) : (
           <form onSubmit={handleSave} className="mt-6 space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-dark-text">Clinic logo</label>
+              <p className="mt-0.5 text-xs text-dark-muted">Shown to clients during their sessions. Optional.</p>
+              {logoUrl && (
+                <img
+                  src={logoUrl}
+                  alt="Clinic logo"
+                  className="mt-2 rounded"
+                  style={{ maxHeight: '48px', objectFit: 'contain' }}
+                />
+              )}
+              <label className={`mt-2 inline-block border border-dark-border bg-dark-elevated text-dark-muted text-sm rounded px-3 py-2 cursor-pointer hover:bg-dark-surface ${logoUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                {logoUploading ? 'Uploading…' : 'Choose image'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={logoUploading}
+                  onChange={handleLogoUpload}
+                />
+              </label>
+              {logoError && <p className="mt-1 text-sm text-red-400">{logoError}</p>}
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-dark-text">Clinic name</label>
               <input
