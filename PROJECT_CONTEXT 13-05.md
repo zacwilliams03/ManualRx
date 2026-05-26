@@ -1348,3 +1348,31 @@ Georgia used instead of Outfit — custom fonts cannot be used in SVG data URIs 
 
 **Build verified:** `npm run build` exits 0. No new errors.
 
+---
+
+### Session 33 — Multi-category exercises
+
+*(See summary block in "Completed" section above.)*
+
+---
+
+### Session 34 — iOS safe area fix + PDF branding
+
+**iOS white safe area fix:**
+- `src/index.css` — added `html, body { background-color: #0a0a0a; }` inside `@layer base`. Root cause: `viewport-fit=cover` extends content behind the iOS status bar but without an explicit body background the browser renders white in the safe area gap before React paints. The fix colours the body to match `dark.bg`.
+
+**PDF branding update (`src/components/therapist/PrescriptionPDF.jsx`):**
+- Fixed teal colour: `TEAL` constant `#3DBDB5` → `#29B5CC` (brand teal, matches app's `dark.accent`)
+- Fixed light teal: `TEAL_LIGHT` `#E5F7F6` → `#E1F5FA` (matches brand light teal in `tailwind.config.js`)
+- "EXERCISE PROGRAM" subtitle colour changed from `TEAL` → `GREY` (`#6B7280`)
+- `notesBox` style — added `borderLeftWidth: 2, borderLeftColor: TEAL` (left accent border)
+- **ManualRx logo added to header** — replaces plain clinic name text. Built from `@react-pdf/renderer` primitives only (no image file):
+  - `logoRow` (flex row, `alignItems: center`)
+  - `logoBar` (`View`, 3px wide, 20px tall, `#29B5CC`, `borderRadius: 2`)
+  - `Text` with nested `Text`: "Manual" in `#1E2D3D` (logoManual) + "Rx" in `#29B5CC` (logoRx) — nested Text is the correct react-pdf pattern for inline colour changes within a single text node
+- Subtitle updated to `EXERCISE PROGRAM — {clinicName}` so the clinic name appears beneath the logo
+- `clinicName` prop retained in function signature and passed from `Prescribe.jsx` (via existing `useClinicName()` hook)
+- Unused `clinicName` StyleSheet style removed
+
+**Note on PDF colours:** The PDF document is intentionally white/print-friendly — not dark. The dark app theme does not carry into PDFs since clients print them.
+
