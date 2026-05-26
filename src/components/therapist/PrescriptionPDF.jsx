@@ -22,16 +22,33 @@ const styles = StyleSheet.create({
     borderBottomColor: TEAL,
     paddingBottom: 12,
   },
-  clinicName: {
-    fontSize: 20,
-    fontFamily: 'Helvetica-Bold',
-    color: NAVY,
-  },
   subtitle: {
     fontSize: 9,
     color: GREY,
     letterSpacing: 1.5,
     marginTop: 2,
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  logoBar: {
+    width: 3,
+    height: 20,
+    backgroundColor: TEAL,
+    borderRadius: 2,
+    marginRight: 8,
+  },
+  logoManual: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 16,
+    color: NAVY,
+  },
+  logoRx: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 16,
+    color: TEAL,
   },
   metaRow: {
     flexDirection: 'row',
@@ -93,7 +110,10 @@ export function PrescriptionPDF({ clinicName, clientName, prescriptionName, exer
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.clinicName}>{clinicName || 'ManualRx'}</Text>
+          <View style={styles.logoRow}>
+            <View style={styles.logoBar} />
+            <Text style={styles.logoManual}>Manual<Text style={styles.logoRx}>Rx</Text></Text>
+          </View>
           <Text style={styles.subtitle}>EXERCISE PROGRAM</Text>
         </View>
 
