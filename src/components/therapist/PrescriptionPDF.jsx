@@ -2,8 +2,8 @@ import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
 import { weightDisplay } from '../../utils/pdfUtils'
 
 const NAVY = '#1E2D3D'
-const TEAL = '#3DBDB5'
-const TEAL_LIGHT = '#E5F7F6'
+const TEAL = '#29B5CC'
+const TEAL_LIGHT = '#E1F5FA'
 const GREY = '#6B7280'
 const BORDER = '#D4E8E8'
 
@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 9,
-    color: TEAL,
+    color: GREY,
     letterSpacing: 1.5,
     marginTop: 2,
   },
@@ -62,6 +62,8 @@ const styles = StyleSheet.create({
   notesBox: {
     backgroundColor: TEAL_LIGHT,
     borderRadius: 4,
+    borderLeftWidth: 2,
+    borderLeftColor: TEAL,
     padding: 6,
     marginTop: 4,
   },
