@@ -484,6 +484,10 @@ export default function SessionWizard() {
               </button>
             </div>
           )}
+
+          <p className="mt-4 text-xs text-dark-subtle text-center">
+            Stop and seek medical advice if you experience sudden severe pain, chest pain, or dizziness.
+          </p>
         </div>
       </div>
     )
