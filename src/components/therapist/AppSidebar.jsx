@@ -35,11 +35,11 @@ function Logo() {
           fontFamily: '"Outfit", sans-serif',
           fontWeight: 700,
           fontSize: '17px',
-          letterSpacing: '-0.01em',
+          letterSpacing: '-0.02em',
           lineHeight: 1,
         }}
       >
-        <span style={{ color: '#f0f0f0' }}>Manual</span>
+        <span style={{ color: '#e8edf5' }}>Manual</span>
         <span style={{ color: '#29B5CC' }}>Rx</span>
       </span>
     </div>
@@ -58,15 +58,24 @@ function NavItem({ to, icon: Icon, label, activePrefixes, exact }) {
       <Link
         to={to}
         className={[
-          'flex items-center gap-3 px-3 rounded-lg transition-colors duration-150 cursor-pointer',
+          'flex items-center gap-3 rounded-lg transition-all duration-150 cursor-pointer',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dark-accent',
           active
-            ? 'bg-dark-accent-bg text-dark-accent'
-            : 'text-dark-muted hover:bg-dark-elevated hover:text-dark-text',
+            ? 'text-dark-accent'
+            : 'hover:text-dark-text',
         ].join(' ')}
-        style={{ minHeight: '44px' }}
+        style={{
+          minHeight: '40px',
+          paddingLeft: '10px',
+          paddingRight: '12px',
+          background: active ? 'rgba(41,181,204,0.08)' : 'transparent',
+          borderLeft: active ? '2px solid #29B5CC' : '2px solid transparent',
+          color: active ? '#29B5CC' : '#aaaaaa',
+        }}
+        onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+        onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
       >
-        <Icon size={18} strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
+        <Icon size={17} strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
         <span className="text-sm font-medium">{label}</span>
       </Link>
     </div>
@@ -335,7 +344,11 @@ export default function AppSidebar() {
     <nav
       aria-label="Main navigation"
       className="fixed left-0 top-0 h-screen z-40 flex flex-col border-r border-dark-border"
-      style={{ width: '240px', background: '#111111' }}
+      style={{
+        width: '240px',
+        background: 'linear-gradient(180deg, rgba(41,181,204,0.05) 0%, #0e1117 8%, #0e1117 100%)',
+        borderRight: '1px solid rgba(41,181,204,0.10)',
+      }}
     >
       {/* Logo */}
       <div className="px-5 py-5 flex-shrink-0">
@@ -345,7 +358,7 @@ export default function AppSidebar() {
       </div>
 
       {/* Divider */}
-      <div className="border-t border-dark-border mx-4 mb-2" />
+      <div className="mx-4 mb-2" style={{ height: '1px', background: 'rgba(41,181,204,0.12)' }} />
 
       {/* Nav links */}
       <div role="list" className="flex-1 flex flex-col gap-0.5 px-3 py-2 overflow-y-auto">
@@ -374,7 +387,7 @@ export default function AppSidebar() {
       </div>
 
       {/* Bottom zone */}
-      <div className="px-3 pb-4 pt-2 flex flex-col gap-0.5 flex-shrink-0 border-t border-dark-border">
+      <div className="px-3 pb-4 pt-2 flex flex-col gap-0.5 flex-shrink-0" style={{ borderTop: '1px solid rgba(41,181,204,0.12)' }}>
         <NavItem
           to="/settings"
           icon={Settings}

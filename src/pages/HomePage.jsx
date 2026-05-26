@@ -405,7 +405,7 @@ function Hero({ scrollTo }) {
   return (
     <section style={{ position: 'relative', minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '60px', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden' }}>
-        <ParticleBackground position="absolute" />
+        <ParticleBackground position="absolute" spawnFromTop />
       </div>
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none',

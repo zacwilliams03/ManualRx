@@ -591,8 +591,7 @@ export default function TherapistDashboard() {
   return (
     <SidebarLayout>
       <ParticleBackground />
-      <div style={{ position: 'fixed', inset: 0, background: '#06080f', zIndex: 1, pointerEvents: 'none' }} />
-      <div style={{ position: 'relative', zIndex: 2, padding: '40px 40px 60px', minHeight: '100vh' }}>
+      <div style={{ position: 'relative', zIndex: 1, padding: '40px 40px 60px', minHeight: '100vh' }}>
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}

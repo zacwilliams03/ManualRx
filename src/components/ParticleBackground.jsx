@@ -1,16 +1,20 @@
 import { useEffect, useRef } from 'react'
 import { useReducedMotion } from 'framer-motion'
 
-function makeParticle(W, H) {
+function makeParticle(W, H, spawnFromTop) {
   const COLORS = [
     'rgb(255,255,255)', 'rgb(200,225,255)',
     'rgb(100,170,255)', 'rgb(41,181,204)', 'rgb(77,142,247)'
   ]
   return {
     x: Math.random() < 0.6 ? W * (0.1 + Math.random() * 0.7) : Math.random() * W,
-    y: H * 0.6 + Math.random() * H * 0.4,
-    vy: -(0.12 + Math.random() * 0.28),
-    swayAmp: 0.15 + Math.random() * 0.30,
+    y: spawnFromTop
+      ? Math.random() * H * 0.25
+      : H * 0.6 + Math.random() * H * 0.4,
+    vy: spawnFromTop
+      ? 0.08 + Math.random() * 0.18
+      : -(0.12 + Math.random() * 0.28),
+    swayAmp: 0.20 + Math.random() * 0.35,
     swayFreq: 0.008 + Math.random() * 0.012,
     swayPhase: Math.random() * Math.PI * 2,
     size: 1.2 + Math.random() * 1.6,
@@ -20,7 +24,7 @@ function makeParticle(W, H) {
   }
 }
 
-export default function ParticleBackground({ particleCount = 140, className, position = 'fixed' }) {
+export default function ParticleBackground({ particleCount = 140, className, position = 'fixed', spawnFromTop = false }) {
   const reduceMotion = useReducedMotion()
   const canvasRef = useRef(null)
 
@@ -43,7 +47,7 @@ export default function ParticleBackground({ particleCount = 140, className, pos
       window.addEventListener('resize', resizeCanvas)
 
       const W = canvas.width, H = canvas.height
-      const particles = Array.from({ length: particleCount }, () => makeParticle(W, H))
+      const particles = Array.from({ length: particleCount }, () => makeParticle(W, H, spawnFromTop))
 
       const loop = () => {
         const W = canvas.width, H = canvas.height
@@ -54,20 +58,30 @@ export default function ParticleBackground({ particleCount = 140, className, pos
           p.y += p.vy
           p.x += Math.sin(p.life * p.swayFreq + p.swayPhase) * p.swayAmp
 
-          if (p.y < -10 || p.life > p.maxLife) {
-            Object.assign(p, makeParticle(W, H))
+          // Reset: rising particles exit top, falling particles exit bottom
+          const exitedTop = !spawnFromTop && p.y < -10
+          const exitedBottom = spawnFromTop && p.y > H + 10
+          if (exitedTop || exitedBottom || p.life > p.maxLife) {
+            Object.assign(p, makeParticle(W, H, spawnFromTop))
             continue
           }
 
-          // Vertical fade mask
-          const fadeStart = H * 0.45, fadeEnd = H * 0.72
-          const maskAlpha = p.y < fadeStart ? 1 : p.y > fadeEnd ? 0 : 1 - (p.y - fadeStart) / (fadeEnd - fadeStart)
+          // Vertical fade mask — inverted for spawnFromTop
+          let maskAlpha
+          if (spawnFromTop) {
+            // Fully visible in top 60%, fade to 0 by 85%
+            const fadeStart = H * 0.60, fadeEnd = H * 0.85
+            maskAlpha = p.y < fadeStart ? 1 : p.y > fadeEnd ? 0 : 1 - (p.y - fadeStart) / (fadeEnd - fadeStart)
+          } else {
+            const fadeStart = H * 0.45, fadeEnd = H * 0.72
+            maskAlpha = p.y < fadeStart ? 1 : p.y > fadeEnd ? 0 : 1 - (p.y - fadeStart) / (fadeEnd - fadeStart)
+          }
           if (maskAlpha <= 0) continue
 
           // Lifetime alpha: fade in first 15%, full middle, fade out last 25%
           const t = p.life / p.maxLife
           const lifeAlpha = t < 0.15 ? t / 0.15 : t > 0.75 ? (1 - t) / 0.25 : 1
-          const alpha = Math.min(lifeAlpha * maskAlpha * 0.50, 0.50)
+          const alpha = Math.min(lifeAlpha * maskAlpha * 0.70, 0.70)
 
           ctx.globalAlpha = alpha
           ctx.fillStyle = p.color
@@ -76,7 +90,7 @@ export default function ParticleBackground({ particleCount = 140, className, pos
           ctx.fill()
         }
 
-        // Connection lines between nearby particles
+        // Connection lines — increased threshold and opacity for more visible web
         ctx.lineWidth = 0.5
         ctx.strokeStyle = 'rgb(100,170,255)'
         for (let i = 0; i < particles.length; i++) {
@@ -84,13 +98,19 @@ export default function ParticleBackground({ particleCount = 140, className, pos
             const dx = particles[i].x - particles[j].x
             const dy = particles[i].y - particles[j].y
             const dist = Math.sqrt(dx * dx + dy * dy)
-            if (dist < 85) {
-              // compute per-particle mask alphas for connection line opacity
+            if (dist < 120) {
               const pi = particles[i], pj = particles[j]
-              const fadeS = H * 0.45, fadeE = H * 0.72
-              const maskI = pi.y < fadeS ? 1 : pi.y > fadeE ? 0 : 1 - (pi.y - fadeS) / (fadeE - fadeS)
-              const maskJ = pj.y < fadeS ? 1 : pj.y > fadeE ? 0 : 1 - (pj.y - fadeS) / (fadeE - fadeS)
-              ctx.globalAlpha = (1 - dist / 85) * Math.min(maskI, maskJ) * 0.07
+              let maskI, maskJ
+              if (spawnFromTop) {
+                const fadeS = H * 0.60, fadeE = H * 0.85
+                maskI = pi.y < fadeS ? 1 : pi.y > fadeE ? 0 : 1 - (pi.y - fadeS) / (fadeE - fadeS)
+                maskJ = pj.y < fadeS ? 1 : pj.y > fadeE ? 0 : 1 - (pj.y - fadeS) / (fadeE - fadeS)
+              } else {
+                const fadeS = H * 0.45, fadeE = H * 0.72
+                maskI = pi.y < fadeS ? 1 : pi.y > fadeE ? 0 : 1 - (pi.y - fadeS) / (fadeE - fadeS)
+                maskJ = pj.y < fadeS ? 1 : pj.y > fadeE ? 0 : 1 - (pj.y - fadeS) / (fadeE - fadeS)
+              }
+              ctx.globalAlpha = (1 - dist / 120) * Math.min(maskI, maskJ) * 0.14
               ctx.beginPath()
               ctx.moveTo(pi.x, pi.y)
               ctx.lineTo(pj.x, pj.y)
@@ -110,7 +130,7 @@ export default function ParticleBackground({ particleCount = 140, className, pos
       cancelAnimationFrame(rafId)
       window.removeEventListener('resize', resizeCanvas)
     }
-  }, [reduceMotion, particleCount])
+  }, [reduceMotion, particleCount, spawnFromTop])
 
   if (reduceMotion) return null
   return (
