@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import Lenis from 'lenis'
+import ParticleBackground from '../components/ParticleBackground'
 
 // ─── Data (edit copy here) ─────────────────────────────────────────────────
 
@@ -403,6 +404,9 @@ function Hero({ scrollTo }) {
 
   return (
     <section style={{ position: 'relative', minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '60px', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden' }}>
+        <ParticleBackground position="absolute" />
+      </div>
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none',
         background: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(41,181,204,0.12) 0%, transparent 70%)',
@@ -415,7 +419,7 @@ function Hero({ scrollTo }) {
         maskImage: 'radial-gradient(ellipse 70% 60% at 50% 50%, black 0%, transparent 100%)',
       }} />
 
-      <div style={{ position: 'relative', maxWidth: '1100px', width: '100%', margin: '0 auto', padding: '60px 24px 80px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: '1100px', width: '100%', margin: '0 auto', padding: '60px 24px 80px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
         <motion.div {...fa(reduceMotion, 0)}>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '7px',
