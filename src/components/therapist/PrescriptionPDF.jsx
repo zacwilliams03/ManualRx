@@ -103,7 +103,7 @@ function formatDate(date) {
   return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export function PrescriptionPDF({ clinicName, clientName, prescriptionName, exercises, weightUnit }) {
+export function PrescriptionPDF({ clientName, prescriptionName, exercises, weightUnit }) {
   const today = formatDate(new Date())
 
   return (
