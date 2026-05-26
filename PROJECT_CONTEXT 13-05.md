@@ -302,6 +302,8 @@ A therapist-facing "client notes" page (free-text clinical observations) would c
 - [x] Prescription duration + active/inactive state — `start_date` and `duration_weeks` added to prescriptions; `duration_weeks` added to templates as a default; active/inactive derived client-side (+7 grace period); inactive cards shown dimmed with Inactive badge + Reactivate button (duplicates prescription with today as new start_date, navigates to SessionEdit); clients only see active prescriptions; applying a template copies its duration_weeks + sets start_date = today
 - [x] PDF export — therapist can download a PDF of any prescription; "Download PDF" button on each session card; client-side generation via `@react-pdf/renderer`; lazy-fetches exercise data on click; filename sanitised; loading + error state per card; clinic name branding (falls back to "ManualRx"); weight in therapist's unit; bodyweight exercises shown as "Bodyweight"
 - [x] Marketing homepage — dark-theme, 7-section landing page at `/` route (`src/pages/HomePage.jsx`); DM Serif Display headings, Lenis smooth scroll, Framer Motion animations with `prefers-reduced-motion` support; Logo Option 1 (F1 Bar) implemented; sections: Nav, Hero, Features, How It Works, Pricing, CTA Banner, Footer
+- [x] Static red flag safety disclaimer — muted `text-xs` line at the bottom of every per-exercise step in `SessionWizard`: "Stop and seek medical advice if you experience sudden severe pain, chest pain, or dizziness."
+- [x] High pain rating gate — when client rates pain ≥ 7/10, amber warning box appears in `SessionWizard` after the ScaleSelector with an "I understand, continue anyway" checkbox; Next button disabled until acknowledged; acknowledgement resets on each step change
 
 ---
 
@@ -376,6 +378,61 @@ No decision made. Building with placeholder/seed data in the interim so developm
 Recommendation to revisit
 Decision should be driven by what the first real therapist customers say they need. If the exercise list for manual therapy is narrow and well-defined (likely), filming them yourself over time may be the most defensible long-term strategy, with Exercise Animatic as a stopgap for launch.Sonnet 4.6
 
+## Feature Backlog
+
+### Pre-Launch (must ship before going live)
+
+**1. Clinic branding (therapist logo on client-facing pages)**
+Show therapist's clinic name and logo in the client exercise view header.
+- Add `logo_url` column to `therapist_profiles`
+- Add logo upload to Settings page (Supabase Storage, same pattern as
+  exercise video uploads)
+- Display `clinic_name` + `logo_url` in client prescription/exercise
+  view header. Therapist profile already accessible via
+  `prescriptions.therapist_id`
+- No theme system — image + name display only
+- Skip cropping; accept any image, display at fixed size
+~Half day.
+
+---
+
+### Post-Launch
+
+**3. SMS Integration (Twilio)**
+Replace/supplement email with SMS for client invites and exercise
+reminders. Email gets lost — SMS open rates are significantly higher.
+
+Scope:
+- Add optional `phone` field to Add Client form
+- Build `send-invite-sms` Supabase Edge Function via Twilio — same
+  pattern as `send-invite-email`. Message: "[TherapistName] has shared
+  an exercise program with you: manualrx.app/join/{code}"
+- Build `send-reminders` scheduled Edge Function (pg_cron) — daily SMS
+  to clients with active prescriptions, stored phone number, and
+  reminder enabled
+- Add `reminder_time` (time) and `reminder_enabled` (bool) to `clients`
+  table
+- Fallback: phone exists → SMS; no phone → existing Resend email flow
+- Cost: ~AUD $0.08–0.12/SMS via Twilio. Absorb at launch volume.
+- Dependencies: Twilio account. Secrets needed in Supabase:
+  `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`
+
+**4. Therapist alert on high pain**
+If a client logs pain ≥ 7/10 (`exercise_logs.pain_rating`), send the
+therapist an SMS or email: "[Client Name] reported a pain rating of
+8/10 today." Requires edge function trigger on `exercise_logs` insert.
+Defer until therapist feedback confirms demand.
+
+**5. Outcome Measures / PROMs**
+Validated questionnaires (Oswestry, DASH, PSFS) assigned by therapists
+to measure progress objectively. Visible gap vs SimpleSet and Physitrack
+but not essential for massage/manual therapy niche at launch. Revisit
+post-validation.
+
+**6. Practice Management Integrations**
+Cliniko, Jane App, Nookal, Zanda. Not realistic until ManualRx has an
+established clinic customer base. Requires OAuth/API partnership with
+each platform. Long-term only.
 
 ## Branding
 
@@ -1375,4 +1432,23 @@ Georgia used instead of Outfit — custom fonts cannot be used in SVG data URIs 
 - Unused `clinicName` StyleSheet style removed
 
 **Note on PDF colours:** The PDF document is intentionally white/print-friendly — not dark. The dark app theme does not carry into PDFs since clients print them.
+
+---
+
+### Session 35 — Safety disclaimers in session wizard
+
+**Static red flag disclaimer (`src/pages/client/SessionWizard.jsx`):**
+- Added a single line of muted text at the very bottom of the scrollable content area on every per-exercise step (inside the `typeof step === 'number'` branch, after all inputs and the Next button).
+- Text: "Stop and seek medical advice if you experience sudden severe pain, chest pain, or dizziness."
+- Styling: `text-xs text-dark-subtle text-center mt-4` — plain text only, no icon, border, or background.
+- Does not appear on intro, summary, or done screens.
+
+**High pain rating gate (`src/pages/client/SessionWizard.jsx`):**
+- When `ex.painRating >= 7` (after all sets are done), an amber warning box appears between the ScaleSelector and the notes textarea:
+  - Box: `rounded border border-amber-800/30 bg-amber-900/20 px-3 py-3` (matches existing amber pattern from `Clients.jsx`)
+  - Copy: "Your pain rating is high. If this is new or severe, stop and seek medical advice."
+  - Checkbox: "I understand, continue anyway" — standard checkbox pattern matching `ExerciseUpload.jsx`
+- Next / "Review session →" button disabled (`disabled:opacity-50`) when `ex.painRating >= 7 && !painAcknowledged`.
+- `painAcknowledged` is a component-level `useState(false)`, reset to `false` via `useEffect` on every `step` change — ensures each exercise requires its own acknowledgement and back-navigation clears a stale tick.
+- No new files, no schema changes, no logic beyond the gate.
 
