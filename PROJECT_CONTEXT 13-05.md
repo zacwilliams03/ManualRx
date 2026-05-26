@@ -13,18 +13,6 @@
 - Vercel project: rename to manualrx, add manualrx.app domain
 - Supabase Auth URLs: Site URL → https://manualrx.app; Redirect URLs → add https://manualrx.app/reset-password
 
-### Name Decision Log
-
-| Name | Status | Reason ruled out |
-|---|---|---|
-| **PrescriptRx** | ❌ ruled out | Redundant — "Prescript" + "Rx" both mean prescription |
-| **PrescriptR** | ❌ ruled out | Established US company at prescriptr.com — brand conflict, drug connotation risk |
-| **PrescribR** | ❌ ruled out | Dropped vowel styling dated; same brand conflict risk |
-| **TherAlign** | ❌ ruled out | TherAlignHealth is a US drug prescription company |
-| **MotionRx / KineticRx / RehabRx / Scriptly** | ❌ ruled out | All taken by existing operating businesses |
-| **ManualRx** | ✅ **SELECTED** | No trademark registrations (USPTO/IP Australia), no conflicting business found, "manual therapy" is correct clinical term across massage/physio/OT, Rx reads as clinical shorthand not drug prescription in context |
-
-**Trademark note:** File for registration in AU and US before any serious US expansion.
 
 ---
 
@@ -392,25 +380,33 @@ Decision should be driven by what the first real therapist customers say they ne
 ## Branding
 
 ### Status
-Colour palette **decided** (Session 18). Typography **decided** (Session 18). Logo and favicon not yet done.
+Colour palette **decided** (Sessions 31–32 — full dark sweep). Typography **decided** (Session 18). Logo and favicon not yet done.
 
 ### Decisions locked
 
-**Colour palette — Slate Navy + Bright Teal**
+**Colour palette — Dark theme (near-black + teal accent)**
+
+The entire app — therapist UI, client UI, auth pages, and homepage — uses a unified dark theme. The old "Slate Navy + Bright Teal" light palette (decided Session 18) was superseded in Sessions 31–32.
+
+**App UI** — `dark.*` tokens in `tailwind.config.js` under `theme.extend.colors.dark`:
 
 | Role | Hex | Tailwind token |
 |---|---|---|
-| Nav background | `#1E2D3D` | `bg-brand-nav` |
-| Primary (buttons, links, active) | `#3DBDB5` | `bg-brand-primary` / `text-brand-primary` |
-| Primary dark (hover, dark text) | `#2A8A86` | `bg-brand-primary-dark` |
-| Primary light (badge bg, info panels) | `#E5F7F6` | `bg-brand-primary-light` |
-| Page background | `#F7F8F9` | `bg-brand-bg` |
-| Border | `#D4E8E8` | `border-brand-border` |
-| Note box background | `#EEF6F6` | `bg-brand-note-bg` |
-| Note box border | `#C8E8E6` | `border-brand-note-border` |
-| Note box text | `#2A8A86` | `text-brand-note-text` |
+| Page background | `#0a0a0a` | `bg-dark-bg` |
+| Card / sidebar / surface | `#111111` | `bg-dark-surface` |
+| Hover / input fill | `#1a1a1a` | `bg-dark-elevated` |
+| Border | `rgba(255,255,255,0.06)` | `border-dark-border` |
+| Primary text | `#f0f0f0` | `text-dark-text` |
+| Muted text | `#888888` | `text-dark-muted` |
+| Subtle text / placeholders | `#555555` | `text-dark-subtle` |
+| Accent (buttons, links, active, icons) | `#29B5CC` | `bg-dark-accent` / `text-dark-accent` |
+| Accent background (badge bg, tinted panels) | `rgba(41,181,204,0.10)` | `bg-dark-accent-bg` |
 
-All tokens are defined in `tailwind.config.js` under `theme.extend.colors.brand`. Badge bg = `brand-primary-light`, badge text = `brand-primary-dark`. Invite email template still uses old `#2E6B7A` — update when re-doing email templates.
+**Homepage** — same colour values as above, written as raw hex inline styles (no Tailwind tokens used on the homepage).
+
+**`brand.*` tokens** — still present in `tailwind.config.js` but are secondary / legacy. Primary value is `#29B5CC` (same accent). The old light-theme values (`#F7F8F9` bg, `#CDE9EF` border etc.) are no longer used in the UI — do not treat them as active. If doing a light-mode variant in future, start from scratch.
+
+Invite email template still uses old `#2E6B7A` — update when re-doing email templates.
 
 **Typography — DM Sans**
 - Loaded via Google Fonts (preconnect + link in `index.html`)
