@@ -81,7 +81,7 @@ export default function ParticleBackground({ particleCount = 140, className, pos
           // Lifetime alpha: fade in first 15%, full middle, fade out last 25%
           const t = p.life / p.maxLife
           const lifeAlpha = t < 0.15 ? t / 0.15 : t > 0.75 ? (1 - t) / 0.25 : 1
-          const alpha = Math.min(lifeAlpha * maskAlpha * 0.70, 0.70)
+          const alpha = Math.min(lifeAlpha * maskAlpha * (spawnFromTop ? 0.45 : 0.70), spawnFromTop ? 0.45 : 0.70)
 
           ctx.globalAlpha = alpha
           ctx.fillStyle = p.color
@@ -110,7 +110,7 @@ export default function ParticleBackground({ particleCount = 140, className, pos
                 maskI = pi.y < fadeS ? 1 : pi.y > fadeE ? 0 : 1 - (pi.y - fadeS) / (fadeE - fadeS)
                 maskJ = pj.y < fadeS ? 1 : pj.y > fadeE ? 0 : 1 - (pj.y - fadeS) / (fadeE - fadeS)
               }
-              ctx.globalAlpha = (1 - dist / 120) * Math.min(maskI, maskJ) * 0.14
+              ctx.globalAlpha = (1 - dist / 120) * Math.min(maskI, maskJ) * (spawnFromTop ? 0.08 : 0.14)
               ctx.beginPath()
               ctx.moveTo(pi.x, pi.y)
               ctx.lineTo(pj.x, pj.y)
