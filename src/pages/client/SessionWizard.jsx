@@ -69,6 +69,11 @@ export default function SessionWizard() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const [painAcknowledged, setPainAcknowledged] = useState(false)
+
+  useEffect(() => {
+    setPainAcknowledged(false)
+  }, [step])
 
   useEffect(() => {
     async function fetchData() {
@@ -431,6 +436,23 @@ export default function SessionWizard() {
                 onChange={v => updateEx(step, 'painRating', v)}
               />
 
+              {ex.painRating >= 7 && (
+                <div className="rounded border border-amber-800/30 bg-amber-900/20 px-3 py-3">
+                  <p className="text-sm font-medium text-amber-400">
+                    Your pain rating is high. If this is new or severe, stop and seek medical advice.
+                  </p>
+                  <label className="mt-3 flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={painAcknowledged}
+                      onChange={e => setPainAcknowledged(e.target.checked)}
+                      className="rounded border-dark-border text-brand-primary focus:ring-brand-primary focus:ring-offset-0 bg-dark-elevated"
+                    />
+                    <span className="text-sm text-dark-muted">I understand, continue anyway</span>
+                  </label>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-medium text-dark-muted">
                   Notes for therapist <span className="font-normal text-dark-subtle">(optional)</span>
@@ -478,7 +500,8 @@ export default function SessionWizard() {
 
               <button
                 onClick={() => setStep(isLast ? 'summary' : step + 1)}
-                className="w-full rounded bg-brand-primary py-3 text-sm font-medium text-white hover:bg-brand-primary-dark"
+                disabled={ex.painRating >= 7 && !painAcknowledged}
+                className="w-full rounded bg-brand-primary py-3 text-sm font-medium text-white hover:bg-brand-primary-dark disabled:opacity-50"
               >
                 {isLast ? 'Review session →' : 'Next →'}
               </button>
