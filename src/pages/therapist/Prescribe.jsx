@@ -10,6 +10,7 @@ import { formatWeight } from '../../utils/weightUtils'
 import { sanitise } from '../../utils/pdfUtils'
 import { pdf } from '@react-pdf/renderer'
 import { PrescriptionPDF } from '../../components/therapist/PrescriptionPDF'
+import { AllSessionsPDF } from '../../components/therapist/AllSessionsPDF'
 import { ClientDataTab } from './ClientDataTab'
 import { motion, AnimatePresence } from 'framer-motion'
 import PageHero from '../../components/therapist/PageHero'
@@ -140,6 +141,8 @@ export default function Prescribe() {
 
   const [pdfLoadingId, setPdfLoadingId] = useState(null)
   const [pdfError, setPdfError] = useState(null)
+  const [allPdfLoading, setAllPdfLoading] = useState(false)
+  const [allPdfError, setAllPdfError] = useState(false)
 
   useEffect(() => {
     if (profile?.id) fetchData()
@@ -321,6 +324,62 @@ export default function Prescribe() {
     return new Date(a.created_at) - new Date(b.created_at)
   })
 
+  async function downloadAllPDF() {
+    const activeSessions = sortedSessions.filter(isActive)
+    if (activeSessions.length === 0) return
+
+    setAllPdfLoading(true)
+    setAllPdfError(false)
+    try {
+      const activeIds = activeSessions.map(s => s.id)
+      const { data: peData, error: peError } = await supabase
+        .from('prescription_exercises')
+        .select('prescription_id, sets, reps, weight, therapist_notes, exercises(name)')
+        .in('prescription_id', activeIds)
+        .order('created_at', { ascending: true })
+      if (peError) throw peError
+
+      const byId = {}
+      for (const row of peData) {
+        if (!byId[row.prescription_id]) byId[row.prescription_id] = []
+        byId[row.prescription_id].push({
+          name: row.exercises?.name ?? 'Exercise',
+          sets: row.sets,
+          reps: row.reps,
+          weight: row.weight,
+          therapist_notes: row.therapist_notes,
+        })
+      }
+
+      const prescriptions = activeSessions.map(s => ({
+        name: s.name,
+        frequencyLabel: frequencyLabel(s.frequency_days),
+        exercises: byId[s.id] ?? [],
+      }))
+
+      const blob = await pdf(
+        <AllSessionsPDF
+          clinicName={clinicName}
+          clientName={client?.name ?? 'Client'}
+          prescriptions={prescriptions}
+          weightUnit={weightUnit}
+        />
+      ).toBlob()
+
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${sanitise(client?.name ?? 'client')}-all-sessions.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('PDF generation failed:', err)
+      setAllPdfError(true)
+    } finally {
+      setAllPdfLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <SidebarLayout>
@@ -340,13 +399,20 @@ export default function Prescribe() {
         back={{ label: 'Clients', to: '/therapist/clients' }}
         actions={
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {/* Global Export PDF — placeholder for future "print all sessions" feature */}
-            <button
-              onClick={() => {}}
-              style={{ padding: '8px 14px', background: 'transparent', color: '#888', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', fontSize: '12px', cursor: 'pointer' }}
-            >
-              Export PDF
-            </button>
+            {sortedSessions.some(isActive) && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                <button
+                  onClick={downloadAllPDF}
+                  disabled={allPdfLoading}
+                  style={{ padding: '8px 14px', background: 'transparent', color: '#888', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', fontSize: '12px', cursor: allPdfLoading ? 'default' : 'pointer', opacity: allPdfLoading ? 0.6 : 1 }}
+                >
+                  {allPdfLoading ? 'Exporting…' : 'Export PDF'}
+                </button>
+                {allPdfError && (
+                  <span style={{ fontSize: '11px', color: '#f87171' }}>Export failed</span>
+                )}
+              </div>
+            )}
             {activeTab === 'prescriptions' && (
               <>
                 <button
