@@ -6,6 +6,9 @@ import SidebarLayout from '../../components/therapist/SidebarLayout'
 import ExercisePicker from '../../components/therapist/ExercisePicker'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
 import { formatWeight } from '../../utils/weightUtils'
+import { motion } from 'framer-motion'
+import PageHero from '../../components/therapist/PageHero'
+import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
 
 function VideoPlayer({ url }) {
   if (!url) return null
@@ -148,33 +151,59 @@ export default function TemplateEdit() {
     )
   }
 
-  const inputClass = 'mt-1 block w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:border-dark-accent focus:outline-none'
-
   return (
     <SidebarLayout>
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <Link to="/therapist/templates" className="text-sm text-dark-muted hover:text-dark-text">
-          ← Back to templates
-        </Link>
+      <PageHero
+        title={name || 'Edit Template'}
+        back={{ label: 'Templates', to: '/therapist/templates' }}
+        actions={
+          <button
+            onClick={saveMeta}
+            disabled={saving || !name.trim()}
+            style={{
+              padding: '9px 18px',
+              background: '#29B5CC',
+              color: '#000',
+              border: 'none',
+              borderRadius: '7px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: (saving || !name.trim()) ? 'default' : 'pointer',
+              opacity: (saving || !name.trim()) ? 0.6 : 1,
+            }}
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        }
+      />
 
-        {/* Template details */}
-        <div className="mt-4 max-w-lg bg-dark-surface rounded-lg border border-dark-border p-5">
-          <h2 className="text-sm font-medium text-dark-text mb-3">Template details</h2>
-          <div className="space-y-4">
+      <div style={{ padding: '24px 32px', maxWidth: '620px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+        {/* Template details glass card */}
+        <div style={{ ...CARD }}>
+          <div style={SHIMMER} />
+          <div style={{ marginBottom: '16px' }}>
+            <span style={SECTION_LABEL}>Template Details</span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-dark-text">
-                Name <span className="text-red-400">*</span>
+              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>
+                Name <span style={{ color: '#f87171' }}>*</span>
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className={inputClass}
+                style={{ width: '100%', padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
+
+            {/* Category */}
             <div>
-              <label className="block text-sm font-medium text-dark-text">
-                Category <span className="font-normal text-dark-subtle">(optional — e.g. Rotator Cuff, Lumbar Rehab)</span>
+              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>
+                Category <span style={{ color: '#555' }}>(optional)</span>
               </label>
               <input
                 type="text"
@@ -182,7 +211,7 @@ export default function TemplateEdit() {
                 onChange={e => setCategory(e.target.value)}
                 placeholder="e.g. Rotator Cuff"
                 list="template-categories"
-                className={inputClass}
+                style={{ width: '100%', padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
               />
               <datalist id="template-categories">
                 {existingCategories.map(cat => (
@@ -190,9 +219,11 @@ export default function TemplateEdit() {
                 ))}
               </datalist>
             </div>
+
+            {/* Duration pills — keep Tailwind classes for pills */}
             <div>
-              <label className="block text-sm font-medium text-dark-text mb-2">
-                Duration <span className="font-normal text-dark-subtle">(optional default — applied when template is used)</span>
+              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '8px' }}>
+                Duration <span style={{ color: '#555' }}>(optional default)</span>
               </label>
               <div className="flex flex-wrap gap-2">
                 {[
@@ -231,66 +262,53 @@ export default function TemplateEdit() {
                 </div>
               )}
             </div>
-            <button
-              onClick={saveMeta}
-              disabled={saving || !name.trim()}
-              className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
-            >
-              {saving ? 'Saving…' : 'Save Template & Exit'}
-            </button>
           </div>
         </div>
 
-        <div className="mt-6 max-w-lg space-y-4">
-          {/* Exercise list */}
-          <div className="rounded-lg border border-dark-border bg-dark-surface overflow-hidden">
-            <div className="px-4 py-3 border-b border-dark-border">
-              <h2 className="text-sm font-semibold text-dark-text">
-                Exercises
-                {exercises.length > 0 && (
-                  <span className="ml-1 font-normal text-dark-subtle">({exercises.length})</span>
-                )}
-              </h2>
-            </div>
-            {exercises.length === 0 ? (
-              <p className="px-4 py-4 text-sm text-dark-subtle">No exercises added yet.</p>
-            ) : (
-              <div className="divide-y divide-dark-border">
-                {exercises.map(te => (
-                  <div key={te.id} className="px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-dark-text">{te.exercises?.name}</p>
-                        <p className="mt-0.5 text-xs text-dark-muted">
-                          {te.sets} sets × {te.reps} reps
-                          {te.weight ? ` · ${formatWeight(te.weight, weightUnit)}` : ''}
-                        </p>
-                        {te.therapist_notes && (
-                          <p className="mt-0.5 text-xs text-dark-subtle italic">{te.therapist_notes}</p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => removeExercise(te.id)}
-                        className="shrink-0 text-xs text-red-400 hover:text-red-300 cursor-pointer transition-colors duration-150"
-                      >
-                        Remove
-                      </button>
+        {/* Exercise list glass card */}
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, delay: 0.1 }}
+          style={{ ...CARD, padding: 0 }}
+        >
+          <div style={SHIMMER} />
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <span style={SECTION_LABEL}>Exercises {exercises.length > 0 ? `(${exercises.length})` : ''}</span>
+          </div>
+          {exercises.length === 0 ? (
+            <p style={{ padding: '16px 20px', fontSize: '13px', color: '#666' }}>No exercises added yet.</p>
+          ) : (
+            exercises.map((te, i) => (
+              <div
+                key={te.id}
+                style={{ padding: '12px 20px', borderBottom: i < exercises.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#e8edf5' }}>{te.exercises?.name}</div>
+                    <div style={{ fontSize: '12px', color: '#555', marginTop: '2px' }}>
+                      {te.sets} sets × {te.reps} reps{te.weight ? ` · ${formatWeight(te.weight, weightUnit)}` : ''}
                     </div>
-                    {te.exercises?.video_url && (
-                      <VideoPlayer url={te.exercises.video_url} />
+                    {te.therapist_notes && (
+                      <div style={{ fontSize: '11px', color: '#555', marginTop: '2px', fontStyle: 'italic' }}>{te.therapist_notes}</div>
                     )}
                   </div>
-                ))}
+                  <button
+                    onClick={() => removeExercise(te.id)}
+                    style={{ fontSize: '12px', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
+                  >
+                    Remove
+                  </button>
+                </div>
+                {te.exercises?.video_url && <VideoPlayer url={te.exercises.video_url} />}
               </div>
-            )}
-          </div>
+            ))
+          )}
+        </motion.div>
 
-          <ExercisePicker
-            onAdd={handleAddExercise}
-            weightUnit={weightUnit}
-            confirmLabel="Add to template"
-          />
-        </div>
+        {/* ExercisePicker — unchanged */}
+        <ExercisePicker onAdd={handleAddExercise} weightUnit={weightUnit} confirmLabel="Add to template" />
       </div>
     </SidebarLayout>
   )

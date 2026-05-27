@@ -6,6 +6,9 @@ import SidebarLayout from '../../components/therapist/SidebarLayout'
 import ExercisePicker from '../../components/therapist/ExercisePicker'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
 import { formatWeight } from '../../utils/weightUtils'
+import { motion } from 'framer-motion'
+import PageHero from '../../components/therapist/PageHero'
+import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
 
 function VideoPlayer({ url }) {
   if (!url) return null
@@ -149,33 +152,60 @@ export default function SessionEdit() {
     )
   }
 
-  const inputClass = 'block w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:border-dark-accent focus:outline-none'
   const pillBase = 'rounded-full px-3 py-1 text-sm cursor-pointer transition-colors duration-150'
   const pillActive = 'bg-brand-primary text-white'
   const pillInactive = 'bg-dark-elevated border border-dark-border text-dark-muted hover:text-dark-text'
 
   return (
     <SidebarLayout>
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <Link to={`/therapist/prescribe/${clientId}`} className="text-sm text-dark-muted hover:text-dark-text">
-          ← Back to sessions
-        </Link>
+      <PageHero
+        title={name || 'Edit Session'}
+        back={{ label: 'Back', to: `/therapist/prescribe/${clientId}` }}
+        actions={
+          <button
+            onClick={saveMeta}
+            disabled={savingMeta}
+            style={{
+              padding: '9px 18px',
+              background: '#29B5CC',
+              color: '#000',
+              border: 'none',
+              borderRadius: '7px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: savingMeta ? 'default' : 'pointer',
+              opacity: savingMeta ? 0.6 : 1,
+            }}
+          >
+            {savingMeta ? 'Saving…' : 'Save'}
+          </button>
+        }
+      />
 
-        {/* Session details */}
-        <div className="mt-4 max-w-lg bg-dark-surface rounded-lg border border-dark-border p-5">
-          <h2 className="text-sm font-medium text-dark-text mb-3">Session details</h2>
-          <div className="space-y-4">
+      <div style={{ padding: '24px 32px', maxWidth: '620px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+        {/* Session details glass card */}
+        <div style={{ ...CARD }}>
+          <div style={SHIMMER} />
+          <div style={{ marginBottom: '16px' }}>
+            <span style={SECTION_LABEL}>Session Details</span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-dark-text">Name</label>
+              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>Name</label>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className={inputClass}
+                style={{ width: '100%', padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
+
+            {/* Frequency pills — keep existing Tailwind classes */}
             <div>
-              <label className="block text-sm font-medium text-dark-text mb-2">Repeat frequency</label>
+              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '8px' }}>Repeat frequency</label>
               <div className="flex flex-wrap gap-2">
                 {[
                   { label: 'No repeat', value: null },
@@ -205,17 +235,21 @@ export default function SessionEdit() {
                 </div>
               )}
             </div>
+
+            {/* Start date */}
             <div>
-              <label className="block text-sm font-medium text-dark-text mb-2">Start date</label>
+              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>Start date</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
-                className="rounded border border-dark-border bg-dark-elevated px-3 py-1.5 text-sm text-dark-text focus:border-dark-accent focus:outline-none"
+                style={{ padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none' }}
               />
             </div>
+
+            {/* Duration pills */}
             <div>
-              <label className="block text-sm font-medium text-dark-text mb-2">Duration</label>
+              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '8px' }}>Duration</label>
               <div className="flex flex-wrap gap-2">
                 {[
                   { label: 'None (ongoing)', value: null },
@@ -249,65 +283,53 @@ export default function SessionEdit() {
                 </div>
               )}
             </div>
-            <button
-              onClick={saveMeta}
-              disabled={savingMeta}
-              className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
-            >
-              {savingMeta ? 'Saving…' : 'Save & Exit'}
-            </button>
           </div>
         </div>
 
-        <div className="mt-6 max-w-lg space-y-4">
-          {/* Exercise list */}
-          <div className="rounded-lg border border-dark-border bg-dark-surface overflow-hidden">
-            <div className="px-4 py-3 border-b border-dark-border">
-              <h2 className="text-sm font-semibold text-dark-text">
-                Exercises
-                {exercises.length > 0 && (
-                  <span className="ml-1 font-normal text-dark-subtle">({exercises.length})</span>
-                )}
-              </h2>
-            </div>
-            {exercises.length === 0 ? (
-              <p className="px-4 py-4 text-sm text-dark-subtle">No exercises added yet.</p>
-            ) : (
-              <div className="divide-y divide-dark-border">
-                {exercises.map(pe => (
-                  <div key={pe.id} className="px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-dark-text">{pe.exercises.name}</p>
-                        <p className="mt-0.5 text-xs text-dark-muted">
-                          {pe.sets} sets × {pe.reps} reps
-                          {pe.weight ? ` · ${formatWeight(pe.weight, weightUnit)}` : ''}
-                        </p>
-                        {pe.therapist_notes && (
-                          <p className="mt-0.5 text-xs text-dark-subtle italic">{pe.therapist_notes}</p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => removeExercise(pe.id)}
-                        className="shrink-0 text-xs text-red-400 hover:text-red-300 cursor-pointer transition-colors duration-150"
-                      >
-                        Remove
-                      </button>
+        {/* Exercise list glass card */}
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, delay: 0.1 }}
+          style={{ ...CARD, padding: 0 }}
+        >
+          <div style={SHIMMER} />
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <span style={SECTION_LABEL}>Exercises {exercises.length > 0 ? `(${exercises.length})` : ''}</span>
+          </div>
+          {exercises.length === 0 ? (
+            <p style={{ padding: '16px 20px', fontSize: '13px', color: '#666' }}>No exercises added yet.</p>
+          ) : (
+            exercises.map((pe, i) => (
+              <div
+                key={pe.id}
+                style={{ padding: '12px 20px', borderBottom: i < exercises.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#e8edf5' }}>{pe.exercises.name}</div>
+                    <div style={{ fontSize: '12px', color: '#555', marginTop: '2px' }}>
+                      {pe.sets} sets × {pe.reps} reps{pe.weight ? ` · ${formatWeight(pe.weight, weightUnit)}` : ''}
                     </div>
-                    {pe.exercises.video_url && (
-                      <VideoPlayer url={pe.exercises.video_url} />
+                    {pe.therapist_notes && (
+                      <div style={{ fontSize: '11px', color: '#555', marginTop: '2px', fontStyle: 'italic' }}>{pe.therapist_notes}</div>
                     )}
                   </div>
-                ))}
+                  <button
+                    onClick={() => removeExercise(pe.id)}
+                    style={{ fontSize: '12px', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
+                  >
+                    Remove
+                  </button>
+                </div>
+                {pe.exercises.video_url && <VideoPlayer url={pe.exercises.video_url} />}
               </div>
-            )}
-          </div>
+            ))
+          )}
+        </motion.div>
 
-          <ExercisePicker
-            onAdd={handleAddExercise}
-            weightUnit={weightUnit}
-          />
-        </div>
+        {/* ExercisePicker — unchanged */}
+        <ExercisePicker onAdd={handleAddExercise} weightUnit={weightUnit} />
       </div>
     </SidebarLayout>
   )
