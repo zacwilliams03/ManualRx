@@ -124,10 +124,11 @@ What clients can do once logged in:
 - **therapist_video_library** — id, therapist_id, exercise_id, video_url, label, created_at
 - **templates** — id, therapist_id, name, category (nullable text, free-form tag e.g. "Rotator Cuff"), created_at. RLS: therapist_id = auth.uid()
 - **template_exercises** — id, template_id (FK → templates, CASCADE), exercise_id (FK → exercises), sets, reps, weight (nullable numeric, canonical kg), therapist_notes, created_at. RLS: template_id IN (SELECT id FROM templates WHERE therapist_id = auth.uid())
-- **prescriptions** — id, therapist_id, client_id, name, frequency_days (nullable integer), created_at, notes
+- **prescriptions** — id, therapist_id, client_id, name, frequency_days (nullable integer), start_date (date, nullable), duration_weeks (integer, nullable), created_at, notes
 - **prescription_exercises** — id, prescription_id, exercise_id, sets, reps, weight (nullable numeric), frequency, therapist_notes, order
 - **session_logs** — id, prescription_id, client_id, completed_at, session_rpe (0–10), session_notes
 - **exercise_logs** — id, prescription_exercise_id, client_id, session_log_id (FK to session_logs), completed_at, sets_completed, reps_completed (nullable — deprecated, null on new logs), weight_completed (nullable — deprecated, null on new logs), pain_rating (0–10), client_notes, video_url, sets_data (JSONB — array of `{reps, weight}` per set; use this for all new logs)
+- **dashboard_dismissed_alerts** — id, therapist_id (FK → auth.users, CASCADE), alert_type (text, CHECK IN ('overdue', 'program_complete')), prescription_id (FK → prescriptions, CASCADE), dismissed_at (timestamptz, default NOW()). RLS: therapist_id = auth.uid(). UNIQUE (therapist_id, alert_type, prescription_id). Used by the therapist dashboard NeedsAttentionCard to persist dismissed alerts across sessions.
 
 ### Key patterns
 - `prescriptions.frequency_days`: null = no repeat, 1 = daily, 7 = weekly, N = custom
@@ -304,6 +305,13 @@ A therapist-facing "client notes" page (free-text clinical observations) would c
 - [x] Marketing homepage — dark-theme, 7-section landing page at `/` route (`src/pages/HomePage.jsx`); DM Serif Display headings, Lenis smooth scroll, Framer Motion animations with `prefers-reduced-motion` support; Logo Option 1 (F1 Bar) implemented; sections: Nav, Hero, Features, How It Works, Pricing, CTA Banner, Footer
 - [x] Static red flag safety disclaimer — muted `text-xs` line at the bottom of every per-exercise step in `SessionWizard`: "Stop and seek medical advice if you experience sudden severe pain, chest pain, or dizziness."
 - [x] High pain rating gate — when client rates pain ≥ 7/10, amber warning box appears in `SessionWizard` after the ScaleSelector with an "I understand, continue anyway" checkbox; Next button disabled until acknowledged; acknowledgement resets on each step change
+- [x] Clinic branding — logo upload in Settings and onboarding flow; clinic logo + name displayed in client session header (Session 35)
+- [x] AppSidebar visual refresh — teal gradient background (`rgba(41,181,204,0.05)` → `#0e1117`), 2px teal left-border active indicator, `rgba(41,181,204,0.12)` teal-tinted dividers (Session 36)
+- [x] ParticleBackground component — `src/components/ParticleBackground.jsx`; reusable canvas 2D particle animation; `spawnFromTop` prop (false = particles rise from bottom for dashboard, true = particles fall from top for homepage hero); `position` prop ('fixed' default vs 'absolute' for contained sections); respects `prefers-reduced-motion` (Session 36)
+- [x] Therapist dashboard rebuilt — full rewrite of `src/pages/therapist/Dashboard.jsx`; **AdherenceCard**: 14-day dot grid per active client (done/missed/pending slots, adherence %), See all/collapse; **NeedsAttentionCard**: overdue alerts (≥2 consecutive missed slots), program-complete detection, dismiss-to-DB via `dashboard_dismissed_alerts` upsert with AnimatePresence exit animation; **ActivityFeedCard**: last 10 sessions with RPE badge (≤6 teal/≥7 amber) and pain badge (0–4 teal/5–7 amber/8–10 red); single prescriptions fetch shared by first two cards (Session 36)
+- [x] Full therapist UI redesign — all therapist-side pages (Clients, Templates, ExerciseLibrary, ExerciseUpload, ExerciseDetail, Prescribe, SessionEdit, TemplateEdit, Settings, Onboarding) updated to glass card design language with shared `PageHero`, `CARD`/`SHIMMER`/`SECTION_LABEL` constants from `styles.js`, confined hero-zone particles, and Framer Motion page + list animations (Session 37)
+- [x] ExercisePicker glass redesign — `src/components/therapist/ExercisePicker.jsx` restyled to glass card with shimmer, matching inputs and section label; used in SessionEdit and TemplateEdit (Session 37)
+- [x] Dashboard active client count highlighted — "N active clients" text in DashboardHeader now uses `#29B5CC` in both the alerts-present and all-clear states (Session 37)
 
 ---
 
@@ -449,7 +457,7 @@ The entire app — therapist UI, client UI, auth pages, and homepage — uses a 
 
 | Role | Hex | Tailwind token |
 |---|---|---|
-| Page background | `#0a0a0a` | `bg-dark-bg` |
+| Page background | `#0e1117` | `bg-dark-bg` |
 | Card / sidebar / surface | `#111111` | `bg-dark-surface` |
 | Hover / input fill | `#1a1a1a` | `bg-dark-elevated` |
 | Border | `rgba(255,255,255,0.06)` | `border-dark-border` |
@@ -459,11 +467,50 @@ The entire app — therapist UI, client UI, auth pages, and homepage — uses a 
 | Accent (buttons, links, active, icons) | `#29B5CC` | `bg-dark-accent` / `text-dark-accent` |
 | Accent background (badge bg, tinted panels) | `rgba(41,181,204,0.10)` | `bg-dark-accent-bg` |
 
-**Homepage** — same colour values as above, written as raw hex inline styles (no Tailwind tokens used on the homepage).
+> Note: `dark.bg` was `#0a0a0a` through Session 36 — updated to `#0e1117` in Session 37 to match the sidebar and eliminate a visible contrast seam. The homepage still uses `#0a0a0a` as raw hex (intentional — it doesn't use Tailwind tokens).
+
+**Homepage** — raw hex inline styles (no Tailwind tokens). bg `#0a0a0a`, surface `#111111`, primary `#29B5CC`, text `#f0f0f0`, muted `#888888`.
 
 **`brand.*` tokens** — still present in `tailwind.config.js` but are secondary / legacy. Primary value is `#29B5CC` (same accent). The old light-theme values (`#F7F8F9` bg, `#CDE9EF` border etc.) are no longer used in the UI — do not treat them as active. If doing a light-mode variant in future, start from scratch.
 
 Invite email template still uses old `#2E6B7A` — update when re-doing email templates.
+
+---
+
+### Glass Card Design Language (therapist UI — Session 37)
+
+All therapist-side content pages now use a shared glass-morphic card style defined in `src/components/therapist/styles.js`:
+
+```js
+// CARD — use as spread: style={{ ...CARD }}
+background: 'rgba(13,17,23,0.85)', backdropFilter: 'blur(12px)',
+border: '1px solid rgba(100,160,255,0.08)', borderRadius: '14px',
+padding: '22px 24px', position: 'relative', overflow: 'hidden'
+
+// SHIMMER — place as first child inside any CARD div
+height: '1px', background: 'linear-gradient(90deg, transparent, rgba(41,181,204,0.25), rgba(77,142,247,0.25), transparent)',
+position: 'absolute', top: 0, left: 0, right: 0
+
+// SECTION_LABEL — uppercase label style
+fontSize: '11px', fontWeight: 600, textTransform: 'uppercase',
+letterSpacing: '0.08em', color: '#888888'
+```
+
+**PageHero component** (`src/components/therapist/PageHero.jsx`) — shared page header used on every therapist page except Onboarding. Props: `title`, `subtitle` (optional), `back` (`{ label, to }` optional breadcrumb), `actions` (optional JSX). Renders a confined particle zone using `<ParticleBackground position="absolute" particleCount={60} spawnFromTop />` inside a `position:relative; overflow:hidden` wrapper, plus a `radial-gradient` cyan glow and a bottom border `rgba(41,181,204,0.08)`. Padding: `32px 32px 28px`.
+
+**Particle placement:** Hero zone only (not full page) on all pages except Dashboard. Dashboard retains full-page `<ParticleBackground spawnFromTop />` — intentionally exempt.
+
+**Framer Motion pattern:**
+- Page wrapper: `motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.25 }}`
+- Staggered list items: `delay: Math.min(index * 0.05, 0.3)` (capped to avoid long waits on large lists)
+- Tab content switches (Prescribe): `AnimatePresence mode="wait"`
+
+**Inputs (on Settings, Onboarding, ExercisePicker):**
+`background: rgba(255,255,255,0.04), border: 1px solid rgba(255,255,255,0.08), borderRadius: 7px, color: #e8edf5, padding: 9px 14px`
+
+**Toggle buttons active/inactive:**
+- Active: `rgba(41,181,204,0.12)` bg + `rgba(41,181,204,0.3)` border + `#29B5CC` text
+- Inactive: `rgba(255,255,255,0.04)` bg + `rgba(255,255,255,0.08)` border + `#888` text
 
 **Typography — DM Sans**
 - Loaded via Google Fonts (preconnect + link in `index.html`)
@@ -1451,4 +1498,92 @@ Georgia used instead of Outfit — custom fonts cannot be used in SVG data URIs 
 - Next / "Review session →" button disabled (`disabled:opacity-50`) when `ex.painRating >= 7 && !painAcknowledged`.
 - `painAcknowledged` is a component-level `useState(false)`, reset to `false` via `useEffect` on every `step` change — ensures each exercise requires its own acknowledgement and back-navigation clears a stale tick.
 - No new files, no schema changes, no logic beyond the gate.
+
+---
+
+### Session 36 — AppSidebar refresh + ParticleBackground + Dashboard rebuild
+
+**AppSidebar visual refresh (`src/components/therapist/AppSidebar.jsx`):**
+- Background updated from teal-gradient to `#0e1117` (matches `dark.bg`)
+- Active nav item: 2px teal left-border indicator + `rgba(41,181,204,0.08)` tinted background
+- Section dividers: `rgba(41,181,204,0.12)` teal-tinted (was plain dark border)
+
+**ParticleBackground component (`src/components/ParticleBackground.jsx`):**
+- Reusable canvas 2D particle animation
+- Props: `spawnFromTop` (bool — false = particles rise from bottom for dashboard full-page; true = particles fall from top for hero zones); `position` ('fixed' default vs 'absolute' for contained sections); `particleCount` (default 80)
+- Respects `prefers-reduced-motion` — skips animation if user has reduced motion enabled
+- Used on: Dashboard (full-page, fixed, spawnFromTop=false), HomePage hero (fixed), PageHero confined hero zones (absolute, spawnFromTop=true)
+
+**Therapist Dashboard rebuilt (`src/pages/therapist/Dashboard.jsx`):**
+- Full rewrite with glass card design
+- **DashboardHeader**: time-of-day greeting, active client count — "N active clients" highlighted in `#29B5CC`
+- **AdherenceCard**: 14-day dot grid per active client (done/missed/pending slots, adherence %); "See all" toggle with AnimatePresence; only shows clients with active repeating programs
+- **NeedsAttentionCard**: overdue detection (≥2 consecutive missed slots), program-complete detection; dismiss-to-DB via `dashboard_dismissed_alerts` table upsert; AnimatePresence exit animation on dismiss
+- **ActivityFeedCard**: last 10 sessions with RPE badge (≤6 teal/≥7 amber) and pain badge (0–4 teal/5–7 amber/8–10 red); click row → navigate to prescribe page
+- Single prescriptions fetch shared by AdherenceCard and NeedsAttentionCard
+- Full-page `<ParticleBackground spawnFromTop={false} />` (particles rise from bottom — this page is intentionally exempt from the hero-zone-only rule)
+
+**New DB table:**
+```sql
+CREATE TABLE dashboard_dismissed_alerts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  therapist_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  alert_type TEXT NOT NULL CHECK (alert_type IN ('overdue', 'program_complete')),
+  prescription_id UUID NOT NULL REFERENCES prescriptions(id) ON DELETE CASCADE,
+  dismissed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (therapist_id, alert_type, prescription_id)
+);
+ALTER TABLE dashboard_dismissed_alerts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Therapists manage own dismissed alerts" ON dashboard_dismissed_alerts
+  FOR ALL USING (therapist_id = auth.uid()) WITH CHECK (therapist_id = auth.uid());
+```
+
+---
+
+### Session 37 — Full therapist UI redesign (glass card design language)
+
+**Goal:** Bring all remaining therapist-side pages in line with the dashboard's design language.
+
+**Global change:**
+- `tailwind.config.js`: `dark.bg` updated `#0a0a0a` → `#0e1117` — eliminates visible contrast seam between sidebar and content area. Propagates via `bg-dark-bg` on `SidebarLayout`. Homepage still uses raw `#0a0a0a` hex.
+- `src/index.css`: `html, body { background-color: #0e1117; }` updated to match
+
+**New shared files:**
+- `src/components/therapist/styles.js` — `CARD`, `SHIMMER`, `SECTION_LABEL` style constants (see Glass Card Design Language in Branding section above). Dashboard was also updated to import from here instead of local constants.
+- `src/components/therapist/PageHero.jsx` — shared hero component used on every therapist page except Onboarding (see Branding section for spec)
+
+**Pages redesigned:**
+
+| Page | File | Notes |
+|---|---|---|
+| Clients | `Clients.jsx` | PageHero, glass card client list, staggered rows, avatar initials, status badges |
+| Templates | `Templates.jsx` | PageHero, glass card template list, category filter pills |
+| Exercise Library | `ExerciseLibrary.jsx` | PageHero, glass card exercise list, category filter pills |
+| Exercise Upload | `ExerciseUpload.jsx` | PageHero, form in glass card, success state in glass card |
+| Exercise Detail | `ExerciseDetail.jsx` | PageHero with exercise name, content in glass card |
+| Prescribe | `Prescribe.jsx` | PageHero with client name + Export PDF noop + Apply Template; styled tabs with `AnimatePresence mode="wait"`; glass prescription cards |
+| Session Edit | `SessionEdit.jsx` | PageHero with session name, form in glass card, exercise list in second glass card |
+| Template Edit | `TemplateEdit.jsx` | PageHero with template name, same two-card pattern |
+| Settings | `Settings.jsx` | PageHero "Settings / Clinic preferences and account"; motion.div form with section labels + dividers; no glass cards (form style page) |
+| Onboarding | `Onboarding.jsx` | Standalone glass card (no PageHero, no SidebarLayout); shimmer top border; glass inputs and toggle buttons |
+
+**ExercisePicker (`src/components/therapist/ExercisePicker.jsx`):**
+- Full glass redesign: outer wrapper is now a glass card with shimmer top border
+- All Tailwind classes replaced with inline styles using the glass design tokens
+- Inputs use the standard dark glass input style
+- Section header uses `SECTION_LABEL` style (uppercase, `#888888`)
+- Hover states via `onMouseEnter`/`onMouseLeave` (no Tailwind needed)
+- All logic unchanged
+
+**Dashboard header fix:**
+- "N active clients" text in `DashboardHeader` now uses `color: '#29B5CC'` in both the alerts-present and all-clear branches
+
+**Key gotchas for this codebase (discovered during redesign):**
+- `createTemplate()` navigates after DB insert — use `<button onClick={createTemplate}>` not `<Link to="/therapist/templates/new">` (that route doesn't exist)
+- `deleteTemplate(id, name)` takes two args — always pass both
+- `template_exercises?.length` not `template.exercises?.length` — the Supabase field is `template_exercises`
+- ExerciseLibrary pagination is 0-indexed (`page === 0` = first page, `page >= totalPages - 1` = last)
+- Delete guard for custom exercises: `ex.is_custom && ex.created_by === profile?.id` (not `ex.therapist_id`)
+- `<ClientDataTab prescriptions={sessions} />` — takes `prescriptions` prop, not `clientId`
+- `ApplyTemplateModal` has no `open` prop — use `{showApplyModal && <ApplyTemplateModal .../>}` conditional render
 
