@@ -11,6 +11,9 @@ import { sanitise } from '../../utils/pdfUtils'
 import { pdf } from '@react-pdf/renderer'
 import { PrescriptionPDF } from '../../components/therapist/PrescriptionPDF'
 import { ClientDataTab } from './ClientDataTab'
+import { motion, AnimatePresence } from 'framer-motion'
+import PageHero from '../../components/therapist/PageHero'
+import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
 
 const TAB_LABELS = { prescriptions: 'Prescribed Sessions', history: 'Session History', clientData: 'Client Data' }
 
@@ -331,203 +334,233 @@ export default function Prescribe() {
 
   return (
     <SidebarLayout>
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <Link to="/therapist/clients" className="text-sm text-dark-muted hover:text-dark-text">
-          ← Back to clients
-        </Link>
-
-        <div className="mt-4 flex items-start justify-between max-w-2xl">
-          <div>
-            <h1 className="text-2xl font-semibold text-dark-text">{client?.name}</h1>
-            <p className="text-sm text-dark-muted">{client?.email}</p>
-          </div>
-          {activeTab === 'prescriptions' && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowApplyModal(true)}
-                className="rounded border border-dark-accent px-4 py-2 text-sm text-dark-accent hover:bg-dark-accent-bg cursor-pointer transition-colors duration-150"
-              >
-                Apply Template
-              </button>
-              <button
-                onClick={createSession}
-                disabled={creating}
-                className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
-              >
-                {creating ? 'Creating…' : 'New session'}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Tab switcher */}
-        <div className="mt-5 max-w-2xl flex gap-6 border-b border-dark-border">
-          {['prescriptions', 'history', 'clientData'].map(tab => (
+      {/* Hero zone */}
+      <PageHero
+        title={client?.name ?? '…'}
+        subtitle={client?.email ?? null}
+        back={{ label: 'Clients', to: '/therapist/clients' }}
+        actions={
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {/* Global Export PDF — placeholder for future "print all sessions" feature */}
             <button
-              key={tab}
-              onClick={() => { setActiveTab(tab); setExpandedLogId(null) }}
-              className={`pb-2 text-sm font-medium transition-colors cursor-pointer ${
-                activeTab === tab
-                  ? 'border-b-2 border-brand-primary text-brand-primary'
-                  : 'text-dark-subtle hover:text-dark-muted'
-              }`}
+              onClick={() => {}}
+              style={{ padding: '8px 14px', background: 'transparent', color: '#888', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', fontSize: '12px', cursor: 'pointer' }}
             >
-              {TAB_LABELS[tab]}
+              Export PDF
             </button>
-          ))}
-        </div>
-
-        {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
-
-        {/* ── Prescribed Sessions tab ───────────────────────────────────────── */}
-        {activeTab === 'prescriptions' && (
-          <div className="mt-6 max-w-2xl space-y-3">
-            {!error && sessions.length === 0 && (
-              <p className="text-sm text-dark-muted">No sessions yet. Create the first one.</p>
-            )}
-
-            {sortedSessions.map(s => {
-              const active = isActive(s)
-              const completedCount = parseInt(s.session_logs?.[0]?.count ?? 0)
-              const expected = expectedSessions(s)
-
-              return (
-                <div
-                  key={s.id}
-                  className={`rounded-lg border overflow-hidden ${
-                    active ? 'border-dark-border bg-dark-surface' : 'border-dark-border bg-dark-elevated opacity-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-dark-text">{s.name}</p>
-                        {!active && (
-                          <span className="inline-flex items-center rounded-full bg-dark-elevated px-2 py-0.5 text-xs font-medium text-dark-muted">
-                            Inactive
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-0.5 text-xs text-dark-muted">
-                        {s.prescription_exercises[0]?.count ?? 0} exercises · {frequencyLabel(s.frequency_days)}
-                      </p>
-                      {active && s.duration_weeks && s.start_date && (
-                        <p className="mt-0.5 text-xs text-dark-subtle">
-                          Active until {formatExpiryDate(s.start_date, s.duration_weeks)}
-                        </p>
-                      )}
-                      <p className="mt-0.5 text-xs text-dark-subtle">
-                        {expected != null
-                          ? `${completedCount} / ${expected} sessions completed`
-                          : `${completedCount} session${completedCount !== 1 ? 's' : ''} completed`}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {!active && (
-                        <button
-                          onClick={() => reactivatePrescription(s)}
-                          disabled={reactivating === s.id}
-                          className="rounded border border-dark-accent px-3 py-1 text-sm text-dark-accent hover:bg-dark-accent-bg disabled:opacity-50 cursor-pointer transition-colors duration-150"
-                        >
-                          {reactivating === s.id ? 'Copying…' : 'Reactivate'}
-                        </button>
-                      )}
-                      <div className="flex flex-col items-end gap-0.5">
-                        <button
-                          onClick={() => downloadPDF(s)}
-                          disabled={pdfLoadingId === s.id}
-                          className="rounded border border-dark-border px-3 py-1 text-sm text-dark-muted hover:bg-dark-elevated hover:text-dark-text disabled:opacity-50 cursor-pointer transition-colors duration-150"
-                        >
-                          {pdfLoadingId === s.id ? 'Generating…' : 'Download PDF'}
-                        </button>
-                        {pdfError === s.id && (
-                          <span className="text-xs text-red-400">PDF failed — try again</span>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => deleteSession(s.id, s.name)}
-                        className="rounded border border-red-800/40 px-3 py-1 text-sm text-red-400 hover:bg-red-900/20 cursor-pointer transition-colors duration-150"
-                      >
-                        Delete
-                      </button>
-                      <Link
-                        to={`/therapist/prescribe/${clientId}/sessions/${s.id}`}
-                        className="rounded border border-dark-accent px-3 py-1 text-sm text-dark-accent hover:bg-dark-accent-bg transition-colors duration-150"
-                      >
-                        Edit
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        {/* ── Session History tab ───────────────────────────────────────────── */}
-        {activeTab === 'history' && (
-          <div className="mt-6 max-w-2xl space-y-3">
-            {historyTabLoading && (
-              <p className="text-sm text-dark-muted">Loading history…</p>
-            )}
-
-            {historyTabLoaded && historyTabLogs.length === 0 && (
-              <p className="text-sm text-dark-muted">No sessions completed yet.</p>
-            )}
-
-            {historyTabLogs.map(log => (
-              <div key={log.id} className="rounded-lg border border-dark-border bg-dark-surface overflow-hidden">
+            {activeTab === 'prescriptions' && (
+              <>
                 <button
-                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-dark-elevated transition-colors cursor-pointer"
-                  onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                  onClick={() => setShowApplyModal(true)}
+                  style={{ padding: '8px 14px', background: 'transparent', color: '#29B5CC', border: '1px solid rgba(41,181,204,0.3)', borderRadius: '7px', fontSize: '13px', cursor: 'pointer' }}
                 >
-                  <div>
-                    <p className="text-sm font-medium text-dark-text">
-                      {log.prescriptions?.name ?? 'Session'} · {formatDate(log.completed_at)}
-                    </p>
-                    <p className="mt-0.5 text-xs text-dark-muted">
-                      {log.session_rpe != null ? `RPE: ${log.session_rpe}/10` : 'No RPE recorded'}
-                    </p>
-                  </div>
-                  <span className="ml-4 text-xs text-dark-subtle shrink-0">
-                    {expandedLogId === log.id ? '▲' : '▼'}
-                  </span>
+                  Apply Template
                 </button>
-
-                {expandedLogId === log.id && (
-                  <div className="border-t border-dark-border">
-                    {log.session_notes && (
-                      <p className="px-4 py-2 text-xs text-dark-muted border-b border-dark-border">
-                        {log.session_notes}
-                      </p>
-                    )}
-                    <div className="divide-y divide-dark-border">
-                      {(log.exercise_logs ?? []).map(el => (
-                        <ExerciseLogDetail
-                          key={el.id}
-                          el={el}
-                          videoUrls={videoUrls}
-                          onPlayVideo={playVideo}
-                          weightUnit={weightUnit}
-                        />
-                      ))}
-                      {(log.exercise_logs ?? []).length === 0 && (
-                        <p className="px-4 py-3 text-xs text-dark-subtle">No exercise detail recorded.</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                <button
+                  onClick={createSession}
+                  disabled={creating}
+                  style={{ padding: '9px 18px', background: '#29B5CC', color: '#000', border: 'none', borderRadius: '7px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', opacity: creating ? 0.6 : 1 }}
+                >
+                  {creating ? 'Creating…' : 'New session'}
+                </button>
+              </>
+            )}
           </div>
-        )}
+        }
+      />
 
-        {/* ── Client Data tab ───────────────────────────────────────────────── */}
-        {activeTab === 'clientData' && (
-          <ClientDataTab prescriptions={sessions} />
-        )}
+      {/* Tabs — flush below hero border */}
+      <div style={{ display: 'flex', padding: '0 32px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        {(['prescriptions', 'history', 'clientData']).map(tab => (
+          <button
+            key={tab}
+            onClick={() => { setActiveTab(tab); setExpandedLogId(null) }}
+            style={{
+              padding: '12px 16px',
+              fontSize: '13px',
+              fontWeight: activeTab === tab ? 600 : 400,
+              color: activeTab === tab ? '#29B5CC' : '#555',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === tab ? '2px solid #29B5CC' : '2px solid transparent',
+              cursor: 'pointer',
+              marginBottom: '-1px',
+              transition: 'color 0.15s, border-color 0.15s',
+            }}
+          >
+            {TAB_LABELS[tab]}
+          </button>
+        ))}
       </div>
 
+      {error && <p style={{ padding: '16px 32px', fontSize: '13px', color: '#f87171' }}>{error}</p>}
+
+      {/* Tab content */}
+      <div style={{ padding: '24px 32px' }}>
+        <AnimatePresence mode="wait">
+
+          {/* ── Prescribed Sessions ── */}
+          {activeTab === 'prescriptions' && (
+            <motion.div
+              key="prescriptions"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              {sessions.length === 0 && (
+                <p style={{ fontSize: '13px', color: '#666' }}>No sessions yet. Create the first one.</p>
+              )}
+              {sortedSessions.map((s, i) => {
+                const active = isActive(s)
+                const completedCount = parseInt(s.session_logs?.[0]?.count ?? 0)
+                const expected = expectedSessions(s)
+
+                return (
+                  <motion.div
+                    key={s.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, delay: Math.min(i * 0.05, 0.3) }}
+                    style={{
+                      ...CARD,
+                      padding: 0,
+                      marginBottom: '14px',
+                      opacity: active ? 1 : 0.55,
+                    }}
+                  >
+                    <div style={SHIMMER} />
+                    {/* Prescription header */}
+                    <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '15px', fontWeight: 600, color: '#e8edf5' }}>{s.name}</span>
+                          {!active && (
+                            <span style={{ fontSize: '11px', padding: '2px 7px', background: 'rgba(255,255,255,0.06)', color: '#888', borderRadius: '4px' }}>Inactive</span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: '12px', color: '#555', marginTop: '4px' }}>
+                          {s.prescription_exercises[0]?.count ?? 0} exercises · {frequencyLabel(s.frequency_days)}
+                        </p>
+                        {active && s.duration_weeks && s.start_date && (
+                          <p style={{ fontSize: '12px', color: '#444', marginTop: '2px' }}>
+                            Active until {formatExpiryDate(s.start_date, s.duration_weeks)}
+                          </p>
+                        )}
+                        <p style={{ fontSize: '12px', color: '#444', marginTop: '2px' }}>
+                          {expected != null
+                            ? `${completedCount} / ${expected} sessions completed`
+                            : `${completedCount} session${completedCount !== 1 ? 's' : ''} completed`}
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          {!active && (
+                            <button
+                              onClick={() => reactivatePrescription(s)}
+                              disabled={reactivating === s.id}
+                              style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(41,181,204,0.3)', borderRadius: '6px', color: '#29B5CC', background: 'transparent', cursor: 'pointer', opacity: reactivating === s.id ? 0.6 : 1 }}
+                            >
+                              {reactivating === s.id ? 'Copying…' : 'Reactivate'}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => downloadPDF(s)}
+                            disabled={pdfLoadingId === s.id}
+                            style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: '#666', background: 'transparent', cursor: 'pointer', opacity: pdfLoadingId === s.id ? 0.6 : 1 }}
+                          >
+                            {pdfLoadingId === s.id ? 'Generating…' : 'PDF'}
+                          </button>
+                          <Link
+                            to={`/therapist/prescribe/${clientId}/sessions/${s.id}`}
+                            style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: '#888', textDecoration: 'none' }}
+                          >
+                            Edit
+                          </Link>
+                          <button
+                            onClick={() => deleteSession(s.id, s.name)}
+                            style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px', color: '#f87171', background: 'transparent', cursor: 'pointer' }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                        {pdfError === s.id && (
+                          <span style={{ fontSize: '11px', color: '#f87171' }}>PDF failed</span>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </motion.div>
+          )}
+
+          {/* ── Session History ── */}
+          {activeTab === 'history' && (
+            <motion.div key="history" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+              {historyTabLoading && <p style={{ fontSize: '13px', color: '#666' }}>Loading history…</p>}
+              {!historyTabLoading && historyTabLogs.length === 0 && (
+                <p style={{ fontSize: '13px', color: '#666' }}>No completed sessions yet.</p>
+              )}
+              {historyTabLogs.map((log, i) => (
+                <motion.div
+                  key={log.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: Math.min(i * 0.05, 0.3) }}
+                  style={{ ...CARD, padding: 0, marginBottom: '12px' }}
+                >
+                  <div style={SHIMMER} />
+                  <button
+                    onClick={() => setExpandedLogId(prev => prev === log.id ? null : log.id)}
+                    style={{ width: '100%', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                  >
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 500, color: '#e8edf5' }}>
+                        {log.prescriptions?.name ?? 'Session'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#555', marginTop: '3px' }}>
+                        {new Date(log.completed_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {log.session_rpe != null ? ` · RPE ${log.session_rpe}` : ''}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#555' }}>{expandedLogId === log.id ? '▲' : '▼'}</span>
+                  </button>
+                  {expandedLogId === log.id && (
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                      {(log.exercise_logs ?? []).map(el => (
+                        <div key={el.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          <ExerciseLogDetail
+                            el={el}
+                            videoUrls={videoUrls}
+                            onPlayVideo={playVideo}
+                            weightUnit={weightUnit}
+                          />
+                        </div>
+                      ))}
+                      {log.session_notes && (
+                        <div style={{ padding: '10px 20px', fontSize: '12px', color: '#666' }}>
+                          Note: {log.session_notes}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+
+          {/* ── Client Data ── */}
+          {activeTab === 'clientData' && (
+            <motion.div key="clientData" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+              <ClientDataTab prescriptions={sessions} />
+            </motion.div>
+          )}
+
+        </AnimatePresence>
+      </div>
+
+      {/* Apply Template modal — keep original conditional rendering and props */}
       {showApplyModal && (
         <ApplyTemplateModal
           therapistId={profile.id}
