@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
+import PageHero from '../../components/therapist/PageHero'
+import { CARD, SHIMMER } from '../../components/therapist/styles'
 
 function VideoPlayer({ url }) {
   if (!url) {
@@ -113,55 +116,76 @@ export default function ExerciseDetail() {
 
   return (
     <SidebarLayout>
-      <div className="max-w-2xl mx-auto px-6 py-8">
-        <Link to="/therapist/exercises" className="text-sm text-dark-muted hover:text-dark-text">
-          ← Back to library
-        </Link>
+      <PageHero
+        title={exercise.name}
+        back={{ label: 'Exercise Library', to: '/therapist/exercises' }}
+        actions={
+          isOwn ? (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              style={{
+                padding: '9px 18px',
+                background: 'transparent',
+                color: '#f87171',
+                border: '1px solid rgba(239,68,68,0.3)',
+                borderRadius: '7px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: deleting ? 'default' : 'pointer',
+                opacity: deleting ? 0.6 : 1,
+              }}
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </button>
+          ) : null
+        }
+      />
 
-        <div className="mt-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-semibold text-dark-text">{exercise.name}</h1>
-              <div className="mt-1 flex items-center gap-2">
-                {(exercise.categories?.length ? exercise.categories : [exercise.category]).filter(Boolean).map(cat => (
-                  <span key={cat} className="rounded-full bg-dark-elevated px-3 py-0.5 text-xs text-dark-muted">
-                    {cat}
-                  </span>
-                ))}
-                {exercise.is_custom && (
-                  <span className="rounded-full bg-dark-accent-bg px-3 py-0.5 text-xs text-dark-accent">
-                    Custom
-                  </span>
-                )}
-              </div>
+      <div style={{ padding: '24px 32px', maxWidth: '600px' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+          style={{ ...CARD }}
+        >
+          <div style={SHIMMER} />
+
+          {/* Category badges */}
+          {(exercise.categories?.length ? exercise.categories : [exercise.category]).filter(Boolean).length > 0 && (
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              {(exercise.categories?.length ? exercise.categories : [exercise.category]).filter(Boolean).map(cat => (
+                <span key={cat} style={{ fontSize: '11px', padding: '3px 9px', background: 'rgba(41,181,204,0.08)', color: '#29B5CC', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '4px' }}>
+                  {cat}
+                </span>
+              ))}
+              {exercise.is_custom && (
+                <span style={{ fontSize: '11px', padding: '3px 9px', background: 'rgba(255,255,255,0.04)', color: '#888', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px' }}>
+                  Custom
+                </span>
+              )}
             </div>
-            {isOwn && (
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="rounded border border-red-800/40 px-3 py-1 text-sm text-red-400 hover:bg-red-900/20 disabled:opacity-50 cursor-pointer transition-colors duration-150"
-              >
-                {deleting ? 'Deleting…' : 'Delete'}
-              </button>
-            )}
-          </div>
+          )}
 
-          <div className="mt-6">
+          {/* Video player */}
+          <div style={{ marginBottom: exercise.description || (exercise.default_sets || exercise.default_reps) ? '20px' : 0 }}>
             <VideoPlayer url={exercise.video_url} />
           </div>
 
+          {/* Sets / reps */}
           {(exercise.default_sets || exercise.default_reps) && (
-            <p className="mt-4 text-sm text-dark-muted">
-              <span className="font-medium text-dark-text">{exercise.default_sets} sets</span>
+            <p style={{ fontSize: '13px', color: '#888', marginBottom: '12px' }}>
+              <span style={{ fontWeight: 600, color: '#e8edf5' }}>{exercise.default_sets} sets</span>
               {' × '}
-              <span className="font-medium text-dark-text">{exercise.default_reps} reps</span>
+              <span style={{ fontWeight: 600, color: '#e8edf5' }}>{exercise.default_reps} reps</span>
             </p>
           )}
 
+          {/* Description */}
           {exercise.description && (
-            <p className="mt-4 text-sm text-dark-muted leading-relaxed">{exercise.description}</p>
+            <p style={{ fontSize: '14px', color: '#aaa', lineHeight: 1.6 }}>{exercise.description}</p>
           )}
-        </div>
+        </motion.div>
       </div>
     </SidebarLayout>
   )

@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
+import PageHero from '../../components/therapist/PageHero'
+import { CARD, SHIMMER } from '../../components/therapist/styles'
 
 const CATEGORIES = ['Cervical', 'Thoracic', 'Lumbar', 'Shoulder', 'Elbow', 'Hand / Wrist', 'Hip', 'Knee', 'Ankle / Foot', 'General']
 
@@ -102,30 +105,38 @@ export default function ExerciseUpload() {
     setUploadProgress(0)
   }
 
-  const inputClass = 'mt-1 block w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:border-dark-accent focus:outline-none'
-
   if (uploadedId) {
     return (
       <SidebarLayout>
-        <div className="flex flex-col items-center justify-center px-4 py-16">
-          <div className="max-w-md w-full bg-dark-surface rounded-lg border border-dark-border p-8 text-center">
-            <h2 className="text-xl font-semibold text-dark-text">Exercise added</h2>
-            <p className="mt-2 text-sm text-dark-muted">Your custom exercise has been saved to the library.</p>
-            <div className="mt-6 flex justify-center gap-3">
+        <PageHero
+          title="Exercise Saved"
+          back={{ label: 'Exercise Library', to: '/therapist/exercises' }}
+        />
+        <div style={{ padding: '24px 32px', maxWidth: '600px' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            style={{ ...CARD }}
+          >
+            <div style={SHIMMER} />
+            <p style={{ fontSize: '14px', color: '#e8edf5', marginBottom: '6px', fontWeight: 500 }}>Exercise added successfully.</p>
+            <p style={{ fontSize: '13px', color: '#666', marginBottom: '20px' }}>Your custom exercise has been saved to the library.</p>
+            <div style={{ display: 'flex', gap: '10px' }}>
               <Link
                 to={`/therapist/exercises/${uploadedId}`}
-                className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark"
+                style={{ padding: '8px 16px', background: '#29B5CC', color: '#000', borderRadius: '7px', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}
               >
                 View exercise
               </Link>
               <button
                 onClick={resetForm}
-                className="rounded border border-dark-border px-4 py-2 text-sm text-dark-muted hover:bg-dark-elevated hover:text-dark-text cursor-pointer transition-colors duration-150"
+                style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', fontSize: '13px', color: '#888', cursor: 'pointer' }}
               >
                 Add another
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
       </SidebarLayout>
     )
@@ -133,111 +144,120 @@ export default function ExerciseUpload() {
 
   return (
     <SidebarLayout>
-      <div className="max-w-2xl mx-auto px-6 py-8">
-        <Link to="/therapist/exercises" className="text-sm text-dark-muted hover:text-dark-text">
-          ← Back to library
-        </Link>
+      <PageHero
+        title="New Exercise"
+        back={{ label: 'Exercise Library', to: '/therapist/exercises' }}
+        actions={
+          <button
+            type="submit"
+            form="exercise-upload-form"
+            disabled={uploading}
+            style={{
+              padding: '9px 18px',
+              background: '#29B5CC',
+              color: '#000',
+              border: 'none',
+              borderRadius: '7px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: uploading ? 'default' : 'pointer',
+              opacity: uploading ? 0.6 : 1,
+            }}
+          >
+            {uploading ? `Saving… ${uploadProgress}%` : 'Save Exercise'}
+          </button>
+        }
+      />
 
-        <div className="mt-4 max-w-lg bg-dark-surface rounded-lg border border-dark-border p-6">
-          <h1 className="text-xl font-semibold text-dark-text">Add custom exercise</h1>
+      <div style={{ padding: '24px 32px', maxWidth: '600px' }}>
+        <div style={{ ...CARD }}>
+          <div style={SHIMMER} />
+          <form id="exercise-upload-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
-          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+            {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-dark-text">Exercise name</label>
+              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>Exercise name</label>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className={inputClass}
+                style={{ width: '100%', padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
 
+            {/* Categories */}
             <div>
-              <label className="block text-sm font-medium text-dark-text">
-                Categories <span className="font-normal text-dark-subtle">(select all that apply)</span>
-              </label>
-              <div className="mt-2 grid grid-cols-2 gap-y-2 gap-x-4">
+              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '8px' }}>Categories <span style={{ color: '#555' }}>(select all that apply)</span></label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
                 {CATEGORIES.map(c => (
-                  <label key={c} className="flex items-center gap-2 cursor-pointer">
+                  <label key={c} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                     <input
                       type="checkbox"
                       checked={categories.includes(c)}
                       onChange={() => toggleCategory(c)}
-                      className="rounded border-dark-border text-brand-primary focus:ring-brand-primary focus:ring-offset-0 bg-dark-elevated"
+                      style={{ accentColor: '#29B5CC' }}
                     />
-                    <span className="text-sm text-dark-text">{c}</span>
+                    <span style={{ fontSize: '13px', color: '#e8edf5' }}>{c}</span>
                   </label>
                 ))}
               </div>
             </div>
 
+            {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-dark-text">
-                Description{' '}
-                <span className="font-normal text-dark-subtle">(optional)</span>
-              </label>
+              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>Description <span style={{ color: '#555' }}>(optional)</span></label>
               <textarea
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 rows={3}
-                className={inputClass}
+                style={{ width: '100%', padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
               />
             </div>
 
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-dark-text">Default sets</label>
+            {/* Sets / Reps */}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>Default sets</label>
                 <input
                   type="number"
                   min="1"
                   value={defaultSets}
                   onChange={e => setDefaultSets(e.target.value)}
-                  className={inputClass}
+                  style={{ width: '100%', padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-dark-text">Default reps</label>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>Default reps</label>
                 <input
                   type="number"
                   min="1"
                   value={defaultReps}
                   onChange={e => setDefaultReps(e.target.value)}
-                  className={inputClass}
+                  style={{ width: '100%', padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
 
+            {/* Video */}
             <div>
-              <label className="block text-sm font-medium text-dark-text">Video file</label>
+              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>Video file</label>
               <input
                 type="file"
                 accept="video/*"
                 onChange={e => setVideoFile(e.target.files[0] ?? null)}
-                className="mt-1 block w-full text-sm text-dark-muted file:mr-3 file:rounded file:border-0 file:bg-dark-elevated file:px-3 file:py-1 file:text-sm file:font-medium file:text-dark-text cursor-pointer"
+                style={{ fontSize: '13px', color: '#888', width: '100%' }}
               />
-              <p className="mt-1 text-xs text-dark-subtle">MP4, MOV, or WebM recommended</p>
+              <p style={{ fontSize: '11px', color: '#555', marginTop: '4px' }}>MP4, MOV, or WebM recommended</p>
             </div>
 
-            {error && <p className="text-sm text-red-400">{error}</p>}
-
-            <button
-              type="submit"
-              disabled={uploading}
-              className="w-full rounded bg-brand-primary py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
-            >
-              {uploading ? `Uploading… ${uploadProgress}%` : 'Save exercise'}
-            </button>
+            {error && <p style={{ fontSize: '13px', color: '#f87171' }}>{error}</p>}
 
             {uploading && (
-              <div>
-                <div className="w-full rounded-full bg-dark-elevated h-2">
-                  <div
-                    className="h-2 rounded-full bg-brand-primary transition-all duration-200"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
+              <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', background: '#29B5CC', width: `${uploadProgress}%`, transition: 'width 0.2s ease', borderRadius: '2px' }} />
               </div>
             )}
+
           </form>
         </div>
       </div>
