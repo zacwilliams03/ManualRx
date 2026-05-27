@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
+import PageHero from '../../components/therapist/PageHero'
+import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
 
 const PAGE_SIZE = 12
 const CATEGORIES = ['All', 'Custom', 'Cervical', 'Thoracic', 'Lumbar', 'Shoulder', 'Elbow', 'Hand / Wrist', 'Hip', 'Knee', 'Ankle / Foot', 'General']
@@ -79,103 +82,142 @@ export default function ExerciseLibrary() {
 
   return (
     <SidebarLayout>
-      <div className="max-w-5xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-dark-text">Exercise Library</h1>
+      <PageHero
+        title="Exercise Library"
+        subtitle={totalCount > 0 ? `${totalCount} exercise${totalCount !== 1 ? 's' : ''}` : null}
+        actions={
           <Link
             to="/therapist/exercises/new"
-            className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark"
+            style={{
+              padding: '9px 18px',
+              background: '#29B5CC',
+              color: '#000',
+              borderRadius: '7px',
+              fontSize: '13px',
+              fontWeight: 600,
+              textDecoration: 'none',
+              display: 'inline-block',
+            }}
           >
-            Add exercise
+            + Add Exercise
           </Link>
+        }
+      />
+
+      <div style={{ padding: '24px 32px', maxWidth: '860px' }}>
+        {/* Search input */}
+        <input
+          type="text"
+          placeholder="Search exercises…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{
+            width: '100%', maxWidth: '320px', padding: '8px 14px',
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none', marginBottom: '12px',
+          }}
+        />
+
+        {/* Category filter pills */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setCategory(cat)}
+              style={{
+                padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+                background: category === cat ? 'rgba(41,181,204,0.12)' : 'rgba(255,255,255,0.04)',
+                color: category === cat ? '#29B5CC' : '#666',
+                borderWidth: '1px', borderStyle: 'solid',
+                borderColor: category === cat ? 'rgba(41,181,204,0.3)' : 'rgba(255,255,255,0.08)',
+              }}
+            >
+              {cat}
+            </button>
+          ))}
         </div>
 
-        <div className="mt-6 space-y-3">
-          <input
-            type="text"
-            placeholder="Search exercises…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="block w-full max-w-md rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:border-dark-accent focus:outline-none"
-          />
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setCategory(cat)}
-                className={`rounded-full px-3 py-1 text-sm cursor-pointer transition-colors duration-150 ${
-                  category === cat
-                    ? 'bg-brand-primary text-white'
-                    : 'bg-dark-elevated border border-dark-border text-dark-muted hover:bg-dark-surface hover:text-dark-text'
-                }`}
+        {loading && <p style={{ fontSize: '13px', color: '#666' }}>Loading…</p>}
+        {error && <p style={{ fontSize: '13px', color: '#f87171' }}>{error}</p>}
+
+        {!loading && !error && exercises.length === 0 && (
+          <p style={{ fontSize: '13px', color: '#666' }}>No exercises found.</p>
+        )}
+
+        {/* Exercise list glass card */}
+        {!loading && !error && exercises.length > 0 && (
+          <div style={{ ...CARD, padding: 0 }}>
+            <div style={SHIMMER} />
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={SECTION_LABEL}>Exercises</span>
+            </div>
+            {exercises.map((ex, i) => (
+              <motion.div
+                key={ex.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, delay: Math.min(i * 0.05, 0.3) }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '13px 20px',
+                  borderBottom: i < exercises.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                }}
               >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-6">
-          {loading && <p className="text-sm text-dark-muted">Loading…</p>}
-          {error && <p className="text-sm text-red-400">{error}</p>}
-          {!loading && !error && exercises.length === 0 && (
-            <p className="text-sm text-dark-muted">No exercises found.</p>
-          )}
-          {!loading && !error && exercises.length > 0 && (
-            <>
-              <div className="rounded-lg border border-dark-border bg-dark-surface divide-y divide-dark-border">
-                {exercises.map(ex => (
-                  <div key={ex.id} className="flex items-center">
-                    <Link
-                      to={`/therapist/exercises/${ex.id}`}
-                      className="flex flex-1 items-center justify-between gap-3 px-4 py-3 hover:bg-dark-elevated transition-colors min-w-0"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-dark-text">{ex.name}</p>
-                        <p className="text-xs text-dark-muted">{ex.category}{ex.is_custom ? ' · Custom' : ''}</p>
-                      </div>
-                      {ex.video_url && (
-                        <span className="shrink-0 rounded-full bg-dark-accent-bg px-2.5 py-0.5 text-xs font-medium text-dark-accent">
-                          Video attached
-                        </span>
-                      )}
-                    </Link>
-                    {ex.is_custom && ex.created_by === profile?.id && (
-                      <button
-                        onClick={() => handleDelete(ex.id)}
-                        className="shrink-0 mr-3 rounded border border-red-800/40 px-2 py-1 text-xs text-red-400 hover:bg-red-900/20 cursor-pointer transition-colors"
-                      >
-                        Delete
-                      </button>
+                <div>
+                  <Link
+                    to={`/therapist/exercises/${ex.id}`}
+                    style={{ fontSize: '14px', fontWeight: 500, color: '#e8edf5', textDecoration: 'none' }}
+                  >
+                    {ex.name}
+                  </Link>
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                    {(ex.categories ?? []).map(cat => (
+                      <span key={cat} style={{ fontSize: '11px', padding: '2px 7px', background: 'rgba(41,181,204,0.08)', color: '#29B5CC', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '4px' }}>
+                        {cat}
+                      </span>
+                    ))}
+                    {ex.video_url && (
+                      <span style={{ fontSize: '11px', padding: '2px 7px', background: 'rgba(255,255,255,0.04)', color: '#666', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px' }}>
+                        Video
+                      </span>
                     )}
                   </div>
-                ))}
-              </div>
-
-              {totalPages > 1 && (
-                <div className="mt-6 flex items-center gap-3">
-                  <button
-                    onClick={() => setPage(p => p - 1)}
-                    disabled={page === 0}
-                    className="rounded border border-dark-border px-3 py-1 text-sm text-dark-muted hover:bg-dark-elevated disabled:opacity-40 cursor-pointer transition-colors duration-150"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-sm text-dark-muted">
-                    Page {page + 1} of {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setPage(p => p + 1)}
-                    disabled={page >= totalPages - 1}
-                    className="rounded border border-dark-border px-3 py-1 text-sm text-dark-muted hover:bg-dark-elevated disabled:opacity-40 cursor-pointer transition-colors duration-150"
-                  >
-                    Next
-                  </button>
                 </div>
-              )}
-            </>
-          )}
-        </div>
+                {ex.is_custom && ex.created_by === profile?.id && (
+                  <button
+                    onClick={() => handleDelete(ex.id)}
+                    style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '6px', background: 'transparent', color: '#f87171', cursor: 'pointer', flexShrink: 0 }}
+                  >
+                    Delete
+                  </button>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '16px' }}>
+            <button
+              onClick={() => setPage(p => p - 1)}
+              disabled={page === 0}
+              style={{ padding: '6px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: page === 0 ? '#444' : '#888', fontSize: '13px', cursor: page === 0 ? 'default' : 'pointer' }}
+            >
+              Previous
+            </button>
+            <span style={{ padding: '6px 8px', fontSize: '13px', color: '#555' }}>
+              {page + 1} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => p + 1)}
+              disabled={page >= totalPages - 1}
+              style={{ padding: '6px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: page >= totalPages - 1 ? '#444' : '#888', fontSize: '13px', cursor: page >= totalPages - 1 ? 'default' : 'pointer' }}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
     </SidebarLayout>
   )
