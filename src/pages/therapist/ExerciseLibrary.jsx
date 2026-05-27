@@ -104,7 +104,12 @@ export default function ExerciseLibrary() {
         }
       />
 
-      <div style={{ padding: '24px 32px', maxWidth: '860px' }}>
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        style={{ padding: '24px 32px', maxWidth: '860px' }}
+      >
         {/* Search input */}
         <input
           type="text"
@@ -218,7 +223,7 @@ export default function ExerciseLibrary() {
             </button>
           </div>
         )}
-      </div>
+      </motion.div>
     </SidebarLayout>
   )
 }

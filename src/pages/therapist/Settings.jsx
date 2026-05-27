@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import PageHero from '../../components/therapist/PageHero'
+import { SECTION_LABEL } from '../../components/therapist/styles'
 
 export default function Settings() {
   const { user, profile } = useAuth()
@@ -258,15 +259,6 @@ export default function Settings() {
     transition: 'all 0.15s',
   }
 
-  const sectionLabelStyle = {
-    fontSize: '11px',
-    fontWeight: 600,
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    color: '#888888',
-    marginBottom: '16px',
-  }
-
   const dividerStyle = {
     height: '1px',
     background: 'rgba(255,255,255,0.05)',
@@ -298,7 +290,7 @@ export default function Settings() {
         ) : (
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
             {/* CLINIC section */}
-            <p style={sectionLabelStyle}>Clinic</p>
+            <p style={{ ...SECTION_LABEL, marginBottom: '16px' }}>Clinic</p>
 
             <div style={{ marginBottom: '20px' }}>
               <label style={fieldLabelStyle}>Clinic logo</label>
@@ -348,7 +340,7 @@ export default function Settings() {
             <div style={dividerStyle} />
 
             {/* PREFERENCES section */}
-            <p style={sectionLabelStyle}>Preferences</p>
+            <p style={{ ...SECTION_LABEL, marginBottom: '16px' }}>Preferences</p>
 
             <div style={{ marginBottom: '20px' }}>
               <label style={fieldLabelStyle}>Weight unit</label>
@@ -431,7 +423,7 @@ export default function Settings() {
             <div style={dividerStyle} />
 
             {/* ACCOUNT section */}
-            <p style={sectionLabelStyle}>Account</p>
+            <p style={{ ...SECTION_LABEL, marginBottom: '16px' }}>Account</p>
 
             <div>
               {passwordSuccess && (

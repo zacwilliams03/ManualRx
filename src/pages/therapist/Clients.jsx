@@ -190,7 +190,12 @@ export default function Clients() {
       />
 
       {/* Page content */}
-      <div style={{ padding: '24px 32px', maxWidth: '860px' }}>
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        style={{ padding: '24px 32px', maxWidth: '860px' }}
+      >
 
         {/* Search */}
         <input
@@ -404,7 +409,7 @@ export default function Clients() {
             </>
           )
         })()}
-      </div>
+      </motion.div>
 
       {/* Add Client Modal — unchanged from original */}
       {showModal && (

@@ -167,7 +167,6 @@ export default function Prescribe() {
       .in('prescription_id', prescriptionIds)
       .order('completed_at', { ascending: false })
       .then(({ data }) => {
-        console.log('[history] raw fetch:', JSON.stringify(data, null, 2))
         setHistoryTabLogs(data ?? [])
         setHistoryTabLoading(false)
         setHistoryTabLoaded(true)
