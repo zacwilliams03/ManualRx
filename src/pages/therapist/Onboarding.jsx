@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 
@@ -132,144 +133,210 @@ export default function Onboarding() {
     navigate('/therapist', { replace: true })
   }
 
-  const inputClass = 'mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:outline-none focus:ring-2 focus:ring-brand-primary'
-  const toggleBtnClass = (active) =>
-    `flex-1 py-2 rounded border text-sm font-medium transition-colors cursor-pointer ${
-      active
-        ? 'bg-brand-primary text-white border-brand-primary'
-        : 'border-dark-border text-dark-muted hover:border-dark-muted'
-    }`
-  const gridBtnClass = (active) =>
-    `py-2 rounded border text-sm font-medium transition-colors cursor-pointer ${
-      active
-        ? 'bg-brand-primary text-white border-brand-primary'
-        : 'border-dark-border text-dark-muted hover:border-dark-muted'
-    }`
+  const inputStyle = {
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '7px',
+    color: '#e8edf5',
+    padding: '9px 14px',
+    width: '100%',
+    fontSize: '13px',
+    outline: 'none',
+    boxSizing: 'border-box',
+  }
+
+  const activeToggleStyle = {
+    flex: 1,
+    padding: '8px',
+    background: 'rgba(41,181,204,0.12)',
+    border: '1px solid rgba(41,181,204,0.3)',
+    color: '#29B5CC',
+    borderRadius: '7px',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  }
+
+  const inactiveToggleStyle = {
+    flex: 1,
+    padding: '8px',
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    color: '#888',
+    borderRadius: '7px',
+    fontSize: '13px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  }
+
+  const activeGridStyle = {
+    padding: '8px',
+    background: 'rgba(41,181,204,0.12)',
+    border: '1px solid rgba(41,181,204,0.3)',
+    color: '#29B5CC',
+    borderRadius: '7px',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  }
+
+  const inactiveGridStyle = {
+    padding: '8px',
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    color: '#888',
+    borderRadius: '7px',
+    fontSize: '13px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  }
+
+  const fieldLabelStyle = {
+    display: 'block',
+    fontSize: '13px',
+    fontWeight: 500,
+    color: '#c8d0dc',
+    marginBottom: '6px',
+  }
 
   if (checking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-dark-bg text-dark-muted">
-        Loading…
-      </div>
-    )
+    return <div className="min-h-screen flex items-center justify-center bg-dark-bg text-dark-muted">Loading…</div>
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-dark-bg px-4">
-      <div className="max-w-md w-full bg-dark-surface rounded-lg border border-dark-border p-8">
-        <h1 className="text-2xl font-semibold text-dark-text">Welcome to ManualRx</h1>
-        <p className="mt-1 text-sm text-dark-muted">
-          Let's get you set up. This takes 30 seconds — you can change any of this later in Settings.
-        </p>
-
-        <form onSubmit={handleSave} className="mt-6 space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-dark-text">Clinic logo</label>
-            <p className="mt-0.5 text-xs text-dark-muted">Shown to clients during their sessions. Optional.</p>
-            {logoUrl && (
-              <img
-                src={logoUrl}
-                alt="Clinic logo"
-                className="mt-2 rounded"
-                style={{ maxHeight: '48px', objectFit: 'contain' }}
-              />
-            )}
-            <label className={`mt-2 inline-block border border-dark-border bg-dark-elevated text-dark-muted text-sm rounded px-3 py-2 cursor-pointer hover:bg-dark-surface ${logoUploading ? 'opacity-50 pointer-events-none' : ''}`}>
-              {logoUploading ? 'Uploading…' : 'Choose image'}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                disabled={logoUploading}
-                onChange={handleLogoUpload}
-              />
-            </label>
-            {logoError && <p className="mt-1 text-sm text-red-400">{logoError}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-dark-text">Clinic name</label>
-            <input
-              type="text"
-              value={clinicName}
-              onChange={(e) => setClinicName(e.target.value)}
-              placeholder="e.g. City Physio"
-              className={inputClass}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-dark-text">Weight unit</label>
-            <div className="mt-1 flex gap-2">
-              {['kg', 'lb'].map((unit) => (
-                <button
-                  key={unit}
-                  type="button"
-                  onClick={() => setWeightUnit(unit)}
-                  className={toggleBtnClass(weightUnit === unit)}
-                >
-                  {unit}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-dark-text">Default session frequency</label>
-            <div className="mt-1 grid grid-cols-2 gap-2">
-              {[
-                { value: 'none', label: 'No repeat' },
-                { value: 'daily', label: 'Daily' },
-                { value: 'weekly', label: 'Weekly' },
-                { value: 'custom', label: 'Custom' },
-              ].map(({ value, label }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setFrequencyMode(value)}
-                  className={gridBtnClass(frequencyMode === value)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            {frequencyMode === 'custom' && (
-              <div className="mt-2 flex items-center gap-2">
-                <input
-                  type="number"
-                  min="1"
-                  value={customDays}
-                  onChange={(e) => setCustomDays(e.target.value)}
-                  placeholder="e.g. 3"
-                  className="w-24 rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text focus:outline-none focus:ring-2 focus:ring-brand-primary"
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0e1117', padding: '24px 16px' }}>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+        style={{
+          width: '100%', maxWidth: '440px',
+          background: 'rgba(13,17,23,0.85)', backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(100,160,255,0.08)', borderRadius: '16px',
+          overflow: 'hidden', position: 'relative',
+        }}
+      >
+        {/* Shimmer top border */}
+        <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(41,181,204,0.25), rgba(77,142,247,0.25), transparent)', position: 'absolute', top: 0, left: 0, right: 0 }} />
+        <div style={{ padding: '32px' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#e8edf5', margin: '0 0 6px', letterSpacing: '-0.02em' }}>Welcome to ManualRx</h1>
+          <p style={{ fontSize: '13px', color: '#666', margin: '0 0 28px' }}>Let's get you set up. Takes 30 seconds — change anything later in Settings.</p>
+          <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Logo upload */}
+            <div>
+              <label style={fieldLabelStyle}>Clinic logo</label>
+              <p style={{ fontSize: '12px', color: '#666', margin: '0 0 8px' }}>Shown to clients during their sessions. Optional.</p>
+              {logoUrl && (
+                <img
+                  src={logoUrl}
+                  alt="Clinic logo"
+                  style={{ maxHeight: '48px', objectFit: 'contain', borderRadius: '6px', marginBottom: '8px', display: 'block' }}
                 />
-                <span className="text-sm text-dark-muted">days between sessions</span>
+              )}
+              <label style={{
+                display: 'inline-block',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#888',
+                fontSize: '13px',
+                borderRadius: '7px',
+                padding: '7px 14px',
+                cursor: logoUploading ? 'not-allowed' : 'pointer',
+                opacity: logoUploading ? 0.5 : 1,
+                pointerEvents: logoUploading ? 'none' : 'auto',
+              }}>
+                {logoUploading ? 'Uploading…' : 'Choose image'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  disabled={logoUploading}
+                  onChange={handleLogoUpload}
+                />
+              </label>
+              {logoError && <p style={{ marginTop: '6px', fontSize: '13px', color: '#f87171' }}>{logoError}</p>}
+            </div>
+
+            {/* Clinic name */}
+            <div>
+              <label style={fieldLabelStyle}>Clinic name</label>
+              <input
+                type="text"
+                value={clinicName}
+                onChange={(e) => setClinicName(e.target.value)}
+                placeholder="e.g. City Physio"
+                style={inputStyle}
+              />
+            </div>
+
+            {/* Weight unit */}
+            <div>
+              <label style={fieldLabelStyle}>Weight unit</label>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
+                {['kg', 'lb'].map((unit) => (
+                  <button
+                    key={unit}
+                    type="button"
+                    onClick={() => setWeightUnit(unit)}
+                    style={weightUnit === unit ? activeToggleStyle : inactiveToggleStyle}
+                  >
+                    {unit}
+                  </button>
+                ))}
               </div>
-            )}
-          </div>
+            </div>
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
+            {/* Default frequency */}
+            <div>
+              <label style={fieldLabelStyle}>Default session frequency</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '2px' }}>
+                {[
+                  { value: 'none', label: 'No repeat' },
+                  { value: 'daily', label: 'Daily' },
+                  { value: 'weekly', label: 'Weekly' },
+                  { value: 'custom', label: 'Custom' },
+                ].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setFrequencyMode(value)}
+                    style={frequencyMode === value ? activeGridStyle : inactiveGridStyle}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {frequencyMode === 'custom' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
+                  <input
+                    type="number"
+                    min="1"
+                    value={customDays}
+                    onChange={(e) => setCustomDays(e.target.value)}
+                    placeholder="e.g. 3"
+                    style={{ ...inputStyle, width: '96px' }}
+                  />
+                  <span style={{ fontSize: '13px', color: '#888' }}>days between sessions</span>
+                </div>
+              )}
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded bg-brand-primary text-white py-2 font-medium hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
-          >
-            {loading ? 'Saving…' : 'Save and continue'}
-          </button>
-        </form>
-
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            onClick={handleSkip}
-            disabled={loading}
-            className="text-sm text-dark-muted hover:underline disabled:opacity-50 cursor-pointer"
-          >
-            Skip for now
-          </button>
+            {error && <p style={{ fontSize: '13px', color: '#f87171', margin: 0 }}>{error}</p>}
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', paddingTop: '4px' }}>
+              <button type="submit" disabled={loading} style={{ padding: '9px 20px', background: '#29B5CC', color: '#000', border: 'none', borderRadius: '7px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', opacity: loading ? 0.6 : 1 }}>
+                {loading ? 'Saving…' : 'Save and continue'}
+              </button>
+              <button type="button" onClick={handleSkip} disabled={loading} style={{ fontSize: '13px', color: '#555', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', opacity: loading ? 0.6 : 1 }}>
+                Skip for now
+              </button>
+            </div>
+          </form>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
