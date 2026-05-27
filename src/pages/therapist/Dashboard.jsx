@@ -512,8 +512,8 @@ function DashboardHeader({ firstName, greeting, alertCount, activeClientCount })
       </h1>
       <p style={{ marginTop: '4px', fontSize: '14px', color: '#888888' }}>
         {alertCount > 0
-          ? <><span style={{ color: '#f87171' }}>{alertCount} {alertCount === 1 ? 'client needs' : 'clients need'} attention</span>{' · '}{activeClientCount} active {activeClientCount === 1 ? 'client' : 'clients'}</>
-          : <><span style={{ color: '#29B5CC' }}>All clients on track</span>{' · '}{activeClientCount} active {activeClientCount === 1 ? 'client' : 'clients'}</>
+          ? <><span style={{ color: '#f87171' }}>{alertCount} {alertCount === 1 ? 'client needs' : 'clients need'} attention</span>{' · '}<span style={{ color: '#29B5CC' }}>{activeClientCount} active {activeClientCount === 1 ? 'client' : 'clients'}</span></>
+          : <><span style={{ color: '#29B5CC' }}>All clients on track</span>{' · '}<span style={{ color: '#29B5CC' }}>{activeClientCount} active {activeClientCount === 1 ? 'client' : 'clients'}</span></>
         }
       </p>
     </div>

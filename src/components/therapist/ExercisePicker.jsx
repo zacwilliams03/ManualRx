@@ -7,6 +7,19 @@ const CATEGORIES = [
   'Shoulder', 'Elbow', 'Hand / Wrist', 'Hip', 'Knee', 'Ankle / Foot', 'General',
 ]
 
+const inputStyle = {
+  display: 'block', width: '100%', boxSizing: 'border-box',
+  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+  borderRadius: '7px', color: '#e8edf5', padding: '9px 14px',
+  fontSize: '13px', outline: 'none',
+}
+
+const rowStyle = {
+  display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between',
+  padding: '11px 20px', textAlign: 'left', background: 'none', border: 'none',
+  borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'background 0.15s',
+}
+
 // confirmLabel: text shown on the Add button — defaults to 'Add to session'; pass 'Add to template' in TemplateEdit
 export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLabel = 'Add to session' }) {
   const [pickerView, setPickerView] = useState('browse')
@@ -92,16 +105,21 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
     }
   }
 
-  const inputClass = 'block w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:border-dark-accent focus:outline-none'
-
   return (
-    <div className="rounded-lg border border-dark-border bg-dark-surface overflow-hidden">
-      <div className="px-4 py-3 border-b border-dark-border">
-        <p className="text-sm font-semibold text-dark-text">Add exercise</p>
+    <div style={{
+      background: 'rgba(13,17,23,0.85)', backdropFilter: 'blur(12px)',
+      border: '1px solid rgba(100,160,255,0.08)', borderRadius: '14px',
+      overflow: 'hidden', position: 'relative',
+    }}>
+      {/* shimmer */}
+      <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(41,181,204,0.25), rgba(77,142,247,0.25), transparent)', position: 'absolute', top: 0, left: 0, right: 0 }} />
+
+      <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#888888', margin: 0 }}>Add exercise</p>
       </div>
 
       {pickerView !== 'configure' && (
-        <div className="px-4 pt-3 pb-2 border-b border-dark-border">
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
           <input
             type="text"
             value={search}
@@ -111,7 +129,7 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
             }}
             placeholder="Search exercises…"
             disabled={disabled}
-            className={inputClass}
+            style={inputStyle}
           />
         </div>
       )}
@@ -120,42 +138,38 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
         <>
           {debouncedSearch.trim().length >= 2 ? (
             <div>
-              {searching && <p className="px-4 py-3 text-sm text-dark-subtle">Searching…</p>}
+              {searching && <p style={{ padding: '12px 20px', fontSize: '13px', color: '#555', margin: 0 }}>Searching…</p>}
               {!searching && searchResults.length === 0 && (
-                <p className="px-4 py-3 text-sm text-dark-subtle">No results for "{debouncedSearch}".</p>
+                <p style={{ padding: '12px 20px', fontSize: '13px', color: '#555', margin: 0 }}>No results for "{debouncedSearch}".</p>
               )}
-              {!searching && searchResults.length > 0 && (
-                <div className="divide-y divide-dark-border">
-                  {searchResults.map(ex => (
-                    <button
-                      key={ex.id}
-                      onClick={() => selectExercise(ex)}
-                      className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-dark-elevated transition-colors cursor-pointer"
-                    >
-                      <div className="flex flex-col">
-                        <span className="text-sm text-dark-text">{ex.name}</span>
-                        {ex.video_url && (
-                          <span className="text-xs text-dark-subtle mt-0.5">Video attached</span>
-                        )}
-                      </div>
-                      <span className="text-xs text-dark-subtle ml-3 shrink-0">{ex.category}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              {!searching && searchResults.length > 0 && searchResults.map(ex => (
+                <button
+                  key={ex.id}
+                  onClick={() => selectExercise(ex)}
+                  style={rowStyle}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '13px', color: '#e8edf5' }}>{ex.name}</span>
+                    {ex.video_url && <span style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>Video attached</span>}
+                  </div>
+                  <span style={{ fontSize: '11px', color: '#555', marginLeft: '12px', flexShrink: 0 }}>{ex.category}</span>
+                </button>
+              ))}
             </div>
           ) : (
-            <div className="divide-y divide-dark-border">
+            <div>
               {CATEGORIES.map(cat => (
                 <button
                   key={cat}
                   onClick={() => selectCategory(cat)}
-                  className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-dark-elevated transition-colors cursor-pointer"
+                  style={rowStyle}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
                 >
-                  <span className={`text-sm ${cat === 'Custom' ? 'font-medium text-dark-text' : 'text-dark-muted'}`}>
-                    {cat}
-                  </span>
-                  <span className="text-dark-subtle">›</span>
+                  <span style={{ fontSize: '13px', color: cat === 'Custom' ? '#e8edf5' : '#888' }}>{cat}</span>
+                  <span style={{ color: '#444', fontSize: '15px' }}>›</span>
                 </button>
               ))}
             </div>
@@ -167,27 +181,29 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
         <div>
           <button
             onClick={() => setPickerView('browse')}
-            className="flex w-full items-center gap-1 px-4 py-3 text-sm text-dark-muted hover:text-dark-text border-b border-dark-border text-left cursor-pointer transition-colors"
+            style={{ ...rowStyle, color: '#888', fontSize: '13px' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = '#e8edf5' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#888' }}
           >
             ‹ Back to categories
           </button>
-          {categoryLoading && <p className="px-4 py-3 text-sm text-dark-subtle">Loading…</p>}
+          {categoryLoading && <p style={{ padding: '12px 20px', fontSize: '13px', color: '#555', margin: 0 }}>Loading…</p>}
           {!categoryLoading && categoryExercises.length === 0 && (
-            <p className="px-4 py-3 text-sm text-dark-subtle">No exercises in this category.</p>
+            <p style={{ padding: '12px 20px', fontSize: '13px', color: '#555', margin: 0 }}>No exercises in this category.</p>
           )}
           {!categoryLoading && categoryExercises.map(ex => (
             <button
               key={ex.id}
               onClick={() => selectExercise(ex)}
-              className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-dark-elevated border-b border-dark-border last:border-0 transition-colors cursor-pointer"
+              style={rowStyle}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}
             >
-              <div className="flex flex-col">
-                <span className="text-sm text-dark-text">{ex.name}</span>
-                {ex.video_url && (
-                  <span className="text-xs text-dark-subtle mt-0.5">Video attached</span>
-                )}
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '13px', color: '#e8edf5' }}>{ex.name}</span>
+                {ex.video_url && <span style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>Video attached</span>}
               </div>
-              <span className="text-xs text-dark-subtle ml-3 shrink-0">
+              <span style={{ fontSize: '11px', color: '#555', marginLeft: '12px', flexShrink: 0 }}>
                 {ex.default_sets ?? 3} × {ex.default_reps ?? 10}
               </span>
             </button>
@@ -199,63 +215,71 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
         <div>
           <button
             onClick={() => setPickerView('browse')}
-            className="flex w-full items-center gap-1 px-4 py-3 text-sm text-dark-muted hover:text-dark-text border-b border-dark-border text-left cursor-pointer transition-colors"
+            style={{ ...rowStyle, color: '#888', fontSize: '13px' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = '#e8edf5' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#888' }}
           >
             ‹ Back
           </button>
-          <div className="px-4 py-3 bg-dark-elevated border-b border-dark-border">
-            <p className="text-sm font-medium text-dark-text">{pickerExercise.name}</p>
-            <p className="text-xs text-dark-subtle mt-0.5">
+          <div style={{ padding: '12px 20px', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <p style={{ fontSize: '13px', fontWeight: 600, color: '#e8edf5', margin: '0 0 2px' }}>{pickerExercise.name}</p>
+            <p style={{ fontSize: '11px', color: '#555', margin: 0 }}>
               {(pickerExercise.categories?.length ? pickerExercise.categories : [pickerExercise.category]).filter(Boolean).join(' · ')}
             </p>
             {pickerExercise.video_url && (
-              <p className="text-xs text-dark-subtle mt-0.5">Video attached</p>
+              <p style={{ fontSize: '11px', color: '#555', margin: '2px 0 0' }}>Video attached</p>
             )}
           </div>
-          <div className="p-4 space-y-4">
-            <div className="grid grid-cols-3 gap-3">
+          <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
               <div>
-                <label className="block text-xs font-medium text-dark-muted">Sets</label>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: '#888', marginBottom: '6px' }}>Sets</label>
                 <input
                   type="number" min="1" value={configSets}
                   onChange={e => setConfigSets(e.target.value)}
-                  className={`mt-1 ${inputClass}`}
+                  style={inputStyle}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-dark-muted">Reps</label>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: '#888', marginBottom: '6px' }}>Reps</label>
                 <input
                   type="number" min="1" value={configReps}
                   onChange={e => setConfigReps(e.target.value)}
-                  className={`mt-1 ${inputClass}`}
+                  style={inputStyle}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-dark-muted">Weight ({weightUnit})</label>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: '#888', marginBottom: '6px' }}>Weight ({weightUnit})</label>
                 <input
                   type="number" min="0" step="0.5" value={configWeight}
                   onChange={e => setConfigWeight(e.target.value)}
                   placeholder="optional"
-                  className={`mt-1 ${inputClass}`}
+                  style={inputStyle}
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-dark-muted">
-                Notes for client <span className="font-normal text-dark-subtle">(optional)</span>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: '#888', marginBottom: '6px' }}>
+                Notes for client <span style={{ fontWeight: 400, color: '#555' }}>(optional)</span>
               </label>
               <input
                 type="text" value={configNotes}
                 onChange={e => setConfigNotes(e.target.value)}
                 placeholder="e.g. keep back straight, stop if painful"
-                className={`mt-1 ${inputClass}`}
+                style={inputStyle}
               />
             </div>
-            {addError && <p className="text-sm text-red-400">{addError}</p>}
+            {addError && <p style={{ fontSize: '13px', color: '#f87171', margin: 0 }}>{addError}</p>}
             <button
               onClick={handleConfirmAdd}
               disabled={adding || disabled || !configSets || !configReps}
-              className="w-full rounded bg-brand-primary py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
+              style={{
+                width: '100%', padding: '10px', background: '#29B5CC', color: '#000',
+                border: 'none', borderRadius: '7px', fontSize: '13px', fontWeight: 600,
+                cursor: adding || disabled || !configSets || !configReps ? 'not-allowed' : 'pointer',
+                opacity: adding || disabled || !configSets || !configReps ? 0.5 : 1,
+                transition: 'opacity 0.15s',
+              }}
             >
               {adding ? 'Adding…' : confirmLabel}
             </button>
