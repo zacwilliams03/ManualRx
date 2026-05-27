@@ -266,11 +266,25 @@ export default function Clients() {
                             flexShrink: 0,
                           }}
                         >
-                          {client.name[0]?.toUpperCase()}
+                          {(client.name ?? '')[0]?.toUpperCase()}
                         </div>
                         <div>
                           <div style={{ fontSize: '14px', fontWeight: 500, color: '#e8edf5' }}>{client.name}</div>
                           <div style={{ fontSize: '12px', color: '#555', marginTop: '1px' }}>{client.email}</div>
+                          {!client.is_active && (
+                            <span style={{
+                              fontSize: '11px',
+                              padding: '2px 7px',
+                              background: 'rgba(255,255,255,0.05)',
+                              border: '1px solid rgba(255,255,255,0.08)',
+                              borderRadius: '10px',
+                              color: '#666',
+                              marginTop: '3px',
+                              display: 'inline-block',
+                            }}>
+                              Inactive
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -360,7 +374,7 @@ export default function Clients() {
                                 fontSize: '13px', fontWeight: 700, color: '#888', flexShrink: 0,
                               }}
                             >
-                              {client.name[0]?.toUpperCase()}
+                              {(client.name ?? '')[0]?.toUpperCase()}
                             </div>
                             <div>
                               <div style={{ fontSize: '14px', fontWeight: 500, color: '#e8edf5' }}>{client.name}</div>
