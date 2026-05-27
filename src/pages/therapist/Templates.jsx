@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
+import PageHero from '../../components/therapist/PageHero'
+import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
 
 export default function Templates() {
   const { profile } = useAuth()
@@ -69,125 +72,136 @@ export default function Templates() {
 
   return (
     <SidebarLayout>
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-dark-text">Templates</h1>
-            <p className="mt-1 text-sm text-dark-muted">Save reusable exercise programs and apply them to any client.</p>
-          </div>
+      <PageHero
+        title="Templates"
+        subtitle={!loading && templates.length > 0 ? `${templates.length} template${templates.length !== 1 ? 's' : ''}` : null}
+        actions={
           <button
             onClick={createTemplate}
             disabled={creating}
-            className="rounded bg-brand-primary px-4 py-2 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
+            style={{
+              padding: '9px 18px',
+              background: '#29B5CC',
+              color: '#000',
+              border: 'none',
+              borderRadius: '7px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: creating ? 'default' : 'pointer',
+              opacity: creating ? 0.6 : 1,
+            }}
           >
-            {creating ? 'Creating…' : 'Add Template'}
+            {creating ? 'Creating…' : '+ New Template'}
           </button>
-        </div>
+        }
+      />
 
-        <div className="mt-6 max-w-2xl space-y-2">
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search templates…"
-            className="w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text placeholder-dark-subtle focus:border-dark-accent focus:outline-none"
-          />
-          {categories.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
+      <div style={{ padding: '24px 32px', maxWidth: '860px' }}>
+        {/* Search input */}
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search templates…"
+          style={{
+            width: '100%', maxWidth: '320px', padding: '8px 14px',
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none', marginBottom: '12px',
+          }}
+        />
+
+        {/* Category filter pills */}
+        {categories.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
+            <button
+              onClick={() => setSelectedCategory(null)}
+              style={{
+                padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', border: 'none',
+                background: selectedCategory === null ? 'rgba(41,181,204,0.12)' : 'rgba(255,255,255,0.04)',
+                color: selectedCategory === null ? '#29B5CC' : '#666',
+                borderWidth: '1px', borderStyle: 'solid',
+                borderColor: selectedCategory === null ? 'rgba(41,181,204,0.3)' : 'rgba(255,255,255,0.08)',
+              }}
+            >
+              All
+            </button>
+            {categories.map(cat => (
               <button
-                onClick={() => setSelectedCategory(null)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
-                  selectedCategory === null
-                    ? 'bg-brand-primary text-white'
-                    : 'bg-dark-elevated text-dark-muted hover:text-dark-text'
-                }`}
+                key={cat}
+                onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                style={{
+                  padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', border: 'none',
+                  background: selectedCategory === cat ? 'rgba(41,181,204,0.12)' : 'rgba(255,255,255,0.04)',
+                  color: selectedCategory === cat ? '#29B5CC' : '#666',
+                  borderWidth: '1px', borderStyle: 'solid',
+                  borderColor: selectedCategory === cat ? 'rgba(41,181,204,0.3)' : 'rgba(255,255,255,0.08)',
+                }}
               >
-                All
+                {cat}
               </button>
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
-                    selectedCategory === cat
-                      ? 'bg-brand-primary text-white'
-                      : 'bg-dark-elevated text-dark-muted hover:text-dark-text'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
-
-        {loading && (
-          <div className="mt-8 flex items-center justify-center h-32">
-            <p className="text-sm text-dark-muted">Loading…</p>
+            ))}
           </div>
         )}
 
-        {!loading && templates.length === 0 && !error && (
-          <div className="mt-12 text-center">
-            <p className="text-sm text-dark-muted">No templates yet. Create your first one.</p>
-          </div>
+        {error && <p style={{ fontSize: '13px', color: '#f87171', marginBottom: '12px' }}>{error}</p>}
+
+        {loading && <p style={{ fontSize: '13px', color: '#666' }}>Loading…</p>}
+
+        {!loading && filteredTemplates.length === 0 && (
+          <p style={{ fontSize: '13px', color: '#666' }}>
+            {templates.length === 0 ? 'No templates yet. Create your first one.' : 'No templates match your search.'}
+          </p>
         )}
 
-        {!loading && templates.length > 0 && filteredTemplates.length === 0 && (
-          <p className="mt-6 text-sm text-dark-muted">No templates match your search.</p>
-        )}
-
+        {/* Template list glass card */}
         {!loading && filteredTemplates.length > 0 && (
-          <div className="mt-6 space-y-3 max-w-2xl">
-            {filteredTemplates.map(t => {
+          <div style={{ ...CARD, padding: 0 }}>
+            <div style={SHIMMER} />
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={SECTION_LABEL}>Templates</span>
+            </div>
+            {filteredTemplates.map((t, i) => {
               const exerciseCount = t.template_exercises?.length ?? 0
-              const exerciseNames = (t.template_exercises ?? [])
-                .map(te => te.exercises?.name)
-                .filter(Boolean)
-
               return (
-                <div key={t.id} className="rounded-lg border border-dark-border bg-dark-surface overflow-hidden">
-                  <div className="px-4 py-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-medium text-dark-text">{t.name}</p>
-                          {t.category && (
-                            <span className="inline-block rounded-full bg-dark-accent-bg px-2 py-0.5 text-xs font-medium text-dark-accent">
-                              {t.category}
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-0.5 text-xs text-dark-muted">
-                          {exerciseCount === 0
-                            ? 'No exercises'
-                            : `${exerciseCount} exercise${exerciseCount !== 1 ? 's' : ''}`}
-                        </p>
-                        {exerciseNames.length > 0 && (
-                          <p className="mt-1 text-xs text-dark-subtle">
-                            {exerciseNames.join(' · ')}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => deleteTemplate(t.id, t.name)}
-                          className="rounded border border-red-800/40 px-3 py-1 text-sm text-red-400 hover:bg-red-900/20 cursor-pointer transition-colors duration-150"
-                        >
-                          Delete
-                        </button>
-                        <button
-                          onClick={() => navigate(`/therapist/templates/${t.id}`)}
-                          className="rounded border border-dark-accent px-3 py-1 text-sm text-dark-accent hover:bg-dark-accent-bg cursor-pointer transition-colors duration-150"
-                        >
-                          Edit
-                        </button>
-                      </div>
+                <motion.div
+                  key={t.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: Math.min(i * 0.05, 0.3) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 20px',
+                    borderBottom: i < filteredTemplates.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 500, color: '#e8edf5' }}>{t.name}</div>
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      {t.category && (
+                        <span style={{ fontSize: '11px', padding: '2px 7px', background: 'rgba(41,181,204,0.08)', color: '#29B5CC', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '4px' }}>
+                          {t.category}
+                        </span>
+                      )}
+                      <span style={{ fontSize: '11px', color: '#555' }}>
+                        {exerciseCount === 0 ? 'No exercises' : `${exerciseCount} exercise${exerciseCount !== 1 ? 's' : ''}`}
+                      </span>
                     </div>
                   </div>
-                </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => navigate(`/therapist/templates/${t.id}`)}
+                      style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(41,181,204,0.3)', borderRadius: '6px', background: 'transparent', color: '#29B5CC', cursor: 'pointer' }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => deleteTemplate(t.id, t.name)}
+                      style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '6px', background: 'transparent', color: '#f87171', cursor: 'pointer' }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </motion.div>
               )
             })}
           </div>
