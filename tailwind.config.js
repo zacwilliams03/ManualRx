@@ -19,7 +19,7 @@ export default {
           'note-text': '#1E8899',
         },
         dark: {
-          bg:          '#0a0a0a',
+          bg:          '#0e1117',   // was #0a0a0a — matches sidebar colour
           surface:     '#111111',
           elevated:    '#1a1a1a',
           border:      'rgba(255,255,255,0.06)',
