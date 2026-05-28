@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
-import PageHero from '../../components/therapist/PageHero'
+import PageHero from '../../components/shared/PageHero'
 import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
 
 const PAGE_SIZE = 12

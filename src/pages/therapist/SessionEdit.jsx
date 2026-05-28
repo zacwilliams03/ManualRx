@@ -7,7 +7,7 @@ import ExercisePicker from '../../components/therapist/ExercisePicker'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
 import { formatWeight } from '../../utils/weightUtils'
 import { motion } from 'framer-motion'
-import PageHero from '../../components/therapist/PageHero'
+import PageHero from '../../components/shared/PageHero'
 import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
 import VideoPlayer from '../../components/VideoPlayer'
 

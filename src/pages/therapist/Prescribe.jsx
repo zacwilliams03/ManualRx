@@ -13,7 +13,7 @@ import { PrescriptionPDF } from '../../components/therapist/PrescriptionPDF'
 import { AllSessionsPDF } from '../../components/therapist/AllSessionsPDF'
 import { ClientDataTab } from './ClientDataTab'
 import { motion, AnimatePresence } from 'framer-motion'
-import PageHero from '../../components/therapist/PageHero'
+import PageHero from '../../components/shared/PageHero'
 import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
 import { frequencyLabel } from '../../utils/frequencyUtils'
 
