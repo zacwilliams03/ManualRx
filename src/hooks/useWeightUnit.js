@@ -17,7 +17,7 @@ export function useWeightUnit() {
       .limit(1)
       .single()
       .then(({ data }) => { if (data?.weight_unit) setWeightUnit(data.weight_unit) })
-  }, [user, profile])
+  }, [user?.id, profile?.role])
 
   return weightUnit
 }

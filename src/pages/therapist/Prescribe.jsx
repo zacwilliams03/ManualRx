@@ -15,15 +15,9 @@ import { ClientDataTab } from './ClientDataTab'
 import { motion, AnimatePresence } from 'framer-motion'
 import PageHero from '../../components/therapist/PageHero'
 import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
+import { frequencyLabel } from '../../utils/frequencyUtils'
 
 const TAB_LABELS = { prescriptions: 'Prescribed Sessions', history: 'Session History', clientData: 'Client Data' }
-
-function frequencyLabel(days) {
-  if (!days) return 'No repeat'
-  if (days === 1) return 'Daily'
-  if (days === 7) return 'Weekly'
-  return `Every ${days} days`
-}
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString(undefined, {

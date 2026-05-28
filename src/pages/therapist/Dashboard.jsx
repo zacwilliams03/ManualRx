@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import ParticleBackground from '../../components/ParticleBackground'
 import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
+import { freqLabel } from '../../utils/frequencyUtils'
 
 // ---------------------------------------------------------------------------
 // Pure helpers (module-level)
@@ -40,12 +41,6 @@ function generateSlots(prescription, sessionLogs) {
     const done = logDates.some(d => d >= windowStart && d < windowEnd)
     return { status: done ? 'done' : 'missed' }
   })
-}
-
-function freqLabel(fd) {
-  if (fd === 1) return 'daily'
-  if (fd === 7) return 'weekly'
-  return `every ${fd} days`
 }
 
 function relativeTime(isoString) {

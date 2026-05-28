@@ -1587,3 +1587,57 @@ CREATE POLICY "Therapists manage own dismissed alerts" ON dashboard_dismissed_al
 - `<ClientDataTab prescriptions={sessions} />` — takes `prescriptions` prop, not `clientId`
 - `ApplyTemplateModal` has no `open` prop — use `{showApplyModal && <ApplyTemplateModal .../>}` conditional render
 
+---
+
+### Session 38 — Export all-sessions PDF
+
+**Goal:** Wire the "Export PDF" hero button on the Prescribe page to generate a single PDF containing all active sessions for a client (not just one prescription at a time).
+
+**New file:** `src/components/therapist/AllSessionsPDF.jsx`
+- Named export `AllSessionsPDF({ clinicName, clientName, prescriptions[], weightUnit })`
+- Props: `prescriptions` is an array of `{ name, frequencyLabel, exercises[] }` — each exercise is `{ name, sets, reps, weight, therapist_notes }`
+- `frequencyLabel` is a pre-formatted string computed in `Prescribe.jsx` via the `frequencyLabel(frequency_days)` helper before passing to the PDF component
+- Visually matches `PrescriptionPDF.jsx` (same NAVY/TEAL palette, Helvetica, en-AU date)
+- One section per prescription, each exercise listed with sets×reps@weight or "Bodyweight"
+
+**Changes to `src/pages/therapist/Prescribe.jsx`:**
+- `downloadAllPDF()` async function: fetches `prescription_exercises` for all active sessions in one batch query (`.in('prescription_id', activeIds)`), builds the `prescriptions` array with `byId` map, generates blob, triggers download
+- Filename: `sanitise(clientName)-all-sessions.pdf`
+- Hero button wired: disabled if no active sessions, loading state with `allPdfLoading`, error state with `allPdfError`
+
+**Test file:** `src/components/therapist/AllSessionsPDF.test.jsx` — 3 vitest tests covering: empty prescription list, prescriptions with no exercises, and prescriptions with exercises
+
+---
+
+### Session 39 — Pre-launch code audit
+
+**Goal:** Remove duplicate code, fix React hook dependency bugs, and extract shared utilities before public launch.
+
+**New files:**
+
+| File | Purpose |
+|------|---------|
+| `src/components/VideoPlayer.jsx` | Shared video player component. Props: `url` (string), `className` (default `'w-full rounded'`). Handles YouTube URL normalisation (watch?v= and youtu.be/ formats) → iframe embed; native `<video>` fallback for non-YouTube URLs. Returns `null` when `url` is falsy. |
+| `src/utils/frequencyUtils.js` | Two exports: `frequencyLabel(days)` (title-case: 'No repeat' / 'Daily' / 'Weekly' / 'Every N days') and `freqLabel(days)` (lowercase: 'daily' / 'weekly' / 'every N days'). `freqLabel` is for prose strings in therapist Dashboard alerts; `frequencyLabel` is for UI card labels everywhere else. |
+
+**Modified files:**
+
+| File | Change |
+|------|--------|
+| `src/pages/client/SessionWizard.jsx` | Removed inline `VideoPlayer` definition; imports shared component |
+| `src/pages/client/SessionComplete.jsx` | Removed inline `VideoPlayer` definition; imports shared component |
+| `src/pages/therapist/SessionEdit.jsx` | Removed inline `VideoPlayer` definition; imports shared component with `className="w-full rounded mt-2"` |
+| `src/pages/therapist/TemplateEdit.jsx` | Removed inline `VideoPlayer` definition; imports shared component with `className="w-full rounded mt-2"` |
+| `src/pages/therapist/Prescribe.jsx` | Removed local `frequencyLabel()`; imports from `frequencyUtils` |
+| `src/pages/client/Dashboard.jsx` | Removed local `frequencyLabel()`; imports from `frequencyUtils` |
+| `src/pages/therapist/Dashboard.jsx` | Removed local `freqLabel()`; imports from `frequencyUtils` |
+| `src/utils/pdfUtils.js` | Added `formatPdfDate(date)` — `date.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })` |
+| `src/components/therapist/PrescriptionPDF.jsx` | Removed local `formatDate()`; imports `formatPdfDate` from pdfUtils |
+| `src/components/therapist/AllSessionsPDF.jsx` | Removed local `formatDate()`; imports `formatPdfDate` from pdfUtils |
+| `src/hooks/useWeightUnit.js` | `useEffect` deps changed from `[user, profile]` → `[user?.id, profile?.role]` (objects fail reference equality; primitives prevent redundant Supabase calls) |
+| `src/hooks/useClinicName.js` | Same dep fix as above |
+
+**Not touched:** `src/pages/therapist/ExerciseDetail.jsx` keeps its own `VideoPlayer` — its null-case renders a "No video available" placeholder div instead of returning `null`, which is intentional and different from the shared component.
+
+**Verification:** `npm run build` exits 0 (3114 modules); `npm test` — 33/33 tests pass across pdfUtils, progressUtils, AllSessionsPDF test files.
+

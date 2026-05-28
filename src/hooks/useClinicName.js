@@ -35,7 +35,7 @@ export function useClinicName() {
             .then(({ data }) => { if (data?.clinic_name) setClinicName(data.clinic_name) })
         })
     }
-  }, [user, profile])
+  }, [user?.id, profile?.role])
 
   return clinicName
 }

@@ -4,13 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { useClinicName } from '../../hooks/useClinicName'
 import BottomNav from '../../components/client/BottomNav'
-
-function frequencyLabel(days) {
-  if (!days) return 'No repeat'
-  if (days === 1) return 'Daily'
-  if (days === 7) return 'Weekly'
-  return `Every ${days} days`
-}
+import { frequencyLabel } from '../../utils/frequencyUtils'
 
 function isRecentlyCompleted(session) {
   const logs = (session.session_logs ?? []).filter(l => l.completed_at)

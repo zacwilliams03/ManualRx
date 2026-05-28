@@ -1,5 +1,5 @@
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
-import { weightDisplay } from '../../utils/pdfUtils'
+import { weightDisplay, formatPdfDate } from '../../utils/pdfUtils'
 
 const NAVY = '#1E2D3D'
 const TEAL = '#29B5CC'
@@ -115,12 +115,8 @@ const styles = StyleSheet.create({
   },
 })
 
-function formatDate(date) {
-  return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })
-}
-
 export function AllSessionsPDF({ clinicName, clientName, prescriptions, weightUnit }) {
-  const today = formatDate(new Date())
+  const today = formatPdfDate(new Date())
 
   return (
     <Document>
