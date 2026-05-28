@@ -5,6 +5,9 @@ import { useWeightUnit } from '../../hooks/useWeightUnit'
 import { formatWeight } from '../../utils/weightUtils'
 import { ProgressTab } from './ProgressTab'
 import BottomNav from '../../components/client/BottomNav'
+import { motion } from 'framer-motion'
+import PageHero from '../../components/shared/PageHero'
+import { CARD, SHIMMER } from '../../components/therapist/styles'
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -88,22 +91,26 @@ export default function History() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-dark-bg p-6 pb-20">
-      <div className="mb-6 max-w-lg">
-        <h1 className="text-2xl font-semibold text-dark-text">History</h1>
-      </div>
+    <div style={{ minHeight: '100dvh', background: '#0e1117', paddingBottom: '80px' }}>
+      <PageHero title="History" subtitle="Your completed sessions" />
 
       {/* Tab switcher */}
-      <div className="max-w-lg flex gap-6 border-b border-dark-border mb-6">
+      <div style={{ maxWidth: '512px', display: 'flex', gap: '24px', borderBottom: '1px solid rgba(255,255,255,0.06)', margin: '0 16px 20px', paddingTop: '4px' }}>
         {[['history', 'History'], ['progress', 'Progress']].map(([tab, label]) => (
           <button
             key={tab}
             onClick={() => handleTabChange(tab)}
-            className={`pb-2 text-sm font-medium transition-colors ${
-              activeTab === tab
-                ? 'border-b-2 border-dark-accent text-dark-accent'
-                : 'text-dark-subtle hover:text-dark-muted'
-            }`}
+            style={{
+              paddingBottom: '10px',
+              fontSize: '13px',
+              fontWeight: 500,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              ...(activeTab === tab
+                ? { borderBottom: '2px solid #29B5CC', color: '#29B5CC', marginBottom: '-1px' }
+                : { color: '#555' }),
+            }}
           >
             {label}
           </button>
@@ -118,45 +125,52 @@ export default function History() {
             <p className="text-sm text-dark-muted">No sessions completed yet.</p>
           )}
 
-          <div className="space-y-3 max-w-lg">
-            {logs.map(log => {
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '512px', padding: '0 16px' }}>
+            {logs.map((log, i) => {
               const isOpen = expandedLogId === log.id
 
               return (
-                <div key={log.id} className="rounded-lg border border-dark-border bg-dark-surface overflow-hidden">
+                <motion.div
+                  key={log.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(i * 0.05, 0.3), duration: 0.25 }}
+                  style={{ ...CARD, padding: 0, overflow: 'hidden' }}
+                >
+                  <div style={SHIMMER} />
                   <button
-                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-dark-elevated transition-colors"
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}
                     onClick={() => setExpandedLogId(isOpen ? null : log.id)}
                   >
                     <div>
-                      <p className="text-sm font-medium text-dark-text">
+                      <p style={{ fontSize: '13px', fontWeight: 500, color: '#f0f0f0', margin: 0 }}>
                         {log.prescriptions?.name ?? 'Session'} · {formatDate(log.completed_at)}
                       </p>
                       {log.session_rpe != null && (
-                        <p className="mt-0.5 text-xs text-dark-muted">RPE: {log.session_rpe}/10</p>
+                        <p style={{ marginTop: '2px', fontSize: '11px', color: '#888', margin: '2px 0 0' }}>RPE: {log.session_rpe}/10</p>
                       )}
                     </div>
-                    <span className="ml-4 text-xs text-dark-subtle shrink-0">
+                    <span style={{ marginLeft: '16px', fontSize: '11px', color: '#555', flexShrink: 0 }}>
                       {isOpen ? '▲' : '▼'}
                     </span>
                   </button>
 
                   {isOpen && (
-                    <div className="border-t border-dark-border">
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                       {log.session_notes && (
-                        <p className="px-4 py-2 text-xs text-dark-muted border-b border-dark-border">
+                        <p style={{ padding: '8px 16px', fontSize: '11px', color: '#888', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                           {log.session_notes}
                         </p>
                       )}
 
-                      <div className="divide-y divide-dark-border">
+                      <div>
                         {(log.exercise_logs ?? []).map(el => {
                           const pe = el.prescription_exercises
                           const exerciseName = pe?.exercises?.name ?? 'Exercise'
                           const hasPerSetData = Array.isArray(el.sets_data) && el.sets_data.length > 0
 
                           return (
-                            <div key={el.id} className="px-3 py-2.5">
+                            <div key={el.id} style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                               <p className="text-xs font-medium text-dark-text">{exerciseName}</p>
 
                               {pe && (
@@ -192,18 +206,18 @@ export default function History() {
                         })}
 
                         {(log.exercise_logs ?? []).length === 0 && (
-                          <p className="px-4 py-2.5 text-xs text-dark-subtle">No exercise data recorded.</p>
+                          <p style={{ padding: '10px 16px', fontSize: '11px', color: '#555' }}>No exercise data recorded.</p>
                         )}
                       </div>
 
                       {log.session_rpe != null && (
-                        <p className="px-4 py-2 text-xs text-dark-muted border-t border-dark-border">
+                        <p style={{ padding: '8px 16px', fontSize: '11px', color: '#888', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
                           Session RPE: {log.session_rpe}/10
                         </p>
                       )}
                     </div>
                   )}
-                </div>
+                </motion.div>
               )
             })}
           </div>
