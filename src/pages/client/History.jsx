@@ -119,10 +119,10 @@ export default function History() {
 
       {activeTab === 'history' && (
         <>
-          {loading && <p className="text-sm text-dark-muted">Loading…</p>}
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {loading && <p style={{ fontSize: '13px', color: '#888', padding: '0 16px' }}>Loading…</p>}
+          {error && <p style={{ fontSize: '13px', color: '#f87171', padding: '0 16px' }}>{error}</p>}
           {!loading && !error && logs.length === 0 && (
-            <p className="text-sm text-dark-muted">No sessions completed yet.</p>
+            <p style={{ fontSize: '13px', color: '#888', padding: '0 16px' }}>No sessions completed yet.</p>
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '512px', padding: '0 16px' }}>
@@ -171,35 +171,35 @@ export default function History() {
 
                           return (
                             <div key={el.id} style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                              <p className="text-xs font-medium text-dark-text">{exerciseName}</p>
+                              <p style={{ fontSize: '12px', fontWeight: 500, color: '#f0f0f0', margin: 0 }}>{exerciseName}</p>
 
                               {pe && (
-                                <p className="mt-0.5 text-xs text-dark-subtle">
+                                <p style={{ marginTop: '2px', fontSize: '11px', color: '#555', margin: '2px 0 0' }}>
                                   Prescribed: {pe.sets} sets × {pe.reps} reps{pe.weight ? ` @ ${formatWeight(pe.weight, weightUnit)}` : ''}
                                 </p>
                               )}
 
                               {hasPerSetData ? (
-                                <div className="mt-1 space-y-0.5">
+                                <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                   {el.sets_data.map((s, si) => (
-                                    <p key={si} className="text-xs text-dark-muted">
+                                    <p key={si} style={{ fontSize: '11px', color: '#888', margin: 0 }}>
                                       Set {si + 1}: {s.reps} reps{s.weight ? ` @ ${formatWeight(parseFloat(s.weight), weightUnit)}` : ''}
                                     </p>
                                   ))}
                                 </div>
                               ) : (
-                                <p className="mt-0.5 text-xs text-dark-muted">
+                                <p style={{ marginTop: '2px', fontSize: '11px', color: '#888', margin: '2px 0 0' }}>
                                   {el.sets_completed ?? '—'} sets × {el.reps_completed ?? '—'} reps
                                   {el.weight_completed ? ` @ ${formatWeight(el.weight_completed, weightUnit)}` : ''}
                                 </p>
                               )}
 
                               {el.pain_rating != null && (
-                                <p className="mt-0.5 text-xs text-dark-muted">Pain: {el.pain_rating}/10</p>
+                                <p style={{ marginTop: '2px', fontSize: '11px', color: '#888', margin: '2px 0 0' }}>Pain: {el.pain_rating}/10</p>
                               )}
 
                               {el.client_notes && (
-                                <p className="mt-1 text-xs text-dark-muted">Note: {el.client_notes}</p>
+                                <p style={{ marginTop: '4px', fontSize: '11px', color: '#888', margin: '4px 0 0' }}>Note: {el.client_notes}</p>
                               )}
                             </div>
                           )
@@ -226,7 +226,7 @@ export default function History() {
 
       {activeTab === 'progress' && (
         prescriptionsLoading
-          ? <p className="text-sm text-dark-muted">Loading…</p>
+          ? <p style={{ fontSize: '13px', color: '#888', padding: '0 16px' }}>Loading…</p>
           : <ProgressTab prescriptions={prescriptions} />
       )}
 

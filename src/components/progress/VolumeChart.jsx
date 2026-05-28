@@ -18,7 +18,13 @@ export function VolumeChart({ data, weightUnit }) {
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
         <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fontSize: 11, fill: '#888888' }} />
         <YAxis tick={{ fontSize: 11, fill: '#888888' }} />
-        <Tooltip formatter={v => [`${v} ${weightUnit}`, 'Total volume']} labelFormatter={fmtDate} />
+        <Tooltip
+          formatter={v => [`${v} ${weightUnit}`, 'Total volume']}
+          labelFormatter={fmtDate}
+          contentStyle={{ background: 'rgba(14,17,23,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', fontSize: '12px', color: '#f0f0f0' }}
+          itemStyle={{ color: '#29B5CC' }}
+          labelStyle={{ color: '#888' }}
+        />
         <Line
           type="monotone"
           dataKey="volume"
