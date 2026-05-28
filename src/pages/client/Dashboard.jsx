@@ -1,10 +1,20 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { useClinicName } from '../../hooks/useClinicName'
 import BottomNav from '../../components/client/BottomNav'
-import { frequencyLabel } from '../../utils/frequencyUtils'
+import PageHero from '../../components/shared/PageHero'
+import { CARD, SHIMMER } from '../../components/therapist/styles'
+
+// frequencyLabel is defined locally — do not import from utils (that file may not exist)
+function frequencyLabel(days) {
+  if (!days) return 'As needed'
+  if (days === 1) return 'Daily'
+  if (days === 7) return 'Weekly'
+  return `Every ${days} days`
+}
 
 function isRecentlyCompleted(session) {
   const logs = (session.session_logs ?? []).filter(l => l.completed_at)
@@ -19,7 +29,7 @@ function isActive(prescription) {
   const { start_date, duration_weeks } = prescription
   if (!start_date || !duration_weeks) return true
   const expiry = new Date(start_date)
-  expiry.setDate(expiry.getDate() + duration_weeks * 7 + 7) // +7 grace period
+  expiry.setDate(expiry.getDate() + duration_weeks * 7 + 7)
   return expiry >= new Date()
 }
 
@@ -61,64 +71,93 @@ export default function ClientDashboard() {
     setLoading(false)
   }
 
+  const activeSessions = sessions.filter(isActive)
+
   return (
-    <div className="min-h-screen bg-dark-bg p-6 pb-20">
-      <div className="flex flex-wrap items-center justify-between gap-y-3 mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-dark-text">My Sessions</h1>
-          <p className="mt-0.5 text-sm text-dark-muted">
-            {profile?.name}{clinicName ? ` · ${clinicName}` : ''}
-          </p>
-        </div>
-      </div>
+    <div style={{ minHeight: '100vh', background: '#0e1117', paddingBottom: '80px' }}>
+      <PageHero
+        title="My Sessions"
+        subtitle={`${profile?.name ?? ''}${clinicName ? ` · ${clinicName}` : ''}`}
+      />
 
-      {loading && <p className="text-sm text-dark-muted">Loading…</p>}
-      {error && <p className="text-sm text-red-400">{error}</p>}
-      {!loading && !error && sessions.filter(isActive).length === 0 && (
-        <p className="text-sm text-dark-muted">Your therapist hasn't added any sessions yet.</p>
-      )}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        style={{ padding: '16px' }}
+      >
+        {loading && <p style={{ fontSize: '13px', color: '#888' }}>Loading…</p>}
+        {error && <p style={{ fontSize: '13px', color: '#f87171' }}>{error}</p>}
+        {!loading && !error && activeSessions.length === 0 && (
+          <p style={{ fontSize: '13px', color: '#888' }}>Your therapist hasn't added any sessions yet.</p>
+        )}
 
-      <div className="space-y-3 max-w-lg">
-        {sessions.filter(isActive).map(s => {
-          const completions = s.session_logs ?? []
-          const lastDone =
-            completions.length > 0
-              ? new Date(
-                  Math.max(...completions.map(l => new Date(l.completed_at).getTime()))
-                ).toLocaleDateString()
-              : null
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '512px' }}>
+          {activeSessions.map((s, i) => {
+            const completions = s.session_logs ?? []
+            const lastDone =
+              completions.length > 0
+                ? new Date(
+                    Math.max(...completions.map(l => new Date(l.completed_at).getTime()))
+                  ).toLocaleDateString()
+                : null
 
-          return (
-            <div
-              key={s.id}
-              className="flex items-start justify-between rounded-lg border border-dark-border bg-dark-surface p-4 gap-3"
-            >
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-dark-text">{s.name}</p>
-                  {isRecentlyCompleted(s) && (
-                    <span className="inline-flex items-center rounded-full bg-dark-accent-bg px-2 py-0.5 text-xs font-medium text-dark-accent">
-                      Completed
-                    </span>
+            return (
+              <motion.div
+                key={s.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: Math.min(i * 0.05, 0.3), duration: 0.25 }}
+                style={{ ...CARD, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}
+              >
+                <div style={SHIMMER} />
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#f0f0f0', margin: 0 }}>{s.name}</p>
+                    {isRecentlyCompleted(s) && (
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        background: 'rgba(41,181,204,0.10)',
+                        border: '1px solid rgba(41,181,204,0.2)',
+                        borderRadius: '9999px',
+                        padding: '2px 8px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: '#29B5CC',
+                      }}>
+                        Completed
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ marginTop: '4px', fontSize: '11px', color: '#888', margin: '4px 0 0' }}>
+                    {s.prescription_exercises[0]?.count ?? 0} exercises · {frequencyLabel(s.frequency_days)}
+                  </p>
+                  {lastDone && (
+                    <p style={{ marginTop: '2px', fontSize: '11px', color: '#555', margin: '2px 0 0' }}>Last completed: {lastDone}</p>
                   )}
                 </div>
-                <p className="mt-0.5 text-xs text-dark-muted">
-                  {s.prescription_exercises[0]?.count ?? 0} exercises · {frequencyLabel(s.frequency_days)}
-                </p>
-                {lastDone && (
-                  <p className="mt-0.5 text-xs text-dark-subtle">Last completed: {lastDone}</p>
-                )}
-              </div>
-              <Link
-                to={`/client/sessions/${s.id}`}
-                className="shrink-0 rounded bg-brand-primary px-4 py-2.5 text-sm text-white hover:bg-brand-primary-dark"
-              >
-                Start
-              </Link>
-            </div>
-          )
-        })}
-      </div>
+                <Link
+                  to={`/client/sessions/${s.id}`}
+                  style={{
+                    flexShrink: 0,
+                    background: '#29B5CC',
+                    color: '#000',
+                    borderRadius: '7px',
+                    padding: '7px 14px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    display: 'inline-block',
+                  }}
+                >
+                  Start
+                </Link>
+              </motion.div>
+            )
+          })}
+        </div>
+      </motion.div>
 
       <BottomNav />
     </div>
