@@ -368,7 +368,10 @@ export default function SessionWizard() {
           </div>
         </div>
 
-        <div style={{ maxWidth: '512px', margin: '0 auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: 'max(2rem,env(safe-area-inset-bottom))' }}>
+        <div style={{ maxWidth: '512px', margin: '0 auto', padding: '16px', paddingBottom: 'max(2rem,env(safe-area-inset-bottom))' }}>
+          <div style={{ ...CARD, padding: 0, overflow: 'hidden', position: 'relative' }}>
+            <div style={SHIMMER} />
+            <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
           {/* Exercise identity */}
           <div>
             <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#f0f0f0', margin: '0 0 4px' }}>{ex.exercises?.name ?? 'Exercise'}</h2>
@@ -555,7 +558,9 @@ export default function SessionWizard() {
             </div>
           )}
 
-          <p style={{ marginTop: '16px', fontSize: '11px', color: '#444', textAlign: 'center' }}>
+            </div>
+          </div>
+          <p style={{ marginTop: '12px', fontSize: '11px', color: '#444', textAlign: 'center' }}>
             Stop and seek medical advice if you experience sudden severe pain, chest pain, or dizziness.
           </p>
         </div>
