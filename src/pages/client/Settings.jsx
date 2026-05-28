@@ -4,6 +4,9 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useClinicName } from '../../hooks/useClinicName'
 import BottomNav from '../../components/client/BottomNav'
+import { motion } from 'framer-motion'
+import PageHero from '../../components/shared/PageHero'
+import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
 
 export default function ClientSettings() {
   const { user, profile, signOut } = useAuth()
@@ -133,162 +136,226 @@ export default function ClientSettings() {
   }
 
   return (
-    <div className="min-h-screen bg-dark-bg p-6 pb-20">
-      <div className="max-w-lg mx-auto">
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold text-dark-text">Settings</h1>
-        </div>
+    <div style={{ minHeight: '100vh', background: '#0e1117', paddingBottom: '80px' }}>
+      <PageHero title="Settings" subtitle="Preferences & account" />
 
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        style={{ padding: '16px', maxWidth: '512px', display: 'flex', flexDirection: 'column', gap: '12px' }}
+      >
         {fetching ? (
-          <p className="text-sm text-dark-muted">Loading…</p>
+          <p style={{ fontSize: '13px', color: '#888' }}>Loading…</p>
         ) : fetchError ? (
-          <p className="text-sm text-red-400">{fetchError}</p>
+          <p style={{ fontSize: '13px', color: '#f87171' }}>{fetchError}</p>
         ) : (
           <>
-            <form onSubmit={handleSave} className="bg-dark-surface rounded-lg border border-dark-border p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-dark-muted">Weight unit</label>
-                <div className="mt-1 flex gap-2">
+            {/* Preferences card */}
+            <div style={{ ...CARD, position: 'relative' }}>
+              <div style={SHIMMER} />
+              <div style={SECTION_LABEL}>Preferences</div>
+
+              <form onSubmit={handleSave} style={{ marginTop: '14px' }}>
+                <label style={{ display: 'block', fontSize: '12px', color: '#888', marginBottom: '8px' }}>Weight unit</label>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
                   {['kg', 'lb'].map((unit) => (
                     <button
                       key={unit}
                       type="button"
                       onClick={() => setWeightUnit(unit)}
-                      className={`flex-1 py-2 rounded border text-sm font-medium transition-colors ${
-                        weightUnit === unit
-                          ? 'bg-brand-primary text-white border-brand-primary'
-                          : 'border-dark-border text-dark-muted hover:border-dark-accent hover:text-dark-text'
-                      }`}
+                      style={{
+                        flex: 1,
+                        padding: '8px',
+                        borderRadius: '7px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        ...(weightUnit === unit
+                          ? { background: '#29B5CC', color: '#000', border: 'none' }
+                          : { background: 'transparent', color: '#666', border: '1px solid rgba(255,255,255,0.08)' }),
+                      }}
                     >
                       {unit}
                     </button>
                   ))}
                 </div>
-              </div>
 
-              {clinicName && (
-                <div>
-                  <label className="block text-sm font-medium text-dark-muted">Your clinic</label>
-                  <p className="mt-1 text-sm text-dark-text">{clinicName}</p>
-                </div>
-              )}
+                {clinicName && (
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', color: '#888', marginBottom: '4px' }}>Your clinic</label>
+                    <p style={{ fontSize: '13px', color: '#f0f0f0', margin: 0 }}>{clinicName}</p>
+                  </div>
+                )}
 
-              {saveError && <p className="text-sm text-red-400">{saveError}</p>}
-              {saveSuccess && <p className="text-sm text-green-400">Settings saved.</p>}
+                {saveError && <p style={{ fontSize: '12px', color: '#f87171', marginBottom: '8px' }}>{saveError}</p>}
+                {saveSuccess && <p style={{ fontSize: '12px', color: '#4ade80', marginBottom: '8px' }}>Settings saved.</p>}
 
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full rounded bg-brand-primary text-white py-2 text-sm font-medium hover:bg-brand-primary-dark disabled:opacity-50"
-              >
-                {saving ? 'Saving…' : 'Save changes'}
-              </button>
-            </form>
-
-            <div className="bg-dark-surface rounded-lg border border-dark-border p-6 mt-4">
-              <h2 className="text-sm font-medium text-dark-muted">Password</h2>
-              {passwordSuccess && (
-                <p className="mt-2 text-sm text-green-400">Password updated successfully.</p>
-              )}
-              {!showPasswordForm && (
                 <button
-                  type="button"
-                  onClick={() => { setPasswordSuccess(false); setShowPasswordForm(true) }}
-                  className="mt-3 rounded border border-dark-border px-4 py-2 text-sm font-medium text-dark-muted hover:bg-dark-elevated hover:text-dark-text"
+                  type="submit"
+                  disabled={saving}
+                  style={{
+                    width: '100%',
+                    background: '#29B5CC',
+                    color: '#000',
+                    border: 'none',
+                    borderRadius: '7px',
+                    padding: '9px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    opacity: saving ? 0.5 : 1,
+                  }}
                 >
-                  Change password
+                  {saving ? 'Saving…' : 'Save changes'}
                 </button>
-              )}
-              {showPasswordForm && (
-                <form onSubmit={handlePasswordSave} className="mt-3 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-dark-muted">Current password</label>
-                    <input
-                      type="password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      required
-                      className="mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-dark-text focus:outline-none focus:ring-1 focus:ring-dark-accent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-dark-muted">New password</label>
-                    <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      required
-                      className="mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-dark-text focus:outline-none focus:ring-1 focus:ring-dark-accent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-dark-muted">Confirm new password</label>
-                    <input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                      className="mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-dark-text focus:outline-none focus:ring-1 focus:ring-dark-accent"
-                    />
-                  </div>
-                  {passwordError && <p className="text-sm text-red-400">{passwordError}</p>}
-                  <div className="flex items-center gap-4">
-                    <button
-                      type="submit"
-                      disabled={passwordLoading}
-                      className="rounded bg-brand-primary text-white px-4 py-2 text-sm font-medium hover:bg-brand-primary-dark disabled:opacity-50"
-                    >
-                      {passwordLoading ? 'Updating…' : 'Update password'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={cancelPasswordForm}
-                      className="text-sm text-dark-muted hover:underline"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              )}
-              <p className="mt-4 text-sm">
-                <Link to="/forgot-password" className="text-brand-primary hover:underline">
-                  Forgot your password?
-                </Link>
-              </p>
+              </form>
             </div>
 
-            <div className="bg-dark-surface rounded-lg border border-dark-border p-6 mt-4">
-              {logoutStep === 'idle' ? (
-                <button
-                  type="button"
-                  onClick={() => setLogoutStep('confirming')}
-                  className="rounded border border-dark-border px-4 py-2 text-sm text-dark-muted hover:bg-dark-elevated hover:text-dark-text transition-colors"
-                >
-                  Log out
-                </button>
-              ) : (
-                <div className="flex items-center gap-3 flex-wrap">
-                  <p className="text-sm text-dark-muted">Log out of ManualRx?</p>
+            {/* Account card */}
+            <div style={{ ...CARD, position: 'relative' }}>
+              <div style={SHIMMER} />
+              <div style={SECTION_LABEL}>Account</div>
+
+              <div style={{ marginTop: '14px' }}>
+                {passwordSuccess && (
+                  <p style={{ fontSize: '12px', color: '#4ade80', marginBottom: '10px' }}>Password updated successfully.</p>
+                )}
+
+                {!showPasswordForm ? (
                   <button
                     type="button"
-                    onClick={signOut}
-                    className="rounded border border-red-800/40 px-3 py-1.5 text-sm text-red-400 hover:bg-red-900/20 transition-colors"
+                    onClick={() => { setPasswordSuccess(false); setShowPasswordForm(true) }}
+                    style={{
+                      background: 'transparent',
+                      color: '#29B5CC',
+                      border: '1px solid rgba(41,181,204,0.3)',
+                      borderRadius: '7px',
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      marginBottom: '12px',
+                      display: 'block',
+                      width: '100%',
+                    }}
                   >
-                    Yes, log out
+                    Change password
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setLogoutStep('idle')}
-                    className="text-sm text-dark-subtle hover:text-dark-muted"
-                  >
-                    Cancel
-                  </button>
+                ) : (
+                  <form onSubmit={handlePasswordSave} style={{ marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {[
+                      ['currentPassword', 'Current password', currentPassword, setCurrentPassword],
+                      ['newPassword', 'New password', newPassword, setNewPassword],
+                      ['confirmPassword', 'Confirm new password', confirmPassword, setConfirmPassword],
+                    ].map(([id, label, val, setter]) => (
+                      <div key={id}>
+                        <label style={{ display: 'block', fontSize: '12px', color: '#888', marginBottom: '4px' }}>{label}</label>
+                        <input
+                          type="password"
+                          value={val}
+                          onChange={(e) => setter(e.target.value)}
+                          required
+                          style={{
+                            width: '100%',
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: '7px',
+                            padding: '9px 12px',
+                            color: '#f0f0f0',
+                            fontSize: '13px',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                      </div>
+                    ))}
+                    {passwordError && <p style={{ fontSize: '12px', color: '#f87171' }}>{passwordError}</p>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <button
+                        type="submit"
+                        disabled={passwordLoading}
+                        style={{
+                          background: '#29B5CC',
+                          color: '#000',
+                          border: 'none',
+                          borderRadius: '7px',
+                          padding: '8px 16px',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          cursor: passwordLoading ? 'not-allowed' : 'pointer',
+                          opacity: passwordLoading ? 0.5 : 1,
+                        }}
+                      >
+                        {passwordLoading ? 'Updating…' : 'Update password'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelPasswordForm}
+                        style={{ background: 'none', border: 'none', fontSize: '13px', color: '#888', cursor: 'pointer' }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                <p style={{ fontSize: '12px', marginBottom: '16px' }}>
+                  <Link to="/forgot-password" style={{ color: '#29B5CC' }}>Forgot your password?</Link>
+                </p>
+
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '14px' }}>
+                  {logoutStep === 'idle' ? (
+                    <button
+                      type="button"
+                      onClick={() => setLogoutStep('confirming')}
+                      style={{
+                        background: 'transparent',
+                        color: '#f87171',
+                        border: '1px solid rgba(248,113,113,0.25)',
+                        borderRadius: '7px',
+                        padding: '8px 16px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        width: '100%',
+                      }}
+                    >
+                      Log out
+                    </button>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      <p style={{ fontSize: '13px', color: '#888', margin: 0 }}>Log out of ManualRx?</p>
+                      <button
+                        type="button"
+                        onClick={signOut}
+                        style={{
+                          background: 'transparent',
+                          color: '#f87171',
+                          border: '1px solid rgba(248,113,113,0.25)',
+                          borderRadius: '7px',
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Yes, log out
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLogoutStep('idle')}
+                        style={{ background: 'none', border: 'none', fontSize: '13px', color: '#555', cursor: 'pointer' }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </>
         )}
-      </div>
+      </motion.div>
 
       <BottomNav />
     </div>
