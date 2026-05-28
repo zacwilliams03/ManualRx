@@ -15,8 +15,14 @@ export default function BottomNav() {
   return (
     <nav
       aria-label="Main navigation"
-      className="fixed bottom-0 inset-x-0 z-40 bg-dark-surface border-t border-dark-border"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      className="fixed bottom-0 inset-x-0 z-40"
+      style={{
+        background: 'rgba(14,17,23,0.95)',
+        borderTop: '1px solid rgba(41,181,204,0.08)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
     >
       <div className="flex items-stretch">
         {TABS.map(({ to, icon: Icon, label, exact }) => {
