@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Trash2 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import useIsMobile from '../../hooks/useIsMobile'
 import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import ParticleBackground from '../../components/ParticleBackground'
@@ -552,14 +553,16 @@ export default function TherapistDashboard() {
         ),
       ].length
 
+  const isMobile = useIsMobile()
+
   const h = new Date().getHours()
   const greeting = h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'
   const firstName = profile?.name?.split(' ')[0] ?? ''
 
   return (
     <SidebarLayout>
-      <ParticleBackground spawnFromTop />
-      <div style={{ position: 'relative', zIndex: 1, padding: '40px 40px 60px', minHeight: '100vh' }}>
+      <ParticleBackground spawnFromTop particleCount={isMobile ? 30 : 140} />
+      <div style={{ position: 'relative', zIndex: 1, padding: isMobile ? '20px 16px 40px' : '40px 40px 60px', minHeight: '100vh' }}>
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
@@ -573,7 +576,7 @@ export default function TherapistDashboard() {
           />
         </motion.div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
           <motion.div
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
