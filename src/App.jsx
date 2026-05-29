@@ -23,7 +23,7 @@ import Onboarding from './pages/therapist/Onboarding'
 import Settings from './pages/therapist/Settings'
 import HomePage from './pages/HomePage'
 import Privacy from './pages/Privacy'
-import Terms from './pages/Terms'
+import Terms from './pages/therapist/Terms'
 import Contact from './pages/Contact'
 
 function ProtectedRoute({ children, requiredRole }) {
