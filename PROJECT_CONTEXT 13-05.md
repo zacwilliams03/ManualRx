@@ -547,7 +547,7 @@ letterSpacing: '0.08em', color: '#888888'
 **Pending (TODOs in code):**
 - Confirm pricing figures before launch (`{/* TODO: confirm pricing before launch */}`)
 - Confirm contact email — currently `mailto:hello@manualrx.app` (`{/* TODO: replace mailto with confirmed address before launch */}`)
-- Add real Privacy policy, Terms, Contact pages for footer links
+- ~~Add real Privacy policy, Terms, Contact pages for footer links~~ — ✅ done. Pages live at `/privacy`, `/terms`, `/contact`; footer links use React Router `<Link>`. **Pre-launch: have a lawyer review all three docs — current drafts are placeholder-quality and need to hold up under AU Privacy Act (and HIPAA if US expansion).**
 
 **Build order:** ~~Logo~~ → ~~Homepage~~ → ~~App UI dark mode sweep~~
 
@@ -595,9 +595,9 @@ Clinic tier. Pricing to be confirmed at launch; current placeholders: Solo $29/m
 
 **Pages:**
 - ~~Marketing/home page~~ — ✅ done (Session 30). Live at `/`.
-- Privacy policy page — required before launch (AU Privacy Act). Footer link is a placeholder.
-- Terms of service page — required before launch. Footer link is a placeholder.
-- Contact page — footer link is a placeholder.
+- ~~Privacy policy page~~ — ✅ done. Live at `/privacy` (`src/pages/Privacy.jsx`). **Pre-launch: have a lawyer review — draft needs to hold up under AU Privacy Act.**
+- ~~Terms of service page~~ — ✅ done. Live at `/terms` (`src/pages/therapist/Terms.jsx`). **Pre-launch: legal review required.**
+- ~~Contact page~~ — ✅ done. Live at `/contact` (`src/pages/Contact.jsx`).
 ---
 
 ## Session Log
@@ -1238,7 +1238,7 @@ Most-recently-created therapist relationship wins. Proper therapist-picker UI is
 - `useReducedMotion()` from Framer Motion called in each section; `fw()` (whileInView) and `fa()` (animate on mount) helpers return `{ initial: false }` when reduced motion is preferred
 - `minHeight: '100dvh'` (not `100vh`) in Hero — iOS Safari `100vh` includes browser chrome
 - Decorative elements have `aria-hidden="true"`; nav has `aria-label="Main"`
-- Footer links use `onClick={e => e.preventDefault()}` — bare `href="#"` causes scroll-to-top
+- Footer links use React Router `<Link to="...">` pointing to `/privacy`, `/terms`, `/contact` (previously placeholder `href="#"` with `preventDefault`)
 - FEATURES data stores `Icon: ComponentReference` not `icon: <JSX />` — avoids hoisting fragility
 - CTA banner copy: "Give your clients a better experience — starting today." (no false social proof)
 
@@ -1640,4 +1640,37 @@ CREATE POLICY "Therapists manage own dismissed alerts" ON dashboard_dismissed_al
 **Not touched:** `src/pages/therapist/ExerciseDetail.jsx` keeps its own `VideoPlayer` — its null-case renders a "No video available" placeholder div instead of returning `null`, which is intentional and different from the shared component.
 
 **Verification:** `npm run build` exits 0 (3114 modules); `npm test` — 33/33 tests pass across pdfUtils, progressUtils, AllSessionsPDF test files.
+
+---
+
+### Session 40 — Create PDF dropdown: download or email to client
+
+**Goal:** Replace the single "Export PDF" button on the Prescribe page with a "Create PDF ▾" dropdown offering two actions — download (existing) or email the PDF directly to the client.
+
+**UX flow:** Button click → dropdown with "⬇ Download PDF" and "✉ Email to client" → email option opens a confirmation modal showing the client's email → Send button generates PDF and emails it → success toast. Cancel resets error state. Error shown inside modal so therapist can retry without reopening.
+
+**Changes to `src/pages/therapist/Prescribe.jsx`:**
+- `useRef` added to imports; `pdfBtnRef` ref added to the "Create PDF" button
+- New state: `showPdfMenu`, `menuPos`, `showEmailConfirm`, `emailLoading`, `emailError`, `emailSuccess`
+- Click-outside `useEffect` (named handler, not inline — same reference for add/remove)
+- Dropdown uses `position: fixed` with coordinates from `getBoundingClientRect()` on click — avoids clipping by `PageHero`'s `overflow: hidden`
+- `emailPDF()` function: duplicates the PDF blob-generation core from `downloadAllPDF` (deliberate — avoids shared abstraction), base64-encodes via `ArrayBuffer → Uint8Array → btoa`, invokes `send-prescription-email` edge function
+- Attachment filename uses `sanitise(client.name)` — same as download convention
+- `therapistFirstName`: `profile.name?.split(' ')[0]`; `clinicName ?? ''` fallback
+- Confirmation modal + success toast rendered as fixed-position overlays inside SidebarLayout
+
+**New Supabase Edge Function: `supabase/functions/send-prescription-email/index.ts`**
+- Modelled exactly on `send-invite-email/index.ts` (same CORS headers, JWT auth, Resend call pattern)
+- Required fields validated: `to, clientName, therapistFirstName, clinicName, attachmentFilename, pdfBase64` — `clinicName` allows empty string (checked `== null`, not falsy)
+- Email subject: `"[therapistFirstName] has sent you your exercise program"`
+- Email body: branded dark HTML template matching `send-invite-email` style; `senderLine` is `"[first] from [clinic]"` or just `"[first]"` if no clinic
+- Resend attachment: `{ filename: attachmentFilename, content: pdfBase64 }`
+- Uses existing `RESEND_API_KEY` — no new secrets needed
+- Deployed via `supabase functions deploy send-prescription-email`
+
+**Design notes:**
+- Dropdown background: `rgba(13,17,23,0.95)` + `backdropFilter: blur(12px)` + `border: 1px solid rgba(41,181,204,0.15)` — matches glass card theme
+- Menu items: `#94a3b8` text + `hover:bg-white/5` Tailwind hover class
+- Divider: `rgba(41,181,204,0.1)` teal tint (vs plain white in earlier iteration)
+- Fixed-position dropdown avoids `overflow: hidden` on `PageHero` — must use `getBoundingClientRect()` on button open; `right` computed as `window.innerWidth - rect.right`
 
