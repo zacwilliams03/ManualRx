@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
+import useIsMobile from '../../hooks/useIsMobile'
 import { toCanonical, fromCanonical, formatWeight } from '../../utils/weightUtils'
 import VideoPlayer from '../../components/VideoPlayer'
 import { motion } from 'framer-motion'
@@ -42,6 +43,7 @@ export default function SessionWizard() {
   const { sessionId } = useParams()
   const { profile } = useAuth()
 
+  const isMobile = useIsMobile()
   const weightUnit = useWeightUnit()
   const [session, setSession] = useState(null)
   const [exercises, setExercises] = useState([])
@@ -329,7 +331,7 @@ export default function SessionWizard() {
     return (
       <div style={{ minHeight: '100dvh', background: '#0e1117' }}>
         {/* Sticky progress header */}
-        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'rgba(14,17,23,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'rgba(14,17,23,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: isMobile ? '12px 14px' : '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <button
             onClick={handleBack}
             style={{ background: 'none', border: 'none', fontSize: '13px', color: '#888', cursor: 'pointer' }}
