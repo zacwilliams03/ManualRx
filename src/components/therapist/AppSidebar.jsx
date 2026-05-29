@@ -48,7 +48,7 @@ function Logo() {
 
 // ─── NavItem ─────────────────────────────────────────────────────────────────
 
-function NavItem({ to, icon: Icon, label, activePrefixes, exact }) {
+function NavItem({ to, icon: Icon, label, activePrefixes, exact, onClose }) {
   const { pathname } = useLocation()
   const prefixes = activePrefixes ?? [to]
   const active = exact ? pathname === to : prefixes.some(p => pathname.startsWith(p))
@@ -57,6 +57,7 @@ function NavItem({ to, icon: Icon, label, activePrefixes, exact }) {
     <div role="listitem">
       <Link
         to={to}
+        onClick={onClose}
         className={[
           'flex items-center gap-3 rounded-lg transition-all duration-150 cursor-pointer',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dark-accent',
@@ -339,7 +340,7 @@ function AccountSection() {
 
 // ─── AppSidebar ───────────────────────────────────────────────────────────────
 
-export default function AppSidebar() {
+export default function AppSidebar({ onClose }) {
   return (
     <nav
       aria-label="Main navigation"
@@ -367,22 +368,26 @@ export default function AppSidebar() {
           icon={LayoutDashboard}
           label="Dashboard"
           exact
+          onClose={onClose}
         />
         <NavItem
           to="/therapist/clients"
           icon={Users}
           label="Clients"
           activePrefixes={['/therapist/clients', '/therapist/prescribe']}
+          onClose={onClose}
         />
         <NavItem
           to="/therapist/templates"
           icon={FileText}
           label="Templates"
+          onClose={onClose}
         />
         <NavItem
           to="/therapist/exercises"
           icon={Dumbbell}
           label="Exercise Library"
+          onClose={onClose}
         />
       </div>
 
@@ -392,6 +397,7 @@ export default function AppSidebar() {
           to="/settings"
           icon={Settings}
           label="Settings"
+          onClose={onClose}
         />
         <AccountSection />
       </div>
