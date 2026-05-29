@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import useIsMobile from '../hooks/useIsMobile'
 
 export default function Contact() {
+  const isMobile = useIsMobile()
   const [submitted, setSubmitted] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', subject: 'General', message: '' })
   const [sending, setSending] = useState(false)
@@ -102,7 +104,7 @@ export default function Contact() {
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
               <div>
                 <label style={labelStyle}>Name</label>
                 <input
