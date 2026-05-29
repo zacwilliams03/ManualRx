@@ -136,7 +136,7 @@ export default function ClientSettings() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0e1117', paddingBottom: '80px' }}>
+    <div style={{ minHeight: '100vh', background: '#0e1117', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
       <PageHero title="Settings" subtitle="Preferences & account" />
 
       <motion.div

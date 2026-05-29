@@ -570,7 +570,7 @@ export default function SessionWizard() {
 
   // ── Summary ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100dvh', background: '#0e1117', paddingBottom: '80px' }}>
+    <div style={{ minHeight: '100dvh', background: '#0e1117', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
       {/* Intentional design change: replaces the per-exercise sticky header (progress dots + clinic logo)
           with a minimal back-only bar. The progress dots don't apply on the summary step. */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'rgba(14,17,23,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '12px 16px' }}>

@@ -91,7 +91,7 @@ export default function History() {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#0e1117', paddingBottom: '80px' }}>
+    <div style={{ minHeight: '100dvh', background: '#0e1117', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
       <PageHero title="History" subtitle="Your completed sessions" />
 
       {/* Tab switcher */}
