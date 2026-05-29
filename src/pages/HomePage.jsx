@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import Lenis from 'lenis'
 import ParticleBackground from '../components/ParticleBackground'
+import useIsMobile from '../hooks/useIsMobile'
 
 // ─── Data (edit copy here) ─────────────────────────────────────────────────
 
@@ -401,6 +402,7 @@ function AppMockup() {
 
 function Hero({ scrollTo }) {
   const reduceMotion = useReducedMotion()
+  const isMobile = useIsMobile()
 
   return (
     <section style={{ position: 'relative', minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '60px', overflow: 'hidden' }}>
@@ -419,7 +421,7 @@ function Hero({ scrollTo }) {
         maskImage: 'radial-gradient(ellipse 70% 60% at 50% 50%, black 0%, transparent 100%)',
       }} />
 
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: '1100px', width: '100%', margin: '0 auto', padding: '60px 24px 80px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: '1100px', width: '100%', margin: '0 auto', padding: isMobile ? '40px 20px 60px' : '60px 24px 80px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
         <motion.div {...fa(reduceMotion, 0)}>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '7px',
@@ -436,7 +438,7 @@ function Hero({ scrollTo }) {
           {...fa(reduceMotion, 0.15)}
           style={{
             fontFamily: '"DM Serif Display", Georgia, serif',
-            fontSize: 'clamp(42px, 7vw, 80px)',
+            fontSize: isMobile ? '34px' : 'clamp(42px, 7vw, 80px)',
             fontWeight: 400, lineHeight: 1.1,
             color: '#f0f0f0', margin: '0 0 24px', maxWidth: '820px',
           }}
@@ -447,7 +449,7 @@ function Hero({ scrollTo }) {
 
         <motion.p
           {...fa(reduceMotion, 0.3)}
-          style={{ fontSize: '18px', color: '#888888', maxWidth: '520px', lineHeight: 1.65, margin: '0 0 36px' }}
+          style={{ fontSize: isMobile ? '16px' : '18px', color: '#888888', maxWidth: '520px', lineHeight: 1.65, margin: '0 0 36px' }}
         >
           Send your clients a personalised exercise program in minutes — no paperwork, no spreadsheets, no clutter. Built specifically for massage and manual therapists.
         </motion.p>
@@ -505,9 +507,10 @@ function Hero({ scrollTo }) {
 
 function Features() {
   const reduceMotion = useReducedMotion()
+  const isMobile = useIsMobile()
 
   return (
-    <section id="features" style={{ background: '#0a0a0a', padding: '100px 24px' }}>
+    <section id="features" style={{ background: '#0a0a0a', padding: isMobile ? '56px 24px' : '100px 24px' }}>
       <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
         <motion.div {...fw(reduceMotion)}>
           <SectionLabel>Features</SectionLabel>
@@ -563,9 +566,10 @@ function Features() {
 
 function HowItWorks() {
   const reduceMotion = useReducedMotion()
+  const isMobile = useIsMobile()
 
   return (
-    <section id="how-it-works" style={{ background: '#111111', padding: '100px 24px' }}>
+    <section id="how-it-works" style={{ background: '#111111', padding: isMobile ? '56px 24px' : '100px 24px' }}>
       <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
         <motion.div {...fw(reduceMotion)}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
@@ -629,9 +633,10 @@ function HowItWorks() {
 
 function Pricing() {
   const reduceMotion = useReducedMotion()
+  const isMobile = useIsMobile()
 
   return (
-    <section id="pricing" style={{ background: '#0a0a0a', padding: '100px 24px' }}>
+    <section id="pricing" style={{ background: '#0a0a0a', padding: isMobile ? '56px 24px' : '100px 24px' }}>
       <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
         <motion.div {...fw(reduceMotion)}>
           <SectionLabel>Pricing</SectionLabel>
@@ -720,9 +725,10 @@ function Pricing() {
 
 function CTABanner() {
   const reduceMotion = useReducedMotion()
+  const isMobile = useIsMobile()
 
   return (
-    <section style={{ background: '#0a0a0a', padding: '100px 24px', position: 'relative', overflow: 'hidden' }}>
+    <section style={{ background: '#0a0a0a', padding: isMobile ? '56px 24px' : '100px 24px', position: 'relative', overflow: 'hidden' }}>
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none',
         background: 'radial-gradient(ellipse 60% 60% at 50% 50%, rgba(41,181,204,0.08) 0%, transparent 70%)',
