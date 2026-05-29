@@ -22,6 +22,9 @@ import Join from './pages/Join'
 import Onboarding from './pages/therapist/Onboarding'
 import Settings from './pages/therapist/Settings'
 import HomePage from './pages/HomePage'
+import Privacy from './pages/Privacy'
+import Terms from './pages/Terms'
+import Contact from './pages/Contact'
 
 function ProtectedRoute({ children, requiredRole }) {
   const { user, profile, loading } = useAuth()
@@ -74,6 +77,10 @@ export default function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/client/settings" element={<ProtectedRoute requiredRole="client"><ClientSettings /></ProtectedRoute>} />
           <Route path="/join/:code" element={<Join />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/contact" element={<Contact />} />
+
 
           {/* Therapist — protected */}
           <Route path="/onboarding" element={<ProtectedRoute requiredRole="therapist"><Onboarding /></ProtectedRoute>} />

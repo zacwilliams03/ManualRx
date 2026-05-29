@@ -789,15 +789,18 @@ function Footer() {
       >
         <Logo />
         <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', justifyContent: 'center' }}>
-          {['Privacy policy', 'Terms', 'Contact'].map(label => (
-            <a
+          {[
+            { label: 'Privacy policy', to: '/privacy' },
+            { label: 'Terms', to: '/terms' },
+            { label: 'Contact', to: '/contact' },
+          ].map(({ label, to }) => (
+            <Link
               key={label}
-              href="#"
-              onClick={e => e.preventDefault()}
+              to={to}
               style={{ fontSize: '13px', color: '#555555', textDecoration: 'none', cursor: 'pointer' }}
             >
               {label}
-            </a>
+            </Link>
           ))}
         </div>
         <div style={{ fontSize: '13px', color: '#555555' }}>
