@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -138,6 +138,14 @@ export default function Prescribe() {
   const [allPdfLoading, setAllPdfLoading] = useState(false)
   const [allPdfError, setAllPdfError] = useState(false)
 
+  const [showPdfMenu, setShowPdfMenu] = useState(false)
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
+  const pdfBtnRef = useRef(null)
+  const [showEmailConfirm, setShowEmailConfirm] = useState(false)
+  const [emailLoading, setEmailLoading] = useState(false)
+  const [emailError, setEmailError] = useState(false)
+  const [emailSuccess, setEmailSuccess] = useState(false)
+
   useEffect(() => {
     if (profile?.id) fetchData()
   }, [clientId, profile?.id])
@@ -169,6 +177,15 @@ export default function Prescribe() {
         setHistoryTabLoaded(true)
       })
   }, [activeTab, sessions, historyTabLoaded])
+
+  useEffect(() => {
+    if (!showPdfMenu) return
+    const handler = (e) => {
+      if (!e.target.closest('[data-pdf-menu]')) setShowPdfMenu(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showPdfMenu])
 
   async function fetchData() {
     setLoading(true)
@@ -374,6 +391,77 @@ export default function Prescribe() {
     }
   }
 
+  async function emailPDF() {
+    const activeSessions = sortedSessions.filter(isActive)
+    if (activeSessions.length === 0) return
+
+    setEmailLoading(true)
+    setEmailError(false)
+    try {
+      const activeIds = activeSessions.map(s => s.id)
+      const { data: peData, error: peError } = await supabase
+        .from('prescription_exercises')
+        .select('prescription_id, sets, reps, weight, therapist_notes, exercises(name)')
+        .in('prescription_id', activeIds)
+        .order('created_at', { ascending: true })
+      if (peError) throw peError
+
+      const byId = {}
+      for (const row of peData) {
+        if (!byId[row.prescription_id]) byId[row.prescription_id] = []
+        byId[row.prescription_id].push({
+          name: row.exercises?.name ?? 'Exercise',
+          sets: row.sets,
+          reps: row.reps,
+          weight: row.weight,
+          therapist_notes: row.therapist_notes,
+        })
+      }
+
+      const prescriptions = activeSessions.map(s => ({
+        name: s.name,
+        frequencyLabel: frequencyLabel(s.frequency_days),
+        exercises: byId[s.id] ?? [],
+      }))
+
+      const blob = await pdf(
+        <AllSessionsPDF
+          clinicName={clinicName}
+          clientName={client?.name ?? 'Client'}
+          prescriptions={prescriptions}
+          weightUnit={weightUnit}
+        />
+      ).toBlob()
+
+      const arrayBuffer = await blob.arrayBuffer()
+      const uint8Array = new Uint8Array(arrayBuffer)
+      let binary = ''
+      for (let i = 0; i < uint8Array.length; i++) binary += String.fromCharCode(uint8Array[i])
+      const pdfBase64 = btoa(binary)
+
+      const { error } = await supabase.functions.invoke('send-prescription-email', {
+        body: {
+          to: client.email,
+          clientName: client.name,
+          therapistFirstName: profile.name?.split(' ')[0] ?? profile.name,
+          clinicName: clinicName ?? '',
+          attachmentFilename: `${sanitise(client?.name ?? 'client')}-prescription.pdf`,
+          pdfBase64,
+        },
+      })
+      if (error) throw error
+
+      setShowEmailConfirm(false)
+      setEmailSuccess(true)
+      setTimeout(() => setEmailSuccess(false), 4000)
+    } catch (err) {
+      console.error('Email PDF failed:', err)
+      setEmailError(true)
+    } finally {
+      setEmailLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <SidebarLayout>
@@ -394,13 +482,18 @@ export default function Prescribe() {
         actions={
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             {sortedSessions.some(isActive) && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+              <div data-pdf-menu style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
                 <button
-                  onClick={downloadAllPDF}
+                  ref={pdfBtnRef}
+                  onClick={() => {
+                    const rect = pdfBtnRef.current.getBoundingClientRect()
+                    setMenuPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right })
+                    setShowPdfMenu(m => !m)
+                  }}
                   disabled={allPdfLoading}
                   style={{ padding: '8px 14px', background: 'transparent', color: '#888', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', fontSize: '12px', cursor: allPdfLoading ? 'default' : 'pointer', opacity: allPdfLoading ? 0.6 : 1 }}
                 >
-                  {allPdfLoading ? 'Exporting…' : 'Export PDF'}
+                  {allPdfLoading ? 'Exporting…' : 'Create PDF ▾'}
                 </button>
                 {allPdfError && (
                   <span style={{ fontSize: '11px', color: '#f87171' }}>Export failed</span>
@@ -631,6 +724,69 @@ export default function Prescribe() {
             fetchData()
           }}
         />
+      )}
+
+      {/* PDF dropdown — fixed position to escape PageHero overflow:hidden */}
+      {showPdfMenu && (
+        <div
+          data-pdf-menu
+          style={{ position: 'fixed', top: menuPos.top, right: menuPos.right, background: 'rgba(13,17,23,0.95)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '10px', minWidth: '190px', boxShadow: '0 12px 40px rgba(0,0,0,0.6)', zIndex: 200, overflow: 'hidden' }}
+        >
+          <button
+            onClick={() => { setShowPdfMenu(false); downloadAllPDF() }}
+            className="hover:bg-white/5 transition-colors"
+            style={{ width: '100%', padding: '11px 16px', background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+          >
+            ⬇ Download PDF
+          </button>
+          <div style={{ height: '1px', background: 'rgba(41,181,204,0.1)', margin: '0 10px' }} />
+          <button
+            onClick={() => { setShowPdfMenu(false); setShowEmailConfirm(true) }}
+            className="hover:bg-white/5 transition-colors"
+            style={{ width: '100%', padding: '11px 16px', background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+          >
+            ✉ Email to client
+          </button>
+        </div>
+      )}
+
+      {/* Email confirmation modal */}
+      {showEmailConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', padding: '24px', width: '300px', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}>
+            <p style={{ margin: '0 0 6px', color: '#e2e8f0', fontSize: '15px', fontWeight: 600 }}>Email prescription PDF?</p>
+            <p style={{ margin: '0 0 20px', color: '#94a3b8', fontSize: '13px' }}>
+              The PDF will be sent to <span style={{ color: '#e2e8f0', fontWeight: 500 }}>{client?.email}</span>
+            </p>
+            {emailError && (
+              <p style={{ margin: '0 0 14px', color: '#f87171', fontSize: '12px' }}>Failed to send — please try again.</p>
+            )}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => { setShowEmailConfirm(false); setEmailError(false) }}
+                disabled={emailLoading}
+                style={{ flex: 1, padding: '9px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#94a3b8', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={emailPDF}
+                disabled={emailLoading}
+                style={{ flex: 1, padding: '9px', background: '#29B5CC', border: 'none', color: '#0f172a', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: emailLoading ? 'default' : 'pointer', opacity: emailLoading ? 0.7 : 1 }}
+              >
+                {emailLoading ? 'Sending…' : 'Send'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email success toast */}
+      {emailSuccess && (
+        <div style={{ position: 'fixed', bottom: '24px', right: '24px', background: '#1e293b', border: '1px solid rgba(41,181,204,0.3)', borderRadius: '8px', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', zIndex: 100 }}>
+          <span style={{ color: '#29B5CC', fontSize: '14px' }}>✓</span>
+          <span style={{ color: '#e2e8f0', fontSize: '13px' }}>PDF sent to {client?.email}</span>
+        </div>
       )}
     </SidebarLayout>
   )

@@ -8,7 +8,16 @@
       "Skill(superpowers:subagent-driven-development)",
       "Skill(superpowers:subagent-driven-development:*)",
       "Skill(superpowers:verification-before-completion)",
-      "Skill(superpowers:verification-before-completion:*)"
+      "Skill(superpowers:verification-before-completion:*)",
+      "Bash(npx vite *)",
+      "Bash(npm run *)",
+      "Skill(superpowers:writing-plans)",
+      "Skill(superpowers:writing-plans:*)",
+      "Skill(superpowers:finishing-a-development-branch)",
+      "Skill(superpowers:finishing-a-development-branch:*)",
+      "Skill(superpowers:brainstorming)",
+      "Skill(superpowers:brainstorming:*)",
+      "Read(//c/Users/Zacwi/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/brainstorming/**)"
     ]
   }
 }
