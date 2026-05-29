@@ -34,7 +34,9 @@ Single breakpoint: **768px**.
 import { useState, useEffect } from 'react'
 
 export default function useIsMobile(threshold = 768) {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < threshold)
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < threshold
+  )
 
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < threshold)
@@ -109,9 +111,24 @@ Tab bar row gets `overflowX: 'auto'` and `WebkitOverflowScrolling: 'touch'` on m
 ### 6. Therapist Dashboard
 **File:** `src/pages/therapist/Dashboard.jsx`
 
-Audit the stat/metric card grid. If it uses a multi-column layout, wrap to single column on mobile. Padding reduction same as other pages.
+The page has a `gridTemplateColumns: '1fr 1fr'` grid at line 576 (AdherenceCard + NeedsAttentionCard side by side). On mobile: switch to `gridTemplateColumns: '1fr'` so they stack vertically. ActivityFeedCard is already full-width below the grid — unchanged. Padding reduction same as other pages.
 
-### 7. `ExercisePicker` modal
+Also reduce the full-page `ParticleBackground` particleCount on mobile (see section below).
+
+### 7. ParticleBackground on mobile
+
+`PageHero` passes `particleCount={60}` — on mobile reduce to `particleCount={20}`. The therapist Dashboard uses a full-page `<ParticleBackground />` — on mobile reduce its particleCount similarly (20). Desktop values unchanged. `prefers-reduced-motion` behaviour is unaffected (already handled inside the component).
+
+### 8. Z-index stack for mobile drawer
+
+Assign explicit values to avoid conflicts with existing modals:
+- Drawer backdrop: `zIndex: 48`
+- Drawer panel: `zIndex: 49`
+- Existing modals (Add Client, ApplyTemplate, etc.) already use Tailwind `z-50` → they remain above the drawer
+
+`ExercisePicker` modal: on mobile: `width: '95vw'`, `maxHeight: '85vh'`, `overflowY: 'auto'`, confirm it renders at `z-50` or above. Desktop unchanged.
+
+### 9. `ExercisePicker` modal
 **File:** `src/components/therapist/ExercisePicker.jsx`
 
 On mobile: `width: '95vw'`, `maxHeight: '85vh'`, `overflowY: 'auto'`. Desktop unchanged.
@@ -122,30 +139,41 @@ On mobile: `width: '95vw'`, `maxHeight: '85vh'`, `overflowY: 'auto'`. Desktop un
 
 The client side has a `BottomNav` already suited for mobile. The following pages need targeted fixes:
 
-### 8. `SessionWizard`
+### 10. BottomNav safe-area clearance
+**Files:** `src/pages/client/Dashboard.jsx`, `src/pages/client/History.jsx`, `src/pages/client/Settings.jsx`, `src/pages/client/SessionWizard.jsx`
+
+Three client pages use `paddingBottom: '80px'` as a hardcoded clearance for the BottomNav. On iPhones with a home indicator (iPhone X and later), the BottomNav itself is 56px tall + 34px safe-area inset = ~90px total. Content gets clipped on real devices, invisible in DevTools emulation.
+
+Fix: replace `paddingBottom: '80px'` with `paddingBottom: 'calc(80px + env(safe-area-inset-bottom))'` in all three files. `SessionWizard.jsx` already applies this correctly on intro/done screens — the remaining instance at line 573 also needs it.
+
+### 11. `SessionWizard`
 **File:** `src/pages/client/SessionWizard.jsx`
 
 - Sticky header: verify it doesn't clip or overlap content on 375px. Reduce horizontal padding on mobile.
 - Scale selector buttons: add `flexWrap: 'wrap'` on mobile if the row overflows.
 - Intro/done/summary glass cards: verify full-width padding is comfortable on mobile.
+- **iOS Safari note:** the sticky header uses `position: sticky` + `backdropFilter: blur(8px)`. This combination has known rendering artifacts on iOS Safari — must be tested on a real iOS device, not just DevTools emulation.
 
-### 9. Client `Dashboard`
+### 12. Client `Dashboard`
 **File:** `src/pages/client/Dashboard.jsx`
 
+- Safe-area padding fix (see §10).
 - Content padding: reduce on mobile.
 - Session cards: verify no horizontal overflow. Check hero section padding.
 
-### 10. Client `History`
+### 13. Client `History`
 **File:** `src/pages/client/History.jsx`
 
+- Safe-area padding fix (see §10).
 - Log cards: verify readable on 375px. Reduce padding on mobile.
 
-### 11. Client `Settings`
+### 14. Client `Settings`
 **File:** `src/pages/client/Settings.jsx`
 
+- Safe-area padding fix (see §10).
 - Glass cards (Preferences + Account): verify full-width, no horizontal scroll.
 
-### 12. `ProgressTab` + charts
+### 15. `ProgressTab` + charts
 **Files:** `src/pages/client/ProgressTab.jsx`, `src/components/progress/PainChart.jsx`, `src/components/progress/VolumeChart.jsx`
 
 Charts must use `<ResponsiveContainer width="100%" height={200}>` (or equivalent). If already using it, verify the parent container has no fixed pixel width that constrains it on mobile.
@@ -154,18 +182,18 @@ Charts must use `<ResponsiveContainer width="100%" height={200}>` (or equivalent
 
 ## Shared / Auth Pages
 
-### 13. `HomePage`
+### 16. `HomePage`
 **File:** `src/pages/HomePage.jsx`
 
 - Hero section: reduce font sizes and padding on mobile.
 - Feature sections: check for horizontal overflow or fixed-width containers.
 
-### 14. Auth pages — quick scan
+### 17. Auth pages — quick scan
 **Files:** `Login.jsx`, `Signup.jsx`, `ForgotPassword.jsx`, `ResetPassword.jsx`, `Join.jsx`
 
 These use centered card layouts and are likely already responsive. Visually verify at 375px — fix any padding or overflow issues found.
 
-### 15. Legal pages — quick scan
+### 18. Legal pages — quick scan
 **Files:** `src/pages/Privacy.jsx`, `src/pages/therapist/Terms.jsx`, `src/pages/Contact.jsx`
 
 Text pages — check for horizontal overflow and comfortable mobile padding.
@@ -184,7 +212,7 @@ Text pages — check for horizontal overflow and comfortable mobile padding.
 ## Verification
 
 For each page:
-1. Open Chrome DevTools, set device to **iPhone SE (375×667)**
+1. Open Chrome DevTools — test at **375px (iPhone SE)** and **390px (iPhone 14)**
 2. Confirm no horizontal scroll, no clipped content, no overlapping elements
 3. Confirm desktop view (1280px) is visually identical to before
 
@@ -193,3 +221,5 @@ Key flows to test end-to-end on mobile:
 - Therapist: open SessionEdit, use ExercisePicker modal
 - Client: complete a session wizard on mobile
 - Client: view session history
+
+**Real device required:** Test `SessionWizard` sticky header on a physical iOS device — `position: sticky` + `backdropFilter: blur()` has known Safari rendering artifacts that DevTools emulation does not reproduce. Also verify BottomNav safe-area clearance on an iPhone with home indicator (iPhone X or later).
