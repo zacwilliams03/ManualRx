@@ -6,10 +6,12 @@ import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import PageHero from '../../components/shared/PageHero'
 import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
+import useIsMobile from '../../hooks/useIsMobile'
 
 export default function Templates() {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
 
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(true)
@@ -100,7 +102,7 @@ export default function Templates() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
-        style={{ padding: '24px 32px', maxWidth: '860px' }}
+        style={{ padding: isMobile ? '16px' : '24px 32px', maxWidth: '860px' }}
       >
         {/* Search input */}
         <input

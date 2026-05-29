@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import PageHero from '../../components/shared/PageHero'
 import { CARD, SHIMMER } from '../../components/therapist/styles'
+import useIsMobile from '../../hooks/useIsMobile'
 
 function VideoPlayer({ url }) {
   if (!url) {
@@ -53,6 +54,7 @@ export default function ExerciseDetail() {
   const { id } = useParams()
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
 
   const [exercise, setExercise] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -142,7 +144,7 @@ export default function ExerciseDetail() {
         }
       />
 
-      <div style={{ padding: '24px 32px', maxWidth: '600px' }}>
+      <div style={{ padding: isMobile ? '16px' : '24px 32px', maxWidth: '600px' }}>
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}

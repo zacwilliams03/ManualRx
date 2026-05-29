@@ -10,12 +10,14 @@ import { motion } from 'framer-motion'
 import PageHero from '../../components/shared/PageHero'
 import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
 import VideoPlayer from '../../components/VideoPlayer'
+import useIsMobile from '../../hooks/useIsMobile'
 
 export default function SessionEdit() {
   const { clientId, sessionId } = useParams()
   const { profile } = useAuth()
   const navigate = useNavigate()
   const weightUnit = useWeightUnit()
+  const isMobile = useIsMobile()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -162,7 +164,7 @@ export default function SessionEdit() {
         }
       />
 
-      <div style={{ padding: '24px 32px', maxWidth: '620px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ padding: isMobile ? '16px' : '24px 32px', maxWidth: '620px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
         {/* Session details glass card */}
         <div style={{ ...CARD }}>

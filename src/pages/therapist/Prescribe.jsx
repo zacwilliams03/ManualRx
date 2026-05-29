@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import PageHero from '../../components/shared/PageHero'
 import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
 import { frequencyLabel } from '../../utils/frequencyUtils'
+import useIsMobile from '../../hooks/useIsMobile'
 
 const TAB_LABELS = { prescriptions: 'Prescribed Sessions', history: 'Session History', clientData: 'Client Data' }
 
@@ -114,6 +115,7 @@ export default function Prescribe() {
   const navigate = useNavigate()
   const weightUnit = useWeightUnit()
   const clinicName = useClinicName()
+  const isMobile = useIsMobile()
 
   const [client, setClient] = useState(null)
   const [sessions, setSessions] = useState([])
@@ -548,7 +550,7 @@ export default function Prescribe() {
       {error && <p style={{ padding: '16px 32px', fontSize: '13px', color: '#f87171' }}>{error}</p>}
 
       {/* Tab content */}
-      <div style={{ padding: '24px 32px' }}>
+      <div style={{ padding: isMobile ? '16px' : '24px 32px' }}>
         <AnimatePresence mode="wait">
 
           {/* ── Prescribed Sessions ── */}

@@ -6,12 +6,14 @@ import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import PageHero from '../../components/shared/PageHero'
 import { CARD, SHIMMER } from '../../components/therapist/styles'
+import useIsMobile from '../../hooks/useIsMobile'
 
 const CATEGORIES = ['Cervical', 'Thoracic', 'Lumbar', 'Shoulder', 'Elbow', 'Hand / Wrist', 'Hip', 'Knee', 'Ankle / Foot', 'General']
 
 export default function ExerciseUpload() {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -112,7 +114,7 @@ export default function ExerciseUpload() {
           title="Exercise Saved"
           back={{ label: 'Exercise Library', to: '/therapist/exercises' }}
         />
-        <div style={{ padding: '24px 32px', maxWidth: '600px' }}>
+        <div style={{ padding: isMobile ? '16px' : '24px 32px', maxWidth: '600px' }}>
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -169,7 +171,7 @@ export default function ExerciseUpload() {
         }
       />
 
-      <div style={{ padding: '24px 32px', maxWidth: '600px' }}>
+      <div style={{ padding: isMobile ? '16px' : '24px 32px', maxWidth: '600px' }}>
         <div style={{ ...CARD }}>
           <div style={SHIMMER} />
           <form id="exercise-upload-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>

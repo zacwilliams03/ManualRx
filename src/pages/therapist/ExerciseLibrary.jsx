@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import PageHero from '../../components/shared/PageHero'
 import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
+import useIsMobile from '../../hooks/useIsMobile'
 
 const PAGE_SIZE = 12
 const CATEGORIES = ['All', 'Custom', 'Cervical', 'Thoracic', 'Lumbar', 'Shoulder', 'Elbow', 'Hand / Wrist', 'Hip', 'Knee', 'Ankle / Foot', 'General']
@@ -108,7 +109,7 @@ export default function ExerciseLibrary() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
-        style={{ padding: '24px 32px', maxWidth: '860px' }}
+        style={{ padding: isMobile ? '16px' : '24px 32px', maxWidth: '860px' }}
       >
         {/* Search input */}
         <input

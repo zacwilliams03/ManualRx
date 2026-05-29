@@ -6,9 +6,11 @@ import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import PageHero from '../../components/shared/PageHero'
 import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
+import useIsMobile from '../../hooks/useIsMobile'
 
 export default function Clients() {
   const { profile } = useAuth()
+  const isMobile = useIsMobile()
 
   const [clients, setClients] = useState([])
   const [listLoading, setListLoading] = useState(true)
@@ -194,7 +196,7 @@ export default function Clients() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
-        style={{ padding: '24px 32px', maxWidth: '860px' }}
+        style={{ padding: isMobile ? '16px' : '24px 32px', maxWidth: '860px' }}
       >
 
         {/* Search */}
