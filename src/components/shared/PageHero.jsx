@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import ParticleBackground from '../ParticleBackground'
+import useIsMobile from '../../hooks/useIsMobile'
 
 export default function PageHero({ title, subtitle, back, actions }) {
+  const isMobile = useIsMobile()
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -11,11 +14,11 @@ export default function PageHero({ title, subtitle, back, actions }) {
       style={{
         position: 'relative',
         overflow: 'hidden',
-        padding: '32px 32px 28px',
+        padding: isMobile ? '20px 16px 16px' : '32px 32px 28px',
         borderBottom: '1px solid rgba(41,181,204,0.08)',
       }}
     >
-      <ParticleBackground position="absolute" particleCount={60} spawnFromTop />
+      <ParticleBackground position="absolute" particleCount={isMobile ? 20 : 60} spawnFromTop />
 
       <div
         style={{
@@ -37,11 +40,17 @@ export default function PageHero({ title, subtitle, back, actions }) {
           </Link>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: isMobile ? '12px' : '16px',
+        }}>
           <div>
             <h1
               style={{
-                fontSize: '26px',
+                fontSize: isMobile ? '22px' : '26px',
                 fontWeight: 700,
                 color: '#e8edf5',
                 margin: '0 0 6px',
@@ -57,7 +66,14 @@ export default function PageHero({ title, subtitle, back, actions }) {
           </div>
 
           {actions && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0, marginTop: '4px' }}>
+            <div style={{
+              display: 'flex',
+              gap: isMobile ? '6px' : '8px',
+              alignItems: 'center',
+              flexShrink: 0,
+              flexWrap: isMobile ? 'wrap' : 'nowrap',
+              marginTop: isMobile ? 0 : '4px',
+            }}>
               {actions}
             </div>
           )}
