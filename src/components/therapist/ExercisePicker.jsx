@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { toCanonical } from '../../utils/weightUtils'
+import useIsMobile from '../../hooks/useIsMobile'
 
 const CATEGORIES = [
   'Custom', 'Cervical', 'Thoracic', 'Lumbar',
@@ -22,6 +23,7 @@ const rowStyle = {
 
 // confirmLabel: text shown on the Add button — defaults to 'Add to session'; pass 'Add to template' in TemplateEdit
 export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLabel = 'Add to session' }) {
+  const isMobile = useIsMobile()
   const [pickerView, setPickerView] = useState('browse')
 
   const [search, setSearch] = useState('')
@@ -110,6 +112,8 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
       background: 'rgba(13,17,23,0.85)', backdropFilter: 'blur(12px)',
       border: '1px solid rgba(100,160,255,0.08)', borderRadius: '14px',
       overflow: 'hidden', position: 'relative',
+      maxHeight: isMobile ? '85vh' : 'none',
+      overflowY: isMobile ? 'auto' : 'visible',
     }}>
       {/* shimmer */}
       <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(41,181,204,0.25), rgba(77,142,247,0.25), transparent)', position: 'absolute', top: 0, left: 0, right: 0 }} />

@@ -524,7 +524,7 @@ export default function Prescribe() {
       />
 
       {/* Tabs — flush below hero border */}
-      <div style={{ display: 'flex', padding: '0 32px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div style={{ display: 'flex', padding: isMobile ? '0' : '0 32px', borderBottom: '1px solid rgba(255,255,255,0.06)', overflowX: isMobile ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch' }}>
         {(['prescriptions', 'history', 'clientData']).map(tab => (
           <button
             key={tab}
