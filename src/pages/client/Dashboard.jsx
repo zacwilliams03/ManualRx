@@ -6,7 +6,8 @@ import { supabase } from '../../lib/supabase'
 import { useClinicName } from '../../hooks/useClinicName'
 import BottomNav from '../../components/client/BottomNav'
 import PageHero from '../../components/shared/PageHero'
-import { CARD, SHIMMER } from '../../components/therapist/styles'
+import { CARD } from '../../components/therapist/styles'
+import ShimmerLine from '../../components/shared/ShimmerLine'
 
 // frequencyLabel is defined locally — do not import from utils (that file may not exist)
 function frequencyLabel(days) {
@@ -74,7 +75,7 @@ export default function ClientDashboard() {
   const activeSessions = sessions.filter(isActive)
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0e1117', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg)', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
       <PageHero
         title="My Sessions"
         subtitle={`${profile?.name ?? ''}${clinicName ? ` · ${clinicName}` : ''}`}
@@ -86,10 +87,10 @@ export default function ClientDashboard() {
         transition={{ duration: 0.25 }}
         style={{ padding: '16px' }}
       >
-        {loading && <p style={{ fontSize: '13px', color: '#888' }}>Loading…</p>}
-        {error && <p style={{ fontSize: '13px', color: '#f87171' }}>{error}</p>}
+        {loading && <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>Loading…</p>}
+        {error && <p style={{ fontSize: '13px', color: 'var(--color-danger)' }}>{error}</p>}
         {!loading && !error && activeSessions.length === 0 && (
-          <p style={{ fontSize: '13px', color: '#888' }}>Your therapist hasn't added any sessions yet.</p>
+          <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>Your therapist hasn't added any sessions yet.</p>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '512px' }}>
@@ -110,10 +111,10 @@ export default function ClientDashboard() {
                 transition={{ delay: Math.min(i * 0.05, 0.3), duration: 0.25 }}
                 style={{ ...CARD, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}
               >
-                <div style={SHIMMER} />
+                <ShimmerLine />
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#f0f0f0', margin: 0 }}>{s.name}</p>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)', margin: 0 }}>{s.name}</p>
                     {isRecentlyCompleted(s) && (
                       <span style={{
                         display: 'inline-flex',
@@ -130,11 +131,11 @@ export default function ClientDashboard() {
                       </span>
                     )}
                   </div>
-                  <p style={{ marginTop: '4px', fontSize: '11px', color: '#888', margin: '4px 0 0' }}>
+                  <p style={{ marginTop: '4px', fontSize: '11px', color: 'var(--color-muted)', margin: '4px 0 0' }}>
                     {s.prescription_exercises[0]?.count ?? 0} exercises · {frequencyLabel(s.frequency_days)}
                   </p>
                   {lastDone && (
-                    <p style={{ marginTop: '2px', fontSize: '11px', color: '#555', margin: '2px 0 0' }}>Last completed: {lastDone}</p>
+                    <p style={{ marginTop: '2px', fontSize: '11px', color: 'var(--color-subtle)', margin: '2px 0 0' }}>Last completed: {lastDone}</p>
                   )}
                 </div>
                 <Link

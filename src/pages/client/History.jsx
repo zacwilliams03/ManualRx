@@ -7,7 +7,8 @@ import { ProgressTab } from './ProgressTab'
 import BottomNav from '../../components/client/BottomNav'
 import { motion } from 'framer-motion'
 import PageHero from '../../components/shared/PageHero'
-import { CARD, SHIMMER } from '../../components/therapist/styles'
+import { CARD } from '../../components/therapist/styles'
+import ShimmerLine from '../../components/shared/ShimmerLine'
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -91,11 +92,11 @@ export default function History() {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#0e1117', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--color-bg)', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
       <PageHero title="History" subtitle="Your completed sessions" />
 
       {/* Tab switcher */}
-      <div style={{ maxWidth: '512px', display: 'flex', gap: '24px', borderBottom: '1px solid rgba(255,255,255,0.06)', margin: '0 16px 20px', paddingTop: '4px' }}>
+      <div style={{ maxWidth: '512px', display: 'flex', gap: '24px', borderBottom: '1px solid var(--color-border)', margin: '0 16px 20px', paddingTop: '4px' }}>
         {[['history', 'History'], ['progress', 'Progress']].map(([tab, label]) => (
           <button
             key={tab}
@@ -109,7 +110,7 @@ export default function History() {
               cursor: 'pointer',
               ...(activeTab === tab
                 ? { borderBottom: '2px solid #29B5CC', color: '#29B5CC', marginBottom: '-1px' }
-                : { color: '#555' }),
+                : { color: 'var(--color-subtle)' }),
             }}
           >
             {label}
@@ -119,10 +120,10 @@ export default function History() {
 
       {activeTab === 'history' && (
         <>
-          {loading && <p style={{ fontSize: '13px', color: '#888', padding: '0 16px' }}>Loading…</p>}
-          {error && <p style={{ fontSize: '13px', color: '#f87171', padding: '0 16px' }}>{error}</p>}
+          {loading && <p style={{ fontSize: '13px', color: 'var(--color-muted)', padding: '0 16px' }}>Loading…</p>}
+          {error && <p style={{ fontSize: '13px', color: 'var(--color-danger)', padding: '0 16px' }}>{error}</p>}
           {!loading && !error && logs.length === 0 && (
-            <p style={{ fontSize: '13px', color: '#888', padding: '0 16px' }}>No sessions completed yet.</p>
+            <p style={{ fontSize: '13px', color: 'var(--color-muted)', padding: '0 16px' }}>No sessions completed yet.</p>
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '512px', padding: '0 16px' }}>
@@ -137,28 +138,28 @@ export default function History() {
                   transition={{ delay: Math.min(i * 0.05, 0.3), duration: 0.25 }}
                   style={{ ...CARD, padding: 0, overflow: 'hidden' }}
                 >
-                  <div style={SHIMMER} />
+                  <ShimmerLine />
                   <button
                     style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}
                     onClick={() => setExpandedLogId(isOpen ? null : log.id)}
                   >
                     <div>
-                      <p style={{ fontSize: '13px', fontWeight: 500, color: '#f0f0f0', margin: 0 }}>
+                      <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', margin: 0 }}>
                         {log.prescriptions?.name ?? 'Session'} · {formatDate(log.completed_at)}
                       </p>
                       {log.session_rpe != null && (
-                        <p style={{ marginTop: '2px', fontSize: '11px', color: '#888', margin: '2px 0 0' }}>RPE: {log.session_rpe}/10</p>
+                        <p style={{ marginTop: '2px', fontSize: '11px', color: 'var(--color-muted)', margin: '2px 0 0' }}>RPE: {log.session_rpe}/10</p>
                       )}
                     </div>
-                    <span style={{ marginLeft: '16px', fontSize: '11px', color: '#555', flexShrink: 0 }}>
+                    <span style={{ marginLeft: '16px', fontSize: '11px', color: 'var(--color-subtle)', flexShrink: 0 }}>
                       {isOpen ? '▲' : '▼'}
                     </span>
                   </button>
 
                   {isOpen && (
-                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div style={{ borderTop: '1px solid var(--color-border)' }}>
                       {log.session_notes && (
-                        <p style={{ padding: '8px 16px', fontSize: '11px', color: '#888', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <p style={{ padding: '8px 16px', fontSize: '11px', color: 'var(--color-muted)', borderBottom: '1px solid var(--color-elevated)' }}>
                           {log.session_notes}
                         </p>
                       )}
@@ -170,11 +171,11 @@ export default function History() {
                           const hasPerSetData = Array.isArray(el.sets_data) && el.sets_data.length > 0
 
                           return (
-                            <div key={el.id} style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                              <p style={{ fontSize: '12px', fontWeight: 500, color: '#f0f0f0', margin: 0 }}>{exerciseName}</p>
+                            <div key={el.id} style={{ padding: '10px 12px', borderBottom: '1px solid var(--color-elevated)' }}>
+                              <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--color-text)', margin: 0 }}>{exerciseName}</p>
 
                               {pe && (
-                                <p style={{ marginTop: '2px', fontSize: '11px', color: '#555', margin: '2px 0 0' }}>
+                                <p style={{ marginTop: '2px', fontSize: '11px', color: 'var(--color-subtle)', margin: '2px 0 0' }}>
                                   Prescribed: {pe.sets} sets × {pe.reps} reps{pe.weight ? ` @ ${formatWeight(pe.weight, weightUnit)}` : ''}
                                 </p>
                               )}
@@ -182,36 +183,36 @@ export default function History() {
                               {hasPerSetData ? (
                                 <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                   {el.sets_data.map((s, si) => (
-                                    <p key={si} style={{ fontSize: '11px', color: '#888', margin: 0 }}>
+                                    <p key={si} style={{ fontSize: '11px', color: 'var(--color-muted)', margin: 0 }}>
                                       Set {si + 1}: {s.reps} reps{s.weight ? ` @ ${formatWeight(parseFloat(s.weight), weightUnit)}` : ''}
                                     </p>
                                   ))}
                                 </div>
                               ) : (
-                                <p style={{ marginTop: '2px', fontSize: '11px', color: '#888', margin: '2px 0 0' }}>
+                                <p style={{ marginTop: '2px', fontSize: '11px', color: 'var(--color-muted)', margin: '2px 0 0' }}>
                                   {el.sets_completed ?? '—'} sets × {el.reps_completed ?? '—'} reps
                                   {el.weight_completed ? ` @ ${formatWeight(el.weight_completed, weightUnit)}` : ''}
                                 </p>
                               )}
 
                               {el.pain_rating != null && (
-                                <p style={{ marginTop: '2px', fontSize: '11px', color: '#888', margin: '2px 0 0' }}>Pain: {el.pain_rating}/10</p>
+                                <p style={{ marginTop: '2px', fontSize: '11px', color: 'var(--color-muted)', margin: '2px 0 0' }}>Pain: {el.pain_rating}/10</p>
                               )}
 
                               {el.client_notes && (
-                                <p style={{ marginTop: '4px', fontSize: '11px', color: '#888', margin: '4px 0 0' }}>Note: {el.client_notes}</p>
+                                <p style={{ marginTop: '4px', fontSize: '11px', color: 'var(--color-muted)', margin: '4px 0 0' }}>Note: {el.client_notes}</p>
                               )}
                             </div>
                           )
                         })}
 
                         {(log.exercise_logs ?? []).length === 0 && (
-                          <p style={{ padding: '10px 16px', fontSize: '11px', color: '#555' }}>No exercise data recorded.</p>
+                          <p style={{ padding: '10px 16px', fontSize: '11px', color: 'var(--color-subtle)' }}>No exercise data recorded.</p>
                         )}
                       </div>
 
                       {log.session_rpe != null && (
-                        <p style={{ padding: '8px 16px', fontSize: '11px', color: '#888', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                        <p style={{ padding: '8px 16px', fontSize: '11px', color: 'var(--color-muted)', borderTop: '1px solid var(--color-elevated)' }}>
                           Session RPE: {log.session_rpe}/10
                         </p>
                       )}
@@ -226,7 +227,7 @@ export default function History() {
 
       {activeTab === 'progress' && (
         prescriptionsLoading
-          ? <p style={{ fontSize: '13px', color: '#888', padding: '0 16px' }}>Loading…</p>
+          ? <p style={{ fontSize: '13px', color: 'var(--color-muted)', padding: '0 16px' }}>Loading…</p>
           : <ProgressTab prescriptions={prescriptions} />
       )}
 

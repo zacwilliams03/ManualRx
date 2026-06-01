@@ -7,12 +7,13 @@ import useIsMobile from '../../hooks/useIsMobile'
 import { toCanonical, fromCanonical, formatWeight } from '../../utils/weightUtils'
 import VideoPlayer from '../../components/VideoPlayer'
 import { motion } from 'framer-motion'
-import { CARD, SHIMMER } from '../../components/therapist/styles'
+import { CARD } from '../../components/therapist/styles'
+import ShimmerLine from '../../components/shared/ShimmerLine'
 
 function ScaleSelector({ label, value, onChange }) {
   return (
     <div>
-      <p style={{ fontSize: '11px', fontWeight: 500, color: '#888', marginBottom: '8px' }}>{label}</p>
+      <p style={{ fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '8px' }}>{label}</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
         {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
           <button
@@ -28,7 +29,7 @@ function ScaleSelector({ label, value, onChange }) {
               cursor: 'pointer',
               ...(value === n
                 ? { background: '#29B5CC', color: '#000', border: 'none' }
-                : { background: 'rgba(255,255,255,0.04)', color: '#888', border: '1px solid rgba(255,255,255,0.08)' }),
+                : { background: 'var(--color-elevated)', color: 'var(--color-muted)', border: '1px solid var(--color-border)' }),
             }}
           >
             {n}
@@ -219,16 +220,16 @@ export default function SessionWizard() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0e1117' }}>
-        <p style={{ fontSize: '13px', color: '#888' }}>Loading…</p>
+      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg)' }}>
+        <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>Loading…</p>
       </div>
     )
   }
 
   if (error && step !== 'summary') {
     return (
-      <div style={{ minHeight: '100dvh', background: '#0e1117', padding: '32px 16px' }}>
-        <p style={{ fontSize: '13px', color: '#f87171' }}>{error}</p>
+      <div style={{ minHeight: '100dvh', background: 'var(--color-bg)', padding: '32px 16px' }}>
+        <p style={{ fontSize: '13px', color: 'var(--color-danger)' }}>{error}</p>
         <Link to="/client" style={{ display: 'inline-block', marginTop: '8px', fontSize: '13px', color: '#29B5CC', textDecoration: 'none' }}>
           Back
         </Link>
@@ -239,16 +240,16 @@ export default function SessionWizard() {
   // ── Done ──────────────────────────────────────────────────────────────────
   if (step === 'done') {
     return (
-      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0e1117', padding: '16px', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
+      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg)', padding: '16px', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
         <div style={{ ...CARD, maxWidth: '384px', width: '100%', textAlign: 'center', position: 'relative' }}>
-          <div style={SHIMMER} />
+          <ShimmerLine />
           <div style={{ margin: '0 auto 16px', display: 'flex', height: '48px', width: '48px', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px', background: 'rgba(74,222,128,0.1)' }}>
-            <svg style={{ height: '24px', width: '24px', color: '#4ade80' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg style={{ height: '24px', width: '24px', color: 'var(--color-success)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#f0f0f0', margin: '0 0 8px' }}>Great work!</h2>
-          <p style={{ fontSize: '13px', color: '#888', margin: '0 0 24px' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--color-text)', margin: '0 0 8px' }}>Great work!</h2>
+          <p style={{ fontSize: '13px', color: 'var(--color-muted)', margin: '0 0 24px' }}>
             {exercises.length} exercise{exercises.length !== 1 ? 's' : ''} completed and logged.
           </p>
           <Link
@@ -274,12 +275,12 @@ export default function SessionWizard() {
   // ── Intro ─────────────────────────────────────────────────────────────────
   if (step === 'intro') {
     return (
-      <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0e1117', padding: '16px', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
+      <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg)', padding: '16px', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
         <div style={{ ...CARD, maxWidth: '384px', width: '100%', textAlign: 'center', position: 'relative' }}>
-          <div style={SHIMMER} />
-          <p style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#555', marginBottom: '8px' }}>Session</p>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#f0f0f0', margin: '0 0 8px', letterSpacing: '-0.02em' }}>{session.name}</h1>
-          <p style={{ fontSize: '13px', color: '#888', margin: '0 0 32px' }}>
+          <ShimmerLine />
+          <p style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-subtle)', marginBottom: '8px' }}>Session</p>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text)', margin: '0 0 8px', letterSpacing: '-0.02em' }}>{session.name}</h1>
+          <p style={{ fontSize: '13px', color: 'var(--color-muted)', margin: '0 0 32px' }}>
             {exercises.length} exercise{exercises.length !== 1 ? 's' : ''}
           </p>
           <button
@@ -299,7 +300,7 @@ export default function SessionWizard() {
           >
             Start session
           </button>
-          <Link to="/client" style={{ display: 'block', fontSize: '13px', color: '#555', textDecoration: 'none' }}>
+          <Link to="/client" style={{ display: 'block', fontSize: '13px', color: 'var(--color-subtle)', textDecoration: 'none' }}>
             Back to sessions
           </Link>
         </div>
@@ -329,12 +330,12 @@ export default function SessionWizard() {
     }
 
     return (
-      <div style={{ minHeight: '100dvh', background: '#0e1117' }}>
+      <div style={{ minHeight: '100dvh', background: 'var(--color-bg)' }}>
         {/* Sticky progress header */}
-        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'rgba(14,17,23,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: isMobile ? '12px 14px' : '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'rgba(14,17,23,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid var(--color-border)', padding: isMobile ? '12px 14px' : '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <button
             onClick={handleBack}
-            style={{ background: 'none', border: 'none', fontSize: '13px', color: '#888', cursor: 'pointer' }}
+            style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--color-muted)', cursor: 'pointer' }}
           >
             ← Back
           </button>
@@ -353,7 +354,7 @@ export default function SessionWizard() {
                 />
               ))}
             </div>
-            <span style={{ marginTop: '4px', fontSize: '11px', color: '#555' }}>
+            <span style={{ marginTop: '4px', fontSize: '11px', color: 'var(--color-subtle)' }}>
               {step + 1} / {exercises.length}
             </span>
           </div>
@@ -365,18 +366,18 @@ export default function SessionWizard() {
                 style={{ maxHeight: '24px', maxWidth: '80px', objectFit: 'contain' }}
               />
             ) : clinicBrand?.clinic_name ? (
-              <span style={{ fontSize: '11px', color: '#555' }}>{clinicBrand.clinic_name}</span>
+              <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>{clinicBrand.clinic_name}</span>
             ) : null}
           </div>
         </div>
 
         <div style={{ maxWidth: '512px', margin: '0 auto', padding: '16px', paddingBottom: 'max(2rem,env(safe-area-inset-bottom))' }}>
           <div style={{ ...CARD, padding: 0, overflow: 'hidden', position: 'relative' }}>
-            <div style={SHIMMER} />
+            <ShimmerLine />
             <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
           {/* Exercise identity */}
           <div>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#f0f0f0', margin: '0 0 4px' }}>{ex.exercises?.name ?? 'Exercise'}</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--color-text)', margin: '0 0 4px' }}>{ex.exercises?.name ?? 'Exercise'}</h2>
             {ex.exercises?.category && (
               <span style={{ marginTop: '4px', display: 'inline-block', background: 'rgba(41,181,204,0.08)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '4px', padding: '2px 7px', fontSize: '11px', color: '#29B5CC' }}>
                 {ex.exercises.category}
@@ -387,9 +388,9 @@ export default function SessionWizard() {
           {ex.exercises?.video_url && <VideoPlayer url={ex.exercises.video_url} />}
 
           {/* Prescribed target */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '10px 14px' }}>
-            <p style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#555', marginBottom: '4px' }}>Target</p>
-            <p style={{ fontSize: '13px', fontWeight: 500, color: '#f0f0f0', margin: 0 }}>
+          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '10px 14px' }}>
+            <p style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-subtle)', marginBottom: '4px' }}>Target</p>
+            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', margin: 0 }}>
               {ex.sets} sets × {ex.reps} reps{ex.weight ? ` @ ${formatWeight(ex.weight, weightUnit)}` : ''}
             </p>
           </div>
@@ -413,12 +414,12 @@ export default function SessionWizard() {
                 >
                   Set {currentSet + 1}
                 </motion.span>
-                <span style={{ fontSize: '13px', color: '#555' }}>of {setsData.length}</span>
+                <span style={{ fontSize: '13px', color: 'var(--color-subtle)' }}>of {setsData.length}</span>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: '#888', marginBottom: '4px' }}>Reps</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>Reps</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -426,11 +427,11 @@ export default function SessionWizard() {
                     value={currentSetData.reps}
                     onChange={e => updateSetField(step, currentSet, 'reps', e.target.value)}
                     placeholder={ex.reps ? String(ex.reps) : '—'}
-                    style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', padding: '9px 12px', color: '#f0f0f0', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: '#888', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
                     Weight <span style={{ fontWeight: 400 }}>({weightUnit}, optional)</span>
                   </label>
                   <input
@@ -440,7 +441,7 @@ export default function SessionWizard() {
                     value={currentSetData.weight}
                     onChange={e => updateSetField(step, currentSet, 'weight', e.target.value)}
                     placeholder={ex.weight ? String(parseFloat(fromCanonical(ex.weight, weightUnit).toFixed(1))) : '—'}
-                    style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', padding: '9px 12px', color: '#f0f0f0', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
@@ -491,7 +492,7 @@ export default function SessionWizard() {
 
               {ex.painRating >= 7 && (
                 <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: '7px', padding: '12px' }}>
-                  <p style={{ fontSize: '13px', fontWeight: 500, color: '#fbbf24', margin: '0 0 12px' }}>
+                  <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-warning)', margin: '0 0 12px' }}>
                     Your pain rating is high. If this is new or severe, stop and seek medical advice.
                   </p>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
@@ -500,13 +501,13 @@ export default function SessionWizard() {
                       checked={painAcknowledged}
                       onChange={e => setPainAcknowledged(e.target.checked)}
                     />
-                    <span style={{ fontSize: '13px', color: '#888' }}>I understand, continue anyway</span>
+                    <span style={{ fontSize: '13px', color: 'var(--color-muted)' }}>I understand, continue anyway</span>
                   </label>
                 </div>
               )}
 
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: '#888', marginBottom: '4px' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
                   Notes for therapist <span style={{ fontWeight: 400 }}>(optional)</span>
                 </label>
                 <textarea
@@ -514,28 +515,28 @@ export default function SessionWizard() {
                   value={ex.clientNotes}
                   onChange={e => updateEx(step, 'clientNotes', e.target.value)}
                   placeholder="e.g. felt tight on rep 3"
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', padding: '9px 12px', color: '#f0f0f0', fontSize: '13px', boxSizing: 'border-box', resize: 'vertical', outline: 'none' }}
+                  style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', boxSizing: 'border-box', resize: 'vertical', outline: 'none' }}
                 />
               </div>
 
               {/* Feedback video */}
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: '#888', marginBottom: '4px' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
                   Feedback video <span style={{ fontWeight: 400 }}>(optional)</span>
                 </label>
                 {ex.videoFile ? (
-                  <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', padding: '8px 12px' }}>
-                    <span style={{ fontSize: '13px', color: '#f0f0f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ex.videoFile.name}</span>
+                  <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '8px 12px' }}>
+                    <span style={{ fontSize: '13px', color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ex.videoFile.name}</span>
                     <button
                       type="button"
                       onClick={() => updateEx(step, 'videoFile', null)}
-                      style={{ marginLeft: '8px', flexShrink: 0, background: 'none', border: 'none', fontSize: '12px', color: '#888', cursor: 'pointer' }}
+                      style={{ marginLeft: '8px', flexShrink: 0, background: 'none', border: 'none', fontSize: '12px', color: 'var(--color-muted)', cursor: 'pointer' }}
                     >
                       Remove
                     </button>
                   </div>
                 ) : (
-                  <label style={{ marginTop: '4px', display: 'flex', cursor: 'pointer', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.12)', borderRadius: '7px', padding: '8px 12px', fontSize: '13px', color: '#555' }}>
+                  <label style={{ marginTop: '4px', display: 'flex', cursor: 'pointer', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.12)', borderRadius: '7px', padding: '8px 12px', fontSize: '13px', color: 'var(--color-subtle)' }}>
                     <span>+ Add video</span>
                     <input
                       type="file"
@@ -572,24 +573,24 @@ export default function SessionWizard() {
 
   // ── Summary ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100dvh', background: '#0e1117', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--color-bg)', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
       {/* Intentional design change: replaces the per-exercise sticky header (progress dots + clinic logo)
           with a minimal back-only bar. The progress dots don't apply on the summary step. */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'rgba(14,17,23,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '12px 16px' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'rgba(14,17,23,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid var(--color-border)', padding: '12px 16px' }}>
         <button
           onClick={() => setStep(exercises.length - 1)}
-          style={{ background: 'none', border: 'none', fontSize: '13px', color: '#888', cursor: 'pointer' }}
+          style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--color-muted)', cursor: 'pointer' }}
         >
           ← Back
         </button>
       </div>
 
       <div style={{ maxWidth: '512px', margin: '0 auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#f0f0f0', margin: 0, letterSpacing: '-0.02em' }}>Session summary</h2>
+        <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-text)', margin: 0, letterSpacing: '-0.02em' }}>Session summary</h2>
 
         {/* Exercise recap — glass card */}
         <div style={{ ...CARD, padding: 0, position: 'relative', overflow: 'hidden' }}>
-          <div style={SHIMMER} />
+          <ShimmerLine />
           {exercises.map((ex, i) => (
             <div
               key={ex.id}
@@ -599,23 +600,23 @@ export default function SessionWizard() {
                 alignItems: 'flex-start',
                 justifyContent: 'space-between',
                 gap: '12px',
-                borderBottom: i < exercises.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                borderBottom: i < exercises.length - 1 ? '1px solid var(--color-elevated)' : 'none',
               }}
             >
               <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: '13px', fontWeight: 500, color: '#f0f0f0', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {ex.exercises?.name ?? 'Exercise'}
                 </p>
-                <p style={{ marginTop: '2px', fontSize: '11px', color: '#888', margin: '2px 0 0' }}>
+                <p style={{ marginTop: '2px', fontSize: '11px', color: 'var(--color-muted)', margin: '2px 0 0' }}>
                   {ex.setsData.length} set{ex.setsData.length !== 1 ? 's' : ''} completed
                 </p>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 {ex.painRating !== null && (
-                  <p style={{ fontSize: '11px', color: '#888', margin: 0 }}>Pain: {ex.painRating}/10</p>
+                  <p style={{ fontSize: '11px', color: 'var(--color-muted)', margin: 0 }}>Pain: {ex.painRating}/10</p>
                 )}
                 {ex.videoFile && (
-                  <p style={{ marginTop: '2px', fontSize: '11px', color: '#4ade80', margin: '2px 0 0' }}>Video attached</p>
+                  <p style={{ marginTop: '2px', fontSize: '11px', color: 'var(--color-success)', margin: '2px 0 0' }}>Video attached</p>
                 )}
                 <button
                   onClick={() => setStep(i)}
@@ -635,7 +636,7 @@ export default function SessionWizard() {
         />
 
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#888', marginBottom: '6px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--color-muted)', marginBottom: '6px' }}>
             Session notes <span style={{ fontWeight: 400 }}>(optional)</span>
           </label>
           <textarea
@@ -645,11 +646,11 @@ export default function SessionWizard() {
             placeholder="How did the session feel overall?"
             style={{
               width: '100%',
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'var(--color-elevated)',
+              border: '1px solid var(--color-border)',
               borderRadius: '7px',
               padding: '9px 12px',
-              color: '#f0f0f0',
+              color: 'var(--color-text)',
               fontSize: '13px',
               boxSizing: 'border-box',
               resize: 'vertical',
@@ -657,7 +658,7 @@ export default function SessionWizard() {
           />
         </div>
 
-        {error && <p style={{ fontSize: '13px', color: '#f87171', margin: 0 }}>{error}</p>}
+        {error && <p style={{ fontSize: '13px', color: 'var(--color-danger)', margin: 0 }}>{error}</p>}
 
         <button
           onClick={handleComplete}
