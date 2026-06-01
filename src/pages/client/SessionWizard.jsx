@@ -332,7 +332,7 @@ export default function SessionWizard() {
     return (
       <div style={{ minHeight: '100dvh', background: 'var(--color-bg)' }}>
         {/* Sticky progress header */}
-        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'rgba(14,17,23,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid var(--color-border)', padding: isMobile ? '12px 14px' : '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--color-surface)', backdropFilter: 'blur(8px)', borderBottom: '1px solid var(--color-border)', padding: isMobile ? '12px 14px' : '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <button
             onClick={handleBack}
             style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--color-muted)', cursor: 'pointer' }}
@@ -348,7 +348,7 @@ export default function SessionWizard() {
                     height: '6px',
                     borderRadius: '9999px',
                     width: exercises.length > 8 ? '12px' : '20px',
-                    background: i < step ? '#444' : i === step ? '#29B5CC' : '#2a2a2a',
+                    background: i < step ? 'var(--color-border-strong)' : i === step ? '#29B5CC' : 'var(--color-border)',
                     transition: 'background 0.2s',
                   }}
                 />
@@ -388,7 +388,7 @@ export default function SessionWizard() {
           {ex.exercises?.video_url && <VideoPlayer url={ex.exercises.video_url} />}
 
           {/* Prescribed target */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '10px 14px' }}>
+          <div style={{ background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '10px 14px' }}>
             <p style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-subtle)', marginBottom: '4px' }}>Target</p>
             <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', margin: 0 }}>
               {ex.sets} sets × {ex.reps} reps{ex.weight ? ` @ ${formatWeight(ex.weight, weightUnit)}` : ''}
@@ -457,7 +457,7 @@ export default function SessionWizard() {
 
               {/* Compact summary of already-done sets */}
               {currentSet > 0 && (
-                <div style={{ background: 'rgba(13,17,23,0.6)', border: '1px solid rgba(41,181,204,0.12)', borderRadius: '8px', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ background: 'var(--color-elevated)', border: '1px solid rgba(41,181,204,0.12)', borderRadius: '8px', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {setsData.slice(0, currentSet).map((s, i) => (
                     <motion.p
                       key={i}
@@ -476,7 +476,7 @@ export default function SessionWizard() {
             /* All sets done — show pain + notes */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* Recap of completed sets */}
-              <div style={{ background: 'rgba(13,17,23,0.6)', border: '1px solid rgba(41,181,204,0.12)', borderRadius: '8px', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ background: 'var(--color-elevated)', border: '1px solid rgba(41,181,204,0.12)', borderRadius: '8px', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {setsData.map((s, i) => (
                   <p key={i} style={{ fontSize: '11px', color: '#29B5CC', margin: 0 }}>
                     Set {i + 1}: {s.reps} reps{s.weight ? ` @ ${s.weight} ${weightUnit}` : ''}
@@ -536,7 +536,7 @@ export default function SessionWizard() {
                     </button>
                   </div>
                 ) : (
-                  <label style={{ marginTop: '4px', display: 'flex', cursor: 'pointer', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.12)', borderRadius: '7px', padding: '8px 12px', fontSize: '13px', color: 'var(--color-subtle)' }}>
+                  <label style={{ marginTop: '4px', display: 'flex', cursor: 'pointer', alignItems: 'center', gap: '8px', background: 'var(--color-elevated)', border: '1px dashed var(--color-border-strong)', borderRadius: '7px', padding: '8px 12px', fontSize: '13px', color: 'var(--color-subtle)' }}>
                     <span>+ Add video</span>
                     <input
                       type="file"
@@ -563,7 +563,7 @@ export default function SessionWizard() {
 
             </div>
           </div>
-          <p style={{ marginTop: '12px', fontSize: '11px', color: '#444', textAlign: 'center' }}>
+          <p style={{ marginTop: '12px', fontSize: '11px', color: 'var(--color-muted)', textAlign: 'center' }}>
             Stop and seek medical advice if you experience sudden severe pain, chest pain, or dizziness.
           </p>
         </div>
@@ -576,7 +576,7 @@ export default function SessionWizard() {
     <div style={{ minHeight: '100dvh', background: 'var(--color-bg)', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
       {/* Intentional design change: replaces the per-exercise sticky header (progress dots + clinic logo)
           with a minimal back-only bar. The progress dots don't apply on the summary step. */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'rgba(14,17,23,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid var(--color-border)', padding: '12px 16px' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--color-surface)', backdropFilter: 'blur(8px)', borderBottom: '1px solid var(--color-border)', padding: '12px 16px' }}>
         <button
           onClick={() => setStep(exercises.length - 1)}
           style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--color-muted)', cursor: 'pointer' }}

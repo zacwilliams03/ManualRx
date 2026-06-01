@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { toCanonical } from '../../utils/weightUtils'
 import useIsMobile from '../../hooks/useIsMobile'
+import ShimmerLine from '../shared/ShimmerLine'
 
 const CATEGORIES = [
   'Custom', 'Cervical', 'Thoracic', 'Lumbar',
@@ -10,15 +11,15 @@ const CATEGORIES = [
 
 const inputStyle = {
   display: 'block', width: '100%', boxSizing: 'border-box',
-  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-  borderRadius: '7px', color: '#e8edf5', padding: '9px 14px',
+  background: 'var(--color-elevated)', border: '1px solid var(--color-border)',
+  borderRadius: '7px', color: 'var(--color-text)', padding: '9px 14px',
   fontSize: '13px', outline: 'none',
 }
 
 const rowStyle = {
   display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between',
   padding: '11px 20px', textAlign: 'left', background: 'none', border: 'none',
-  borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'background 0.15s',
+  borderBottom: '1px solid var(--color-border)', cursor: 'pointer', transition: 'background 0.15s',
 }
 
 // confirmLabel: text shown on the Add button — defaults to 'Add to session'; pass 'Add to template' in TemplateEdit
@@ -109,21 +110,20 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
 
   return (
     <div style={{
-      background: 'rgba(13,17,23,0.85)', backdropFilter: 'blur(12px)',
-      border: '1px solid rgba(100,160,255,0.08)', borderRadius: '14px',
+      background: 'var(--color-surface)', backdropFilter: 'blur(12px)',
+      border: '1px solid var(--color-border)', borderRadius: '14px',
       overflow: 'hidden', position: 'relative',
       maxHeight: isMobile ? '85vh' : 'none',
       overflowY: isMobile ? 'auto' : 'visible',
     }}>
-      {/* shimmer */}
-      <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(41,181,204,0.25), rgba(77,142,247,0.25), transparent)', position: 'absolute', top: 0, left: 0, right: 0 }} />
+      <ShimmerLine />
 
-      <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-        <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#888888', margin: 0 }}>Add exercise</p>
+      <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--color-border)' }}>
+        <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-subtle)', margin: 0 }}>Add exercise</p>
       </div>
 
       {pickerView !== 'configure' && (
-        <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--color-border)' }}>
           <input
             type="text"
             value={search}
@@ -142,23 +142,23 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
         <>
           {debouncedSearch.trim().length >= 2 ? (
             <div>
-              {searching && <p style={{ padding: '12px 20px', fontSize: '13px', color: '#555', margin: 0 }}>Searching…</p>}
+              {searching && <p style={{ padding: '12px 20px', fontSize: '13px', color: 'var(--color-subtle)', margin: 0 }}>Searching…</p>}
               {!searching && searchResults.length === 0 && (
-                <p style={{ padding: '12px 20px', fontSize: '13px', color: '#555', margin: 0 }}>No results for "{debouncedSearch}".</p>
+                <p style={{ padding: '12px 20px', fontSize: '13px', color: 'var(--color-subtle)', margin: 0 }}>No results for "{debouncedSearch}".</p>
               )}
               {!searching && searchResults.length > 0 && searchResults.map(ex => (
                 <button
                   key={ex.id}
                   onClick={() => selectExercise(ex)}
                   style={rowStyle}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--color-elevated)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'none'}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '13px', color: '#e8edf5' }}>{ex.name}</span>
-                    {ex.video_url && <span style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>Video attached</span>}
+                    <span style={{ fontSize: '13px', color: 'var(--color-text)' }}>{ex.name}</span>
+                    {ex.video_url && <span style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px' }}>Video attached</span>}
                   </div>
-                  <span style={{ fontSize: '11px', color: '#555', marginLeft: '12px', flexShrink: 0 }}>{ex.category}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--color-subtle)', marginLeft: '12px', flexShrink: 0 }}>{ex.category}</span>
                 </button>
               ))}
             </div>
@@ -169,11 +169,11 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
                   key={cat}
                   onClick={() => selectCategory(cat)}
                   style={rowStyle}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--color-elevated)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'none'}
                 >
-                  <span style={{ fontSize: '13px', color: cat === 'Custom' ? '#e8edf5' : '#888' }}>{cat}</span>
-                  <span style={{ color: '#444', fontSize: '15px' }}>›</span>
+                  <span style={{ fontSize: '13px', color: cat === 'Custom' ? 'var(--color-text)' : 'var(--color-muted)' }}>{cat}</span>
+                  <span style={{ color: 'var(--color-muted)', fontSize: '15px' }}>›</span>
                 </button>
               ))}
             </div>
@@ -185,29 +185,29 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
         <div>
           <button
             onClick={() => setPickerView('browse')}
-            style={{ ...rowStyle, color: '#888', fontSize: '13px' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = '#e8edf5' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#888' }}
+            style={{ ...rowStyle, color: 'var(--color-muted)', fontSize: '13px' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-elevated)'; e.currentTarget.style.color = 'var(--color-text)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--color-muted)' }}
           >
             ‹ Back to categories
           </button>
-          {categoryLoading && <p style={{ padding: '12px 20px', fontSize: '13px', color: '#555', margin: 0 }}>Loading…</p>}
+          {categoryLoading && <p style={{ padding: '12px 20px', fontSize: '13px', color: 'var(--color-subtle)', margin: 0 }}>Loading…</p>}
           {!categoryLoading && categoryExercises.length === 0 && (
-            <p style={{ padding: '12px 20px', fontSize: '13px', color: '#555', margin: 0 }}>No exercises in this category.</p>
+            <p style={{ padding: '12px 20px', fontSize: '13px', color: 'var(--color-subtle)', margin: 0 }}>No exercises in this category.</p>
           )}
           {!categoryLoading && categoryExercises.map(ex => (
             <button
               key={ex.id}
               onClick={() => selectExercise(ex)}
               style={rowStyle}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-elevated)'}
               onMouseLeave={e => e.currentTarget.style.background = 'none'}
             >
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '13px', color: '#e8edf5' }}>{ex.name}</span>
-                {ex.video_url && <span style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>Video attached</span>}
+                <span style={{ fontSize: '13px', color: 'var(--color-text)' }}>{ex.name}</span>
+                {ex.video_url && <span style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px' }}>Video attached</span>}
               </div>
-              <span style={{ fontSize: '11px', color: '#555', marginLeft: '12px', flexShrink: 0 }}>
+              <span style={{ fontSize: '11px', color: 'var(--color-subtle)', marginLeft: '12px', flexShrink: 0 }}>
                 {ex.default_sets ?? 3} × {ex.default_reps ?? 10}
               </span>
             </button>
@@ -219,25 +219,25 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
         <div>
           <button
             onClick={() => setPickerView('browse')}
-            style={{ ...rowStyle, color: '#888', fontSize: '13px' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = '#e8edf5' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#888' }}
+            style={{ ...rowStyle, color: 'var(--color-muted)', fontSize: '13px' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-elevated)'; e.currentTarget.style.color = 'var(--color-text)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--color-muted)' }}
           >
             ‹ Back
           </button>
-          <div style={{ padding: '12px 20px', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-            <p style={{ fontSize: '13px', fontWeight: 600, color: '#e8edf5', margin: '0 0 2px' }}>{pickerExercise.name}</p>
-            <p style={{ fontSize: '11px', color: '#555', margin: 0 }}>
+          <div style={{ padding: '12px 20px', background: 'var(--color-elevated)', borderBottom: '1px solid var(--color-border)' }}>
+            <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)', margin: '0 0 2px' }}>{pickerExercise.name}</p>
+            <p style={{ fontSize: '11px', color: 'var(--color-subtle)', margin: 0 }}>
               {(pickerExercise.categories?.length ? pickerExercise.categories : [pickerExercise.category]).filter(Boolean).join(' · ')}
             </p>
             {pickerExercise.video_url && (
-              <p style={{ fontSize: '11px', color: '#555', margin: '2px 0 0' }}>Video attached</p>
+              <p style={{ fontSize: '11px', color: 'var(--color-subtle)', margin: '2px 0 0' }}>Video attached</p>
             )}
           </div>
           <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: '#888', marginBottom: '6px' }}>Sets</label>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>Sets</label>
                 <input
                   type="number" min="1" value={configSets}
                   onChange={e => setConfigSets(e.target.value)}
@@ -245,7 +245,7 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: '#888', marginBottom: '6px' }}>Reps</label>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>Reps</label>
                 <input
                   type="number" min="1" value={configReps}
                   onChange={e => setConfigReps(e.target.value)}
@@ -253,7 +253,7 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: '#888', marginBottom: '6px' }}>Weight ({weightUnit})</label>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>Weight ({weightUnit})</label>
                 <input
                   type="number" min="0" step="0.5" value={configWeight}
                   onChange={e => setConfigWeight(e.target.value)}
@@ -263,8 +263,8 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
               </div>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: '#888', marginBottom: '6px' }}>
-                Notes for client <span style={{ fontWeight: 400, color: '#555' }}>(optional)</span>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>
+                Notes for client <span style={{ fontWeight: 400, color: 'var(--color-subtle)' }}>(optional)</span>
               </label>
               <input
                 type="text" value={configNotes}
@@ -273,7 +273,7 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
                 style={inputStyle}
               />
             </div>
-            {addError && <p style={{ fontSize: '13px', color: '#f87171', margin: 0 }}>{addError}</p>}
+            {addError && <p style={{ fontSize: '13px', color: 'var(--color-danger)', margin: 0 }}>{addError}</p>}
             <button
               onClick={handleConfirmAdd}
               disabled={adding || disabled || !configSets || !configReps}
