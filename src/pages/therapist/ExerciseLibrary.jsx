@@ -13,6 +13,7 @@ const CATEGORIES = ['All', 'Custom', 'Cervical', 'Thoracic', 'Lumbar', 'Shoulder
 
 export default function ExerciseLibrary() {
   const { profile } = useAuth()
+  const isMobile = useIsMobile()
 
   const [exercises, setExercises] = useState([])
   const [loading, setLoading] = useState(true)
