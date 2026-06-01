@@ -4,9 +4,9 @@
 
 :root {
   --color-bg:           #0e1117;
-  --color-surface:      #111111;
-  --color-elevated:     #1a1a1a;
-  --color-border:       rgba(255,255,255,0.06);
+  --color-surface:      rgba(13,17,23,0.85);
+  --color-elevated:     rgba(255,255,255,0.04);
+  --color-border:       rgba(100,160,255,0.08);
   --color-border-strong:rgba(255,255,255,0.14);
   --color-text:         #f0f0f0;
   --color-muted:        #888888;
