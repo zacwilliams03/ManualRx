@@ -6,6 +6,7 @@ import SidebarLayout from '../../components/therapist/SidebarLayout'
 import PageHero from '../../components/shared/PageHero'
 import { SECTION_LABEL } from '../../components/therapist/styles'
 import useIsMobile from '../../hooks/useIsMobile'
+import ThemeToggle from '../../components/shared/ThemeToggle'
 
 export default function Settings() {
   const { user, profile } = useAuth()
@@ -200,10 +201,10 @@ export default function Settings() {
   }
 
   const inputStyle = {
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'var(--color-elevated)',
+    border: '1px solid var(--color-border)',
     borderRadius: '7px',
-    color: '#e8edf5',
+    color: 'var(--color-text)',
     padding: '9px 14px',
     width: '100%',
     fontSize: '13px',
@@ -227,9 +228,9 @@ export default function Settings() {
   const inactiveToggleStyle = {
     flex: 1,
     padding: '8px',
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    color: '#888',
+    background: 'var(--color-elevated)',
+    border: '1px solid var(--color-border)',
+    color: 'var(--color-muted)',
     borderRadius: '7px',
     fontSize: '13px',
     fontWeight: 500,
@@ -251,9 +252,9 @@ export default function Settings() {
 
   const inactiveGridStyle = {
     padding: '8px',
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    color: '#888',
+    background: 'var(--color-elevated)',
+    border: '1px solid var(--color-border)',
+    color: 'var(--color-muted)',
     borderRadius: '7px',
     fontSize: '13px',
     fontWeight: 500,
@@ -263,7 +264,7 @@ export default function Settings() {
 
   const dividerStyle = {
     height: '1px',
-    background: 'rgba(255,255,255,0.05)',
+    background: 'var(--color-border)',
     margin: '0 0 24px',
   }
 
@@ -271,7 +272,7 @@ export default function Settings() {
     display: 'block',
     fontSize: '13px',
     fontWeight: 500,
-    color: '#c8d0dc',
+    color: 'var(--color-text)',
     marginBottom: '6px',
   }
 
@@ -286,9 +287,9 @@ export default function Settings() {
         style={{ padding: isMobile ? '16px' : '24px 32px', maxWidth: '520px' }}
       >
         {fetching ? (
-          <p style={{ color: '#888', fontSize: '14px' }}>Loading…</p>
+          <p style={{ color: 'var(--color-muted)', fontSize: '14px' }}>Loading…</p>
         ) : fetchError ? (
-          <p style={{ color: '#f87171', fontSize: '13px' }}>{fetchError}</p>
+          <p style={{ color: 'var(--color-danger)', fontSize: '13px' }}>{fetchError}</p>
         ) : (
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
             {/* CLINIC section */}
@@ -296,7 +297,7 @@ export default function Settings() {
 
             <div style={{ marginBottom: '20px' }}>
               <label style={fieldLabelStyle}>Clinic logo</label>
-              <p style={{ fontSize: '12px', color: '#666', margin: '0 0 8px' }}>Shown to clients during their sessions. Optional.</p>
+              <p style={{ fontSize: '12px', color: 'var(--color-muted)', margin: '0 0 8px' }}>Shown to clients during their sessions. Optional.</p>
               {logoUrl && (
                 <img
                   src={logoUrl}
@@ -306,9 +307,9 @@ export default function Settings() {
               )}
               <label style={{
                 display: 'inline-block',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                color: '#888',
+                background: 'var(--color-elevated)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-muted)',
                 fontSize: '13px',
                 borderRadius: '7px',
                 padding: '7px 14px',
@@ -325,7 +326,7 @@ export default function Settings() {
                   onChange={handleLogoUpload}
                 />
               </label>
-              {logoError && <p style={{ marginTop: '6px', fontSize: '13px', color: '#f87171' }}>{logoError}</p>}
+              {logoError && <p style={{ marginTop: '6px', fontSize: '13px', color: 'var(--color-danger)' }}>{logoError}</p>}
             </div>
 
             <div style={{ marginBottom: '20px' }}>
@@ -361,6 +362,13 @@ export default function Settings() {
             </div>
 
             <div style={{ marginBottom: '20px' }}>
+              <label style={fieldLabelStyle}>Theme</label>
+              <div style={{ marginTop: '6px' }}>
+                <ThemeToggle />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
               <label style={fieldLabelStyle}>Default session frequency</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '2px' }}>
                 {[
@@ -389,15 +397,15 @@ export default function Settings() {
                     placeholder="e.g. 3"
                     style={{ ...inputStyle, width: '96px' }}
                   />
-                  <span style={{ fontSize: '13px', color: '#888' }}>days between sessions</span>
+                  <span style={{ fontSize: '13px', color: 'var(--color-muted)' }}>days between sessions</span>
                 </div>
               )}
             </div>
 
             <div style={dividerStyle} />
 
-            {error && <p style={{ fontSize: '13px', color: '#f87171', marginBottom: '16px' }}>{error}</p>}
-            {success && <p style={{ fontSize: '13px', color: '#4ade80', marginBottom: '16px' }}>Settings saved.</p>}
+            {error && <p style={{ fontSize: '13px', color: 'var(--color-danger)', marginBottom: '16px' }}>{error}</p>}
+            {success && <p style={{ fontSize: '13px', color: 'var(--color-success)', marginBottom: '16px' }}>Settings saved.</p>}
 
             <button
               type="submit"
@@ -429,16 +437,16 @@ export default function Settings() {
 
             <div>
               {passwordSuccess && (
-                <p style={{ fontSize: '13px', color: '#4ade80', marginBottom: '12px' }}>Password updated successfully.</p>
+                <p style={{ fontSize: '13px', color: 'var(--color-success)', marginBottom: '12px' }}>Password updated successfully.</p>
               )}
               {!showPasswordForm && (
                 <button
                   type="button"
                   onClick={() => { setPasswordSuccess(false); setShowPasswordForm(true) }}
                   style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: '#888',
+                    background: 'var(--color-elevated)',
+                    border: '1px solid var(--color-border)',
+                    color: 'var(--color-muted)',
                     borderRadius: '7px',
                     padding: '9px 16px',
                     fontSize: '13px',
@@ -480,7 +488,7 @@ export default function Settings() {
                       style={inputStyle}
                     />
                   </div>
-                  {passwordError && <p style={{ fontSize: '13px', color: '#f87171' }}>{passwordError}</p>}
+                  {passwordError && <p style={{ fontSize: '13px', color: 'var(--color-danger)' }}>{passwordError}</p>}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <button
                       type="submit"
@@ -502,7 +510,7 @@ export default function Settings() {
                     <button
                       type="button"
                       onClick={cancelPasswordForm}
-                      style={{ fontSize: '13px', color: '#666', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                      style={{ fontSize: '13px', color: 'var(--color-muted)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
                     >
                       Cancel
                     </button>
