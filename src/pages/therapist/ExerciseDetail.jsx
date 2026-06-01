@@ -5,7 +5,8 @@ import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import PageHero from '../../components/shared/PageHero'
-import { CARD, SHIMMER } from '../../components/therapist/styles'
+import { CARD } from '../../components/therapist/styles'
+import ShimmerLine from '../../components/shared/ShimmerLine'
 import useIsMobile from '../../hooks/useIsMobile'
 
 function VideoPlayer({ url }) {
@@ -129,7 +130,7 @@ export default function ExerciseDetail() {
               style={{
                 padding: '9px 18px',
                 background: 'transparent',
-                color: '#f87171',
+                color: 'var(--color-danger)',
                 border: '1px solid rgba(239,68,68,0.3)',
                 borderRadius: '7px',
                 fontSize: '13px',
@@ -151,7 +152,7 @@ export default function ExerciseDetail() {
           transition={{ duration: 0.25 }}
           style={{ ...CARD }}
         >
-          <div style={SHIMMER} />
+          <ShimmerLine />
 
           {/* Category badges */}
           {(exercise.categories?.length ? exercise.categories : [exercise.category]).filter(Boolean).length > 0 && (
@@ -162,7 +163,7 @@ export default function ExerciseDetail() {
                 </span>
               ))}
               {exercise.is_custom && (
-                <span style={{ fontSize: '11px', padding: '3px 9px', background: 'rgba(255,255,255,0.04)', color: '#888', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px' }}>
+                <span style={{ fontSize: '11px', padding: '3px 9px', background: 'var(--color-elevated)', color: 'var(--color-muted)', border: '1px solid var(--color-border)', borderRadius: '4px' }}>
                   Custom
                 </span>
               )}
@@ -176,16 +177,16 @@ export default function ExerciseDetail() {
 
           {/* Sets / reps */}
           {(exercise.default_sets || exercise.default_reps) && (
-            <p style={{ fontSize: '13px', color: '#888', marginBottom: '12px' }}>
-              <span style={{ fontWeight: 600, color: '#e8edf5' }}>{exercise.default_sets} sets</span>
+            <p style={{ fontSize: '13px', color: 'var(--color-muted)', marginBottom: '12px' }}>
+              <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>{exercise.default_sets} sets</span>
               {' × '}
-              <span style={{ fontWeight: 600, color: '#e8edf5' }}>{exercise.default_reps} reps</span>
+              <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>{exercise.default_reps} reps</span>
             </p>
           )}
 
           {/* Description */}
           {exercise.description && (
-            <p style={{ fontSize: '14px', color: '#aaa', lineHeight: 1.6 }}>{exercise.description}</p>
+            <p style={{ fontSize: '14px', color: 'var(--color-muted)', lineHeight: 1.6 }}>{exercise.description}</p>
           )}
         </motion.div>
       </div>

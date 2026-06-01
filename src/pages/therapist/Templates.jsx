@@ -5,7 +5,8 @@ import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import PageHero from '../../components/shared/PageHero'
-import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
+import { CARD, SECTION_LABEL } from '../../components/therapist/styles'
+import ShimmerLine from '../../components/shared/ShimmerLine'
 import useIsMobile from '../../hooks/useIsMobile'
 
 export default function Templates() {
@@ -112,8 +113,8 @@ export default function Templates() {
           placeholder="Search templates…"
           style={{
             width: '100%', maxWidth: '320px', padding: '8px 14px',
-            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none', marginBottom: '12px',
+            background: 'var(--color-elevated)', border: '1px solid var(--color-border)',
+            borderRadius: '7px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', marginBottom: '12px',
           }}
         />
 
@@ -124,10 +125,10 @@ export default function Templates() {
               onClick={() => setSelectedCategory(null)}
               style={{
                 padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', border: 'none',
-                background: selectedCategory === null ? 'rgba(41,181,204,0.12)' : 'rgba(255,255,255,0.04)',
-                color: selectedCategory === null ? '#29B5CC' : '#666',
+                background: selectedCategory === null ? 'rgba(41,181,204,0.12)' : 'var(--color-elevated)',
+                color: selectedCategory === null ? '#29B5CC' : 'var(--color-muted)',
                 borderWidth: '1px', borderStyle: 'solid',
-                borderColor: selectedCategory === null ? 'rgba(41,181,204,0.3)' : 'rgba(255,255,255,0.08)',
+                borderColor: selectedCategory === null ? 'rgba(41,181,204,0.3)' : 'var(--color-border)',
               }}
             >
               All
@@ -138,10 +139,10 @@ export default function Templates() {
                 onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
                 style={{
                   padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', border: 'none',
-                  background: selectedCategory === cat ? 'rgba(41,181,204,0.12)' : 'rgba(255,255,255,0.04)',
-                  color: selectedCategory === cat ? '#29B5CC' : '#666',
+                  background: selectedCategory === cat ? 'rgba(41,181,204,0.12)' : 'var(--color-elevated)',
+                  color: selectedCategory === cat ? '#29B5CC' : 'var(--color-muted)',
                   borderWidth: '1px', borderStyle: 'solid',
-                  borderColor: selectedCategory === cat ? 'rgba(41,181,204,0.3)' : 'rgba(255,255,255,0.08)',
+                  borderColor: selectedCategory === cat ? 'rgba(41,181,204,0.3)' : 'var(--color-border)',
                 }}
               >
                 {cat}
@@ -150,12 +151,12 @@ export default function Templates() {
           </div>
         )}
 
-        {error && <p style={{ fontSize: '13px', color: '#f87171', marginBottom: '12px' }}>{error}</p>}
+        {error && <p style={{ fontSize: '13px', color: 'var(--color-danger)', marginBottom: '12px' }}>{error}</p>}
 
-        {loading && <p style={{ fontSize: '13px', color: '#666' }}>Loading…</p>}
+        {loading && <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>Loading…</p>}
 
         {!loading && filteredTemplates.length === 0 && (
-          <p style={{ fontSize: '13px', color: '#666' }}>
+          <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>
             {templates.length === 0 ? 'No templates yet. Create your first one.' : 'No templates match your search.'}
           </p>
         )}
@@ -163,8 +164,8 @@ export default function Templates() {
         {/* Template list glass card */}
         {!loading && filteredTemplates.length > 0 && (
           <div style={{ ...CARD, padding: 0 }}>
-            <div style={SHIMMER} />
-            <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <ShimmerLine />
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--color-elevated)' }}>
               <span style={SECTION_LABEL}>Templates</span>
             </div>
             {filteredTemplates.map((t, i) => {
@@ -178,18 +179,18 @@ export default function Templates() {
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '14px 20px',
-                    borderBottom: i < filteredTemplates.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                    borderBottom: i < filteredTemplates.length - 1 ? '1px solid var(--color-elevated)' : 'none',
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: '14px', fontWeight: 500, color: '#e8edf5' }}>{t.name}</div>
+                    <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-text)' }}>{t.name}</div>
                     <div style={{ display: 'flex', gap: '6px', marginTop: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
                       {t.category && (
                         <span style={{ fontSize: '11px', padding: '2px 7px', background: 'rgba(41,181,204,0.08)', color: '#29B5CC', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '4px' }}>
                           {t.category}
                         </span>
                       )}
-                      <span style={{ fontSize: '11px', color: '#555' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>
                         {exerciseCount === 0 ? 'No exercises' : `${exerciseCount} exercise${exerciseCount !== 1 ? 's' : ''}`}
                       </span>
                     </div>
@@ -203,7 +204,7 @@ export default function Templates() {
                     </button>
                     <button
                       onClick={() => deleteTemplate(t.id, t.name)}
-                      style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '6px', background: 'transparent', color: '#f87171', cursor: 'pointer' }}
+                      style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '6px', background: 'transparent', color: 'var(--color-danger)', cursor: 'pointer' }}
                     >
                       Delete
                     </button>

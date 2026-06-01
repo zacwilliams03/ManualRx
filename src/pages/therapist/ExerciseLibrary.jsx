@@ -5,7 +5,8 @@ import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import PageHero from '../../components/shared/PageHero'
-import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
+import { CARD, SECTION_LABEL } from '../../components/therapist/styles'
+import ShimmerLine from '../../components/shared/ShimmerLine'
 import useIsMobile from '../../hooks/useIsMobile'
 
 const PAGE_SIZE = 12
@@ -120,8 +121,8 @@ export default function ExerciseLibrary() {
           onChange={e => setSearch(e.target.value)}
           style={{
             width: '100%', maxWidth: '320px', padding: '8px 14px',
-            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none', marginBottom: '12px',
+            background: 'var(--color-elevated)', border: '1px solid var(--color-border)',
+            borderRadius: '7px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', marginBottom: '12px',
           }}
         />
 
@@ -133,10 +134,10 @@ export default function ExerciseLibrary() {
               onClick={() => setCategory(cat)}
               style={{
                 padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
-                background: category === cat ? 'rgba(41,181,204,0.12)' : 'rgba(255,255,255,0.04)',
-                color: category === cat ? '#29B5CC' : '#666',
+                background: category === cat ? 'rgba(41,181,204,0.12)' : 'var(--color-elevated)',
+                color: category === cat ? '#29B5CC' : 'var(--color-muted)',
                 borderWidth: '1px', borderStyle: 'solid',
-                borderColor: category === cat ? 'rgba(41,181,204,0.3)' : 'rgba(255,255,255,0.08)',
+                borderColor: category === cat ? 'rgba(41,181,204,0.3)' : 'var(--color-border)',
               }}
             >
               {cat}
@@ -144,18 +145,18 @@ export default function ExerciseLibrary() {
           ))}
         </div>
 
-        {loading && <p style={{ fontSize: '13px', color: '#666' }}>Loading…</p>}
-        {error && <p style={{ fontSize: '13px', color: '#f87171' }}>{error}</p>}
+        {loading && <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>Loading…</p>}
+        {error && <p style={{ fontSize: '13px', color: 'var(--color-danger)' }}>{error}</p>}
 
         {!loading && !error && exercises.length === 0 && (
-          <p style={{ fontSize: '13px', color: '#666' }}>No exercises found.</p>
+          <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>No exercises found.</p>
         )}
 
         {/* Exercise list glass card */}
         {!loading && !error && exercises.length > 0 && (
           <div style={{ ...CARD, padding: 0 }}>
-            <div style={SHIMMER} />
-            <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <ShimmerLine />
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--color-elevated)' }}>
               <span style={SECTION_LABEL}>Exercises</span>
             </div>
             {exercises.map((ex, i) => (
@@ -167,13 +168,13 @@ export default function ExerciseLibrary() {
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '13px 20px',
-                  borderBottom: i < exercises.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                  borderBottom: i < exercises.length - 1 ? '1px solid var(--color-elevated)' : 'none',
                 }}
               >
                 <div>
                   <Link
                     to={`/therapist/exercises/${ex.id}`}
-                    style={{ fontSize: '14px', fontWeight: 500, color: '#e8edf5', textDecoration: 'none' }}
+                    style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-text)', textDecoration: 'none' }}
                   >
                     {ex.name}
                   </Link>
@@ -184,7 +185,7 @@ export default function ExerciseLibrary() {
                       </span>
                     ))}
                     {ex.video_url && (
-                      <span style={{ fontSize: '11px', padding: '2px 7px', background: 'rgba(255,255,255,0.04)', color: '#666', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px' }}>
+                      <span style={{ fontSize: '11px', padding: '2px 7px', background: 'var(--color-elevated)', color: 'var(--color-muted)', border: '1px solid var(--color-border)', borderRadius: '4px' }}>
                         Video
                       </span>
                     )}
@@ -193,7 +194,7 @@ export default function ExerciseLibrary() {
                 {ex.is_custom && ex.created_by === profile?.id && (
                   <button
                     onClick={() => handleDelete(ex.id)}
-                    style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '6px', background: 'transparent', color: '#f87171', cursor: 'pointer', flexShrink: 0 }}
+                    style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '6px', background: 'transparent', color: 'var(--color-danger)', cursor: 'pointer', flexShrink: 0 }}
                   >
                     Delete
                   </button>
@@ -209,17 +210,17 @@ export default function ExerciseLibrary() {
             <button
               onClick={() => setPage(p => p - 1)}
               disabled={page === 0}
-              style={{ padding: '6px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: page === 0 ? '#444' : '#888', fontSize: '13px', cursor: page === 0 ? 'default' : 'pointer' }}
+              style={{ padding: '6px 14px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: page === 0 ? '#444' : 'var(--color-muted)', fontSize: '13px', cursor: page === 0 ? 'default' : 'pointer' }}
             >
               Previous
             </button>
-            <span style={{ padding: '6px 8px', fontSize: '13px', color: '#555' }}>
+            <span style={{ padding: '6px 8px', fontSize: '13px', color: 'var(--color-subtle)' }}>
               {page + 1} / {totalPages}
             </span>
             <button
               onClick={() => setPage(p => p + 1)}
               disabled={page >= totalPages - 1}
-              style={{ padding: '6px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: page >= totalPages - 1 ? '#444' : '#888', fontSize: '13px', cursor: page >= totalPages - 1 ? 'default' : 'pointer' }}
+              style={{ padding: '6px 14px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: page >= totalPages - 1 ? '#444' : 'var(--color-muted)', fontSize: '13px', cursor: page >= totalPages - 1 ? 'default' : 'pointer' }}
             >
               Next
             </button>

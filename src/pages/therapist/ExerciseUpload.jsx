@@ -5,7 +5,8 @@ import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import PageHero from '../../components/shared/PageHero'
-import { CARD, SHIMMER } from '../../components/therapist/styles'
+import { CARD } from '../../components/therapist/styles'
+import ShimmerLine from '../../components/shared/ShimmerLine'
 import useIsMobile from '../../hooks/useIsMobile'
 
 const CATEGORIES = ['Cervical', 'Thoracic', 'Lumbar', 'Shoulder', 'Elbow', 'Hand / Wrist', 'Hip', 'Knee', 'Ankle / Foot', 'General']
@@ -121,9 +122,9 @@ export default function ExerciseUpload() {
             transition={{ duration: 0.25 }}
             style={{ ...CARD }}
           >
-            <div style={SHIMMER} />
-            <p style={{ fontSize: '14px', color: '#e8edf5', marginBottom: '6px', fontWeight: 500 }}>Exercise added successfully.</p>
-            <p style={{ fontSize: '13px', color: '#666', marginBottom: '20px' }}>Your custom exercise has been saved to the library.</p>
+            <ShimmerLine />
+            <p style={{ fontSize: '14px', color: 'var(--color-text)', marginBottom: '6px', fontWeight: 500 }}>Exercise added successfully.</p>
+            <p style={{ fontSize: '13px', color: 'var(--color-muted)', marginBottom: '20px' }}>Your custom exercise has been saved to the library.</p>
             <div style={{ display: 'flex', gap: '10px' }}>
               <Link
                 to={`/therapist/exercises/${uploadedId}`}
@@ -133,7 +134,7 @@ export default function ExerciseUpload() {
               </Link>
               <button
                 onClick={resetForm}
-                style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', fontSize: '13px', color: '#888', cursor: 'pointer' }}
+                style={{ padding: '8px 16px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', fontSize: '13px', color: 'var(--color-muted)', cursor: 'pointer' }}
               >
                 Add another
               </button>
@@ -173,23 +174,23 @@ export default function ExerciseUpload() {
 
       <div style={{ padding: isMobile ? '16px' : '24px 32px', maxWidth: '600px' }}>
         <div style={{ ...CARD }}>
-          <div style={SHIMMER} />
+          <ShimmerLine />
           <form id="exercise-upload-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
             {/* Name */}
             <div>
-              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>Exercise name</label>
+              <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '6px' }}>Exercise name</label>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                style={{ width: '100%', padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '8px 14px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
 
             {/* Categories */}
             <div>
-              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '8px' }}>Categories <span style={{ color: '#555' }}>(select all that apply)</span></label>
+              <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '8px' }}>Categories <span style={{ color: 'var(--color-subtle)' }}>(select all that apply)</span></label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
                 {CATEGORIES.map(c => (
                   <label key={c} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
@@ -199,7 +200,7 @@ export default function ExerciseUpload() {
                       onChange={() => toggleCategory(c)}
                       style={{ accentColor: '#29B5CC' }}
                     />
-                    <span style={{ fontSize: '13px', color: '#e8edf5' }}>{c}</span>
+                    <span style={{ fontSize: '13px', color: 'var(--color-text)' }}>{c}</span>
                   </label>
                 ))}
               </div>
@@ -207,55 +208,55 @@ export default function ExerciseUpload() {
 
             {/* Description */}
             <div>
-              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>Description <span style={{ color: '#555' }}>(optional)</span></label>
+              <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '6px' }}>Description <span style={{ color: 'var(--color-subtle)' }}>(optional)</span></label>
               <textarea
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 rows={3}
-                style={{ width: '100%', padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '8px 14px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
               />
             </div>
 
             {/* Sets / Reps */}
             <div style={{ display: 'flex', gap: '12px' }}>
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>Default sets</label>
+                <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '6px' }}>Default sets</label>
                 <input
                   type="number"
                   min="1"
                   value={defaultSets}
                   onChange={e => setDefaultSets(e.target.value)}
-                  style={{ width: '100%', padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 14px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>Default reps</label>
+                <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '6px' }}>Default reps</label>
                 <input
                   type="number"
                   min="1"
                   value={defaultReps}
                   onChange={e => setDefaultReps(e.target.value)}
-                  style={{ width: '100%', padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 14px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
 
             {/* Video */}
             <div>
-              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>Video file</label>
+              <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '6px' }}>Video file</label>
               <input
                 type="file"
                 accept="video/*"
                 onChange={e => setVideoFile(e.target.files[0] ?? null)}
-                style={{ fontSize: '13px', color: '#888', width: '100%' }}
+                style={{ fontSize: '13px', color: 'var(--color-muted)', width: '100%' }}
               />
-              <p style={{ fontSize: '11px', color: '#555', marginTop: '4px' }}>MP4, MOV, or WebM recommended</p>
+              <p style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '4px' }}>MP4, MOV, or WebM recommended</p>
             </div>
 
-            {error && <p style={{ fontSize: '13px', color: '#f87171' }}>{error}</p>}
+            {error && <p style={{ fontSize: '13px', color: 'var(--color-danger)' }}>{error}</p>}
 
             {uploading && (
-              <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
+              <div style={{ height: '4px', background: 'var(--color-border)', borderRadius: '2px', overflow: 'hidden' }}>
                 <div style={{ height: '100%', background: '#29B5CC', width: `${uploadProgress}%`, transition: 'width 0.2s ease', borderRadius: '2px' }} />
               </div>
             )}
