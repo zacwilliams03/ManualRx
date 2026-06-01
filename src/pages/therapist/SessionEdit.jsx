@@ -8,7 +8,8 @@ import { useWeightUnit } from '../../hooks/useWeightUnit'
 import { formatWeight } from '../../utils/weightUtils'
 import { motion } from 'framer-motion'
 import PageHero from '../../components/shared/PageHero'
-import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
+import { CARD, SECTION_LABEL } from '../../components/therapist/styles'
+import ShimmerLine from '../../components/shared/ShimmerLine'
 import VideoPlayer from '../../components/VideoPlayer'
 import useIsMobile from '../../hooks/useIsMobile'
 
@@ -168,7 +169,7 @@ export default function SessionEdit() {
 
         {/* Session details glass card */}
         <div style={{ ...CARD }}>
-          <div style={SHIMMER} />
+          <ShimmerLine />
           <div style={{ marginBottom: '16px' }}>
             <span style={SECTION_LABEL}>Session Details</span>
           </div>
@@ -176,18 +177,18 @@ export default function SessionEdit() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Name */}
             <div>
-              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>Name</label>
+              <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '6px' }}>Name</label>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                style={{ width: '100%', padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '8px 14px', background: 'var(--color-elevated)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
 
             {/* Frequency pills — keep existing Tailwind classes */}
             <div>
-              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '8px' }}>Repeat frequency</label>
+              <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '8px' }}>Repeat frequency</label>
               <div className="flex flex-wrap gap-2">
                 {[
                   { label: 'No repeat', value: null },
@@ -220,18 +221,18 @@ export default function SessionEdit() {
 
             {/* Start date */}
             <div>
-              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>Start date</label>
+              <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '6px' }}>Start date</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
-                style={{ padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: '#e8edf5', fontSize: '13px', outline: 'none' }}
+                style={{ padding: '8px 14px', background: 'var(--color-elevated)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', color: 'var(--color-text)', fontSize: '13px', outline: 'none' }}
               />
             </div>
 
             {/* Duration pills */}
             <div>
-              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '8px' }}>Duration</label>
+              <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '8px' }}>Duration</label>
               <div className="flex flex-wrap gap-2">
                 {[
                   { label: 'None (ongoing)', value: null },
@@ -275,31 +276,31 @@ export default function SessionEdit() {
           transition={{ duration: 0.2, delay: 0.1 }}
           style={{ ...CARD, padding: 0 }}
         >
-          <div style={SHIMMER} />
-          <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <ShimmerLine />
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--color-elevated)' }}>
             <span style={SECTION_LABEL}>Exercises {exercises.length > 0 ? `(${exercises.length})` : ''}</span>
           </div>
           {exercises.length === 0 ? (
-            <p style={{ padding: '16px 20px', fontSize: '13px', color: '#666' }}>No exercises added yet.</p>
+            <p style={{ padding: '16px 20px', fontSize: '13px', color: 'var(--color-muted)' }}>No exercises added yet.</p>
           ) : (
             exercises.map((pe, i) => (
               <div
                 key={pe.id}
-                style={{ padding: '12px 20px', borderBottom: i < exercises.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
+                style={{ padding: '12px 20px', borderBottom: i < exercises.length - 1 ? '1px solid var(--color-elevated)' : 'none' }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
                   <div>
-                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#e8edf5' }}>{pe.exercises.name}</div>
-                    <div style={{ fontSize: '12px', color: '#555', marginTop: '2px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)' }}>{pe.exercises.name}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '2px' }}>
                       {pe.sets} sets × {pe.reps} reps{pe.weight ? ` · ${formatWeight(pe.weight, weightUnit)}` : ''}
                     </div>
                     {pe.therapist_notes && (
-                      <div style={{ fontSize: '11px', color: '#555', marginTop: '2px', fontStyle: 'italic' }}>{pe.therapist_notes}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px', fontStyle: 'italic' }}>{pe.therapist_notes}</div>
                     )}
                   </div>
                   <button
                     onClick={() => removeExercise(pe.id)}
-                    style={{ fontSize: '12px', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
+                    style={{ fontSize: '12px', color: 'var(--color-danger)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
                   >
                     Remove
                   </button>

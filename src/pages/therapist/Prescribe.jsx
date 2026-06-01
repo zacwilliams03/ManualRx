@@ -14,7 +14,8 @@ import { AllSessionsPDF } from '../../components/therapist/AllSessionsPDF'
 import { ClientDataTab } from './ClientDataTab'
 import { motion, AnimatePresence } from 'framer-motion'
 import PageHero from '../../components/shared/PageHero'
-import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
+import { CARD, SECTION_LABEL } from '../../components/therapist/styles'
+import ShimmerLine from '../../components/shared/ShimmerLine'
 import { frequencyLabel } from '../../utils/frequencyUtils'
 import useIsMobile from '../../hooks/useIsMobile'
 
@@ -493,12 +494,12 @@ export default function Prescribe() {
                     setShowPdfMenu(m => !m)
                   }}
                   disabled={allPdfLoading}
-                  style={{ padding: '8px 14px', background: 'transparent', color: '#888', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', fontSize: '12px', cursor: allPdfLoading ? 'default' : 'pointer', opacity: allPdfLoading ? 0.6 : 1 }}
+                  style={{ padding: '8px 14px', background: 'transparent', color: 'var(--color-muted)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', fontSize: '12px', cursor: allPdfLoading ? 'default' : 'pointer', opacity: allPdfLoading ? 0.6 : 1 }}
                 >
                   {allPdfLoading ? 'Exporting…' : 'Create PDF ▾'}
                 </button>
                 {allPdfError && (
-                  <span style={{ fontSize: '11px', color: '#f87171' }}>Export failed</span>
+                  <span style={{ fontSize: '11px', color: 'var(--color-danger)' }}>Export failed</span>
                 )}
               </div>
             )}
@@ -524,7 +525,7 @@ export default function Prescribe() {
       />
 
       {/* Tabs — flush below hero border */}
-      <div style={{ display: 'flex', padding: isMobile ? '0' : '0 32px', borderBottom: '1px solid rgba(255,255,255,0.06)', overflowX: isMobile ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch' }}>
+      <div style={{ display: 'flex', padding: isMobile ? '0' : '0 32px', borderBottom: '1px solid var(--color-border)', overflowX: isMobile ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch' }}>
         {(['prescriptions', 'history', 'clientData']).map(tab => (
           <button
             key={tab}
@@ -533,7 +534,7 @@ export default function Prescribe() {
               padding: '12px 16px',
               fontSize: '13px',
               fontWeight: activeTab === tab ? 600 : 400,
-              color: activeTab === tab ? '#29B5CC' : '#555',
+              color: activeTab === tab ? '#29B5CC' : 'var(--color-subtle)',
               background: 'none',
               border: 'none',
               borderBottom: activeTab === tab ? '2px solid #29B5CC' : '2px solid transparent',
@@ -547,7 +548,7 @@ export default function Prescribe() {
         ))}
       </div>
 
-      {error && <p style={{ padding: '16px 32px', fontSize: '13px', color: '#f87171' }}>{error}</p>}
+      {error && <p style={{ padding: '16px 32px', fontSize: '13px', color: 'var(--color-danger)' }}>{error}</p>}
 
       {/* Tab content */}
       <div style={{ padding: isMobile ? '16px' : '24px 32px' }}>
@@ -563,7 +564,7 @@ export default function Prescribe() {
               transition={{ duration: 0.2 }}
             >
               {sessions.length === 0 && (
-                <p style={{ fontSize: '13px', color: '#666' }}>No sessions yet. Create the first one.</p>
+                <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>No sessions yet. Create the first one.</p>
               )}
               {sortedSessions.map((s, i) => {
                 const active = isActive(s)
@@ -583,17 +584,17 @@ export default function Prescribe() {
                       opacity: active ? 1 : 0.55,
                     }}
                   >
-                    <div style={SHIMMER} />
+                    <ShimmerLine />
                     {/* Prescription header */}
-                    <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', borderBottom: '1px solid var(--color-elevated)' }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '15px', fontWeight: 600, color: '#e8edf5' }}>{s.name}</span>
+                          <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-text)' }}>{s.name}</span>
                           {!active && (
-                            <span style={{ fontSize: '11px', padding: '2px 7px', background: 'rgba(255,255,255,0.06)', color: '#888', borderRadius: '4px' }}>Inactive</span>
+                            <span style={{ fontSize: '11px', padding: '2px 7px', background: 'var(--color-border)', color: 'var(--color-muted)', borderRadius: '4px' }}>Inactive</span>
                           )}
                         </div>
-                        <p style={{ fontSize: '12px', color: '#555', marginTop: '4px' }}>
+                        <p style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '4px' }}>
                           {s.prescription_exercises[0]?.count ?? 0} exercises · {frequencyLabel(s.frequency_days)}
                         </p>
                         {active && s.duration_weeks && s.start_date && (
@@ -621,25 +622,25 @@ export default function Prescribe() {
                           <button
                             onClick={() => downloadPDF(s)}
                             disabled={pdfLoadingId === s.id}
-                            style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: '#666', background: 'transparent', cursor: 'pointer', opacity: pdfLoadingId === s.id ? 0.6 : 1 }}
+                            style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-muted)', background: 'transparent', cursor: 'pointer', opacity: pdfLoadingId === s.id ? 0.6 : 1 }}
                           >
                             {pdfLoadingId === s.id ? 'Generating…' : 'PDF'}
                           </button>
                           <Link
                             to={`/therapist/prescribe/${clientId}/sessions/${s.id}`}
-                            style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: '#888', textDecoration: 'none' }}
+                            style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-muted)', textDecoration: 'none' }}
                           >
                             Edit
                           </Link>
                           <button
                             onClick={() => deleteSession(s.id, s.name)}
-                            style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px', color: '#f87171', background: 'transparent', cursor: 'pointer' }}
+                            style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px', color: 'var(--color-danger)', background: 'transparent', cursor: 'pointer' }}
                           >
                             Delete
                           </button>
                         </div>
                         {pdfError === s.id && (
-                          <span style={{ fontSize: '11px', color: '#f87171' }}>PDF failed</span>
+                          <span style={{ fontSize: '11px', color: 'var(--color-danger)' }}>PDF failed</span>
                         )}
                       </div>
                     </div>
@@ -652,9 +653,9 @@ export default function Prescribe() {
           {/* ── Session History ── */}
           {activeTab === 'history' && (
             <motion.div key="history" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-              {historyTabLoading && <p style={{ fontSize: '13px', color: '#666' }}>Loading history…</p>}
+              {historyTabLoading && <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>Loading history…</p>}
               {!historyTabLoading && historyTabLogs.length === 0 && (
-                <p style={{ fontSize: '13px', color: '#666' }}>No completed sessions yet.</p>
+                <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>No completed sessions yet.</p>
               )}
               {historyTabLogs.map((log, i) => (
                 <motion.div
@@ -664,26 +665,26 @@ export default function Prescribe() {
                   transition={{ duration: 0.2, delay: Math.min(i * 0.05, 0.3) }}
                   style={{ ...CARD, padding: 0, marginBottom: '12px' }}
                 >
-                  <div style={SHIMMER} />
+                  <ShimmerLine />
                   <button
                     onClick={() => setExpandedLogId(prev => prev === log.id ? null : log.id)}
                     style={{ width: '100%', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
                   >
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: 500, color: '#e8edf5' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-text)' }}>
                         {log.prescriptions?.name ?? 'Session'}
                       </div>
-                      <div style={{ fontSize: '12px', color: '#555', marginTop: '3px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '3px' }}>
                         {new Date(log.completed_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
                         {log.session_rpe != null ? ` · RPE ${log.session_rpe}` : ''}
                       </div>
                     </div>
-                    <span style={{ fontSize: '11px', color: '#555' }}>{expandedLogId === log.id ? '▲' : '▼'}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>{expandedLogId === log.id ? '▲' : '▼'}</span>
                   </button>
                   {expandedLogId === log.id && (
-                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ borderTop: '1px solid var(--color-elevated)' }}>
                       {(log.exercise_logs ?? []).map(el => (
-                        <div key={el.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <div key={el.id} style={{ borderBottom: '1px solid var(--color-elevated)' }}>
                           <ExerciseLogDetail
                             el={el}
                             videoUrls={videoUrls}
@@ -693,7 +694,7 @@ export default function Prescribe() {
                         </div>
                       ))}
                       {log.session_notes && (
-                        <div style={{ padding: '10px 20px', fontSize: '12px', color: '#666' }}>
+                        <div style={{ padding: '10px 20px', fontSize: '12px', color: 'var(--color-muted)' }}>
                           Note: {log.session_notes}
                         </div>
                       )}
@@ -761,13 +762,13 @@ export default function Prescribe() {
               The PDF will be sent to <span style={{ color: '#e2e8f0', fontWeight: 500 }}>{client?.email}</span>
             </p>
             {emailError && (
-              <p style={{ margin: '0 0 14px', color: '#f87171', fontSize: '12px' }}>Failed to send — please try again.</p>
+              <p style={{ margin: '0 0 14px', color: 'var(--color-danger)', fontSize: '12px' }}>Failed to send — please try again.</p>
             )}
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 onClick={() => { setShowEmailConfirm(false); setEmailError(false) }}
                 disabled={emailLoading}
-                style={{ flex: 1, padding: '9px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#94a3b8', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '9px', background: 'var(--color-border)', border: '1px solid rgba(255,255,255,0.12)', color: '#94a3b8', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}
               >
                 Cancel
               </button>
