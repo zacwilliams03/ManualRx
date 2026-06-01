@@ -235,7 +235,8 @@ export default function Clients() {
               )}
 
               {rows.length > 0 && (
-                <div style={{ ...CARD, padding: 0, marginBottom: '12px' }}>
+                <div style={isMobile ? { overflowX: 'auto', marginBottom: '12px' } : {}}>
+                <div style={{ ...CARD, padding: 0, marginBottom: isMobile ? 0 : '12px', minWidth: isMobile ? '520px' : undefined }}>
                   <div style={SHIMMER} />
                   {!showSearch && (
                     <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -340,6 +341,7 @@ export default function Clients() {
                     </motion.div>
                   ))}
                 </div>
+                </div>
               )}
 
               {/* Inactive clients toggle (when not in search mode) */}
@@ -352,7 +354,8 @@ export default function Clients() {
                     {showInactive ? 'Hide inactive clients' : `Show inactive clients (${inactiveClients.length})`}
                   </button>
                   {showInactive && (
-                    <div style={{ ...CARD, padding: 0 }}>
+                    <div style={isMobile ? { overflowX: 'auto' } : {}}>
+                    <div style={{ ...CARD, padding: 0, minWidth: isMobile ? '520px' : undefined }}>
                       <div style={SHIMMER} />
                       <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <span style={SECTION_LABEL}>Inactive</span>
@@ -404,6 +407,7 @@ export default function Clients() {
                           </div>
                         </motion.div>
                       ))}
+                    </div>
                     </div>
                   )}
                 </>

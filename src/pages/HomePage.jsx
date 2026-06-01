@@ -251,7 +251,7 @@ function Nav({ scrollTo }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link to="/login" className="hidden md:block" style={{ color: '#888888', textDecoration: 'none', fontSize: '14px' }}>
+          <Link to="/login" style={{ color: '#888888', textDecoration: 'none', fontSize: '14px' }}>
             Log in
           </Link>
           <Link
