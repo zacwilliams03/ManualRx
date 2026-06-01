@@ -39,7 +39,7 @@ function Logo() {
           lineHeight: 1,
         }}
       >
-        <span style={{ color: '#e8edf5' }}>Manual</span>
+        <span style={{ color: 'var(--color-text)' }}>Manual</span>
         <span style={{ color: '#29B5CC' }}>Rx</span>
       </span>
     </div>
@@ -71,9 +71,9 @@ function NavItem({ to, icon: Icon, label, activePrefixes, exact, onClose }) {
           paddingRight: '12px',
           background: active ? 'rgba(41,181,204,0.08)' : 'transparent',
           borderLeft: active ? '2px solid #29B5CC' : '2px solid transparent',
-          color: active ? '#29B5CC' : '#aaaaaa',
+          color: active ? '#29B5CC' : 'var(--color-muted)',
         }}
-        onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+        onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--color-elevated)' }}
         onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
       >
         <Icon size={17} strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
@@ -168,8 +168,8 @@ function AccountSection() {
             {...panelMotion}
             className="absolute bottom-full left-0 right-0 mb-2 rounded-xl overflow-hidden"
             style={{
-              background: '#111111',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-border)',
               boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
             }}
           >
@@ -243,7 +243,7 @@ function AccountSection() {
                           style={{
                             minHeight: '36px',
                             background: 'rgba(41,181,204,0.15)',
-                            color: '#29B5CC',
+                            color: 'var(--color-accent)',
                           }}
                         >
                           {pwStep === 'loading' ? 'Saving…' : 'Save password'}
@@ -291,7 +291,7 @@ function AccountSection() {
                         minHeight: '32px',
                         fontSize: '13px',
                         background: 'rgba(239,68,68,0.12)',
-                        color: '#f87171',
+                        color: 'var(--color-danger)',
                         padding: '0 10px',
                       }}
                     >
@@ -321,7 +321,7 @@ function AccountSection() {
             width: '26px',
             height: '26px',
             background: 'rgba(41,181,204,0.18)',
-            color: '#29B5CC',
+            color: 'var(--color-accent)',
           }}
         >
           {initial}
@@ -347,7 +347,7 @@ export default function AppSidebar({ onClose }) {
       className="fixed left-0 top-0 h-screen z-40 flex flex-col border-r border-dark-border"
       style={{
         width: '240px',
-        background: 'linear-gradient(180deg, rgba(41,181,204,0.05) 0%, #0e1117 8%, #0e1117 100%)',
+        background: 'linear-gradient(180deg, rgba(41,181,204,0.05) 0%, var(--color-bg) 8%, var(--color-bg) 100%)',
         borderRight: '1px solid rgba(41,181,204,0.10)',
       }}
     >

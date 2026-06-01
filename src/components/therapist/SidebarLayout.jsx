@@ -8,7 +8,7 @@ function Logo() {
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
       <div style={{ width: '3px', height: '20px', background: '#29B5CC', borderRadius: '2px', flexShrink: 0 }} />
       <span style={{ fontFamily: '"Outfit", sans-serif', fontWeight: 700, fontSize: '17px', letterSpacing: '-0.02em', lineHeight: 1 }}>
-        <span style={{ color: '#e8edf5' }}>Manual</span>
+        <span style={{ color: 'var(--color-text)' }}>Manual</span>
         <span style={{ color: '#29B5CC' }}>Rx</span>
       </span>
     </div>
@@ -25,7 +25,7 @@ function MobileTopBar({ drawerOpen, onToggle }) {
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: '12px 16px',
-      background: '#0e1117',
+      background: 'var(--color-bg)',
       borderBottom: '1px solid rgba(41,181,204,0.10)',
     }}>
       <Link to="/therapist" style={{ textDecoration: 'none' }}>
@@ -34,7 +34,7 @@ function MobileTopBar({ drawerOpen, onToggle }) {
       <button
         onClick={onToggle}
         aria-label={drawerOpen ? 'Close navigation' : 'Open navigation'}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: '#aaaaaa', fontSize: '20px', lineHeight: 1 }}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--color-muted)', fontSize: '20px', lineHeight: 1 }}
       >
         {drawerOpen ? '✕' : '☰'}
       </button>
@@ -60,7 +60,7 @@ export default function SidebarLayout({ children }) {
 
   // ── Mobile ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: '#0e1117' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
       <MobileTopBar drawerOpen={drawerOpen} onToggle={() => setDrawerOpen(v => !v)} />
 
       {drawerOpen && (
