@@ -6,7 +6,9 @@ import { useClinicName } from '../../hooks/useClinicName'
 import BottomNav from '../../components/client/BottomNav'
 import { motion } from 'framer-motion'
 import PageHero from '../../components/shared/PageHero'
-import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
+import { CARD, SECTION_LABEL } from '../../components/therapist/styles'
+import ThemeToggle from '../../components/shared/ThemeToggle'
+import ShimmerLine from '../../components/shared/ShimmerLine'
 
 export default function ClientSettings() {
   const { user, profile, signOut } = useAuth()
@@ -136,7 +138,7 @@ export default function ClientSettings() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0e1117', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg)', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
       <PageHero title="Settings" subtitle="Preferences & account" />
 
       <motion.div
@@ -146,18 +148,18 @@ export default function ClientSettings() {
         style={{ padding: '16px', maxWidth: '512px', display: 'flex', flexDirection: 'column', gap: '12px' }}
       >
         {fetching ? (
-          <p style={{ fontSize: '13px', color: '#888' }}>Loading…</p>
+          <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>Loading…</p>
         ) : fetchError ? (
-          <p style={{ fontSize: '13px', color: '#f87171' }}>{fetchError}</p>
+          <p style={{ fontSize: '13px', color: 'var(--color-danger)' }}>{fetchError}</p>
         ) : (
           <>
             {/* Preferences card */}
             <div style={{ ...CARD, position: 'relative' }}>
-              <div style={SHIMMER} />
+              <ShimmerLine />
               <div style={SECTION_LABEL}>Preferences</div>
 
               <form onSubmit={handleSave} style={{ marginTop: '14px' }}>
-                <label style={{ display: 'block', fontSize: '12px', color: '#888', marginBottom: '8px' }}>Weight unit</label>
+                <label style={{ display: 'block', fontSize: '12px', color: 'var(--color-muted)', marginBottom: '8px' }}>Weight unit</label>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
                   {['kg', 'lb'].map((unit) => (
                     <button
@@ -173,7 +175,7 @@ export default function ClientSettings() {
                         cursor: 'pointer',
                         ...(weightUnit === unit
                           ? { background: '#29B5CC', color: '#000', border: 'none' }
-                          : { background: 'transparent', color: '#666', border: '1px solid rgba(255,255,255,0.08)' }),
+                          : { background: 'transparent', color: 'var(--color-muted)', border: '1px solid var(--color-border)' }),
                       }}
                     >
                       {unit}
@@ -181,15 +183,20 @@ export default function ClientSettings() {
                   ))}
                 </div>
 
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', color: 'var(--color-muted)', marginBottom: '8px' }}>Theme</label>
+                  <ThemeToggle />
+                </div>
+
                 {clinicName && (
                   <div style={{ marginBottom: '14px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', color: '#888', marginBottom: '4px' }}>Your clinic</label>
-                    <p style={{ fontSize: '13px', color: '#f0f0f0', margin: 0 }}>{clinicName}</p>
+                    <label style={{ display: 'block', fontSize: '12px', color: 'var(--color-muted)', marginBottom: '4px' }}>Your clinic</label>
+                    <p style={{ fontSize: '13px', color: 'var(--color-text)', margin: 0 }}>{clinicName}</p>
                   </div>
                 )}
 
-                {saveError && <p style={{ fontSize: '12px', color: '#f87171', marginBottom: '8px' }}>{saveError}</p>}
-                {saveSuccess && <p style={{ fontSize: '12px', color: '#4ade80', marginBottom: '8px' }}>Settings saved.</p>}
+                {saveError && <p style={{ fontSize: '12px', color: 'var(--color-danger)', marginBottom: '8px' }}>{saveError}</p>}
+                {saveSuccess && <p style={{ fontSize: '12px', color: 'var(--color-success)', marginBottom: '8px' }}>Settings saved.</p>}
 
                 <button
                   type="submit"
@@ -214,12 +221,12 @@ export default function ClientSettings() {
 
             {/* Account card */}
             <div style={{ ...CARD, position: 'relative' }}>
-              <div style={SHIMMER} />
+              <ShimmerLine />
               <div style={SECTION_LABEL}>Account</div>
 
               <div style={{ marginTop: '14px' }}>
                 {passwordSuccess && (
-                  <p style={{ fontSize: '12px', color: '#4ade80', marginBottom: '10px' }}>Password updated successfully.</p>
+                  <p style={{ fontSize: '12px', color: 'var(--color-success)', marginBottom: '10px' }}>Password updated successfully.</p>
                 )}
 
                 {!showPasswordForm ? (
@@ -250,7 +257,7 @@ export default function ClientSettings() {
                       ['confirmPassword', 'Confirm new password', confirmPassword, setConfirmPassword],
                     ].map(([id, label, val, setter]) => (
                       <div key={id}>
-                        <label style={{ display: 'block', fontSize: '12px', color: '#888', marginBottom: '4px' }}>{label}</label>
+                        <label style={{ display: 'block', fontSize: '12px', color: 'var(--color-muted)', marginBottom: '4px' }}>{label}</label>
                         <input
                           type="password"
                           value={val}
@@ -258,18 +265,18 @@ export default function ClientSettings() {
                           required
                           style={{
                             width: '100%',
-                            background: 'rgba(255,255,255,0.04)',
-                            border: '1px solid rgba(255,255,255,0.08)',
+                            background: 'var(--color-elevated)',
+                            border: '1px solid var(--color-border)',
                             borderRadius: '7px',
                             padding: '9px 12px',
-                            color: '#f0f0f0',
+                            color: 'var(--color-text)',
                             fontSize: '13px',
                             boxSizing: 'border-box',
                           }}
                         />
                       </div>
                     ))}
-                    {passwordError && <p style={{ fontSize: '12px', color: '#f87171' }}>{passwordError}</p>}
+                    {passwordError && <p style={{ fontSize: '12px', color: 'var(--color-danger)' }}>{passwordError}</p>}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <button
                         type="submit"
@@ -291,7 +298,7 @@ export default function ClientSettings() {
                       <button
                         type="button"
                         onClick={cancelPasswordForm}
-                        style={{ background: 'none', border: 'none', fontSize: '13px', color: '#888', cursor: 'pointer' }}
+                        style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--color-muted)', cursor: 'pointer' }}
                       >
                         Cancel
                       </button>
@@ -303,14 +310,14 @@ export default function ClientSettings() {
                   <Link to="/forgot-password" style={{ color: '#29B5CC' }}>Forgot your password?</Link>
                 </p>
 
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '14px' }}>
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '14px' }}>
                   {logoutStep === 'idle' ? (
                     <button
                       type="button"
                       onClick={() => setLogoutStep('confirming')}
                       style={{
                         background: 'transparent',
-                        color: '#f87171',
+                        color: 'var(--color-danger)',
                         border: '1px solid rgba(248,113,113,0.25)',
                         borderRadius: '7px',
                         padding: '8px 16px',
@@ -324,13 +331,13 @@ export default function ClientSettings() {
                     </button>
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                      <p style={{ fontSize: '13px', color: '#888', margin: 0 }}>Log out of ManualRx?</p>
+                      <p style={{ fontSize: '13px', color: 'var(--color-muted)', margin: 0 }}>Log out of ManualRx?</p>
                       <button
                         type="button"
                         onClick={signOut}
                         style={{
                           background: 'transparent',
-                          color: '#f87171',
+                          color: 'var(--color-danger)',
                           border: '1px solid rgba(248,113,113,0.25)',
                           borderRadius: '7px',
                           padding: '6px 12px',
@@ -344,7 +351,7 @@ export default function ClientSettings() {
                       <button
                         type="button"
                         onClick={() => setLogoutStep('idle')}
-                        style={{ background: 'none', border: 'none', fontSize: '13px', color: '#555', cursor: 'pointer' }}
+                        style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--color-subtle)', cursor: 'pointer' }}
                       >
                         Cancel
                       </button>
