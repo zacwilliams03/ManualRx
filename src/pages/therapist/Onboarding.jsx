@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import ThemeToggle from '../../components/shared/ThemeToggle'
+import ShimmerLine from '../../components/shared/ShimmerLine'
 
 export default function Onboarding() {
   const { profile, loading: authLoading } = useAuth()
@@ -134,10 +136,10 @@ export default function Onboarding() {
   }
 
   const inputStyle = {
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'var(--color-elevated)',
+    border: '1px solid var(--color-border)',
     borderRadius: '7px',
-    color: '#e8edf5',
+    color: 'var(--color-text)',
     padding: '9px 14px',
     width: '100%',
     fontSize: '13px',
@@ -161,9 +163,9 @@ export default function Onboarding() {
   const inactiveToggleStyle = {
     flex: 1,
     padding: '8px',
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    color: '#888',
+    background: 'var(--color-elevated)',
+    border: '1px solid var(--color-border)',
+    color: 'var(--color-muted)',
     borderRadius: '7px',
     fontSize: '13px',
     fontWeight: 500,
@@ -185,9 +187,9 @@ export default function Onboarding() {
 
   const inactiveGridStyle = {
     padding: '8px',
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    color: '#888',
+    background: 'var(--color-elevated)',
+    border: '1px solid var(--color-border)',
+    color: 'var(--color-muted)',
     borderRadius: '7px',
     fontSize: '13px',
     fontWeight: 500,
@@ -199,7 +201,7 @@ export default function Onboarding() {
     display: 'block',
     fontSize: '13px',
     fontWeight: 500,
-    color: '#c8d0dc',
+    color: 'var(--color-text)',
     marginBottom: '6px',
   }
 
@@ -208,28 +210,30 @@ export default function Onboarding() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0e1117', padding: '24px 16px' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg)', padding: '24px 16px' }}>
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
         style={{
           width: '100%', maxWidth: '440px',
-          background: 'rgba(13,17,23,0.85)', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(100,160,255,0.08)', borderRadius: '16px',
+          background: 'var(--color-surface)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid var(--color-border)',
+          borderRadius: '16px',
           overflow: 'hidden', position: 'relative',
         }}
       >
         {/* Shimmer top border */}
-        <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(41,181,204,0.25), rgba(77,142,247,0.25), transparent)', position: 'absolute', top: 0, left: 0, right: 0 }} />
+        <ShimmerLine />
         <div style={{ padding: '32px' }}>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#e8edf5', margin: '0 0 6px', letterSpacing: '-0.02em' }}>Welcome to ManualRx</h1>
-          <p style={{ fontSize: '13px', color: '#666', margin: '0 0 28px' }}>Let's get you set up. Takes 30 seconds — change anything later in Settings.</p>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text)', margin: '0 0 6px', letterSpacing: '-0.02em' }}>Welcome to ManualRx</h1>
+          <p style={{ fontSize: '13px', color: 'var(--color-muted)', margin: '0 0 28px' }}>Let's get you set up. Takes 30 seconds — change anything later in Settings.</p>
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* Logo upload */}
             <div>
               <label style={fieldLabelStyle}>Clinic logo</label>
-              <p style={{ fontSize: '12px', color: '#666', margin: '0 0 8px' }}>Shown to clients during their sessions. Optional.</p>
+              <p style={{ fontSize: '12px', color: 'var(--color-muted)', margin: '0 0 8px' }}>Shown to clients during their sessions. Optional.</p>
               {logoUrl && (
                 <img
                   src={logoUrl}
@@ -239,9 +243,9 @@ export default function Onboarding() {
               )}
               <label style={{
                 display: 'inline-block',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                color: '#888',
+                background: 'var(--color-elevated)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-muted)',
                 fontSize: '13px',
                 borderRadius: '7px',
                 padding: '7px 14px',
@@ -258,7 +262,7 @@ export default function Onboarding() {
                   onChange={handleLogoUpload}
                 />
               </label>
-              {logoError && <p style={{ marginTop: '6px', fontSize: '13px', color: '#f87171' }}>{logoError}</p>}
+              {logoError && <p style={{ marginTop: '6px', fontSize: '13px', color: 'var(--color-danger)' }}>{logoError}</p>}
             </div>
 
             {/* Clinic name */}
@@ -288,6 +292,13 @@ export default function Onboarding() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Theme */}
+            <div>
+              <label style={fieldLabelStyle}>Theme</label>
+              <p style={{ fontSize: '12px', color: 'var(--color-muted)', margin: '0 0 6px' }}>Change anytime in Settings</p>
+              <ThemeToggle />
             </div>
 
             {/* Default frequency */}
@@ -320,17 +331,17 @@ export default function Onboarding() {
                     placeholder="e.g. 3"
                     style={{ ...inputStyle, width: '96px' }}
                   />
-                  <span style={{ fontSize: '13px', color: '#888' }}>days between sessions</span>
+                  <span style={{ fontSize: '13px', color: 'var(--color-muted)' }}>days between sessions</span>
                 </div>
               )}
             </div>
 
-            {error && <p style={{ fontSize: '13px', color: '#f87171', margin: 0 }}>{error}</p>}
+            {error && <p style={{ fontSize: '13px', color: 'var(--color-danger)', margin: 0 }}>{error}</p>}
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', paddingTop: '4px' }}>
               <button type="submit" disabled={loading} style={{ padding: '9px 20px', background: '#29B5CC', color: '#000', border: 'none', borderRadius: '7px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', opacity: loading ? 0.6 : 1 }}>
                 {loading ? 'Saving…' : 'Save and continue'}
               </button>
-              <button type="button" onClick={handleSkip} disabled={loading} style={{ fontSize: '13px', color: '#555', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', opacity: loading ? 0.6 : 1 }}>
+              <button type="button" onClick={handleSkip} disabled={loading} style={{ fontSize: '13px', color: 'var(--color-subtle)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', opacity: loading ? 0.6 : 1 }}>
                 Skip for now
               </button>
             </div>
