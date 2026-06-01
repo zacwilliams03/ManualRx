@@ -7,7 +7,7 @@ function Logo() {
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
       <div style={{ width: '3px', height: '20px', background: '#29B5CC', borderRadius: '2px', flexShrink: 0 }} />
       <span style={{ fontFamily: '"Outfit", sans-serif', fontWeight: 700, fontSize: '17px', letterSpacing: '-0.01em', lineHeight: 1 }}>
-        <span style={{ color: '#f0f0f0' }}>Manual</span>
+        <span style={{ color: 'var(--color-text)' }}>Manual</span>
         <span style={{ color: '#29B5CC' }}>Rx</span>
       </span>
     </div>
