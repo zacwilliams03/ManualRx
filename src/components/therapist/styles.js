@@ -1,7 +1,7 @@
 export const CARD = {
-  background: 'rgba(13,17,23,0.85)',
+  background: 'var(--color-surface)',
   backdropFilter: 'blur(12px)',
-  border: '1px solid rgba(100,160,255,0.08)',
+  border: '1px solid var(--color-border)',
   borderRadius: '14px',
   padding: '22px 24px',
   position: 'relative',
@@ -22,5 +22,5 @@ export const SECTION_LABEL = {
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.08em',
-  color: '#888888',
+  color: 'var(--color-subtle)',
 }
