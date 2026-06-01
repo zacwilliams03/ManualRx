@@ -5,7 +5,8 @@ import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import PageHero from '../../components/shared/PageHero'
-import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
+import { CARD, SECTION_LABEL } from '../../components/therapist/styles'
+import ShimmerLine from '../../components/shared/ShimmerLine'
 import useIsMobile from '../../hooks/useIsMobile'
 
 export default function Clients() {
@@ -209,18 +210,18 @@ export default function Clients() {
             width: '100%',
             maxWidth: '320px',
             padding: '8px 14px',
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'var(--color-elevated)',
+            border: '1px solid var(--color-border)',
             borderRadius: '7px',
-            color: '#e8edf5',
+            color: 'var(--color-text)',
             fontSize: '13px',
             marginBottom: '20px',
             outline: 'none',
           }}
         />
 
-        {listLoading && <p style={{ fontSize: '13px', color: '#666' }}>Loading…</p>}
-        {listError && <p style={{ fontSize: '13px', color: '#f87171' }}>{listError}</p>}
+        {listLoading && <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>Loading…</p>}
+        {listError && <p style={{ fontSize: '13px', color: 'var(--color-danger)' }}>{listError}</p>}
 
         {!listLoading && !listError && (() => {
           const rows = searchResults !== null ? searchResults : activeClients
@@ -229,7 +230,7 @@ export default function Clients() {
           return (
             <>
               {rows.length === 0 && (
-                <p style={{ fontSize: '13px', color: '#666' }}>
+                <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>
                   {showSearch ? 'No clients match your search.' : 'No clients yet.'}
                 </p>
               )}
@@ -237,9 +238,9 @@ export default function Clients() {
               {rows.length > 0 && (
                 <div style={isMobile ? { overflowX: 'auto', marginBottom: '12px' } : {}}>
                 <div style={{ ...CARD, padding: 0, marginBottom: isMobile ? 0 : '12px', minWidth: isMobile ? '520px' : undefined }}>
-                  <div style={SHIMMER} />
+                  <ShimmerLine />
                   {!showSearch && (
-                    <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--color-elevated)' }}>
                       <span style={SECTION_LABEL}>Active Clients</span>
                     </div>
                   )}
@@ -254,7 +255,7 @@ export default function Clients() {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '14px 20px',
-                        borderBottom: i < rows.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                        borderBottom: i < rows.length - 1 ? '1px solid var(--color-elevated)' : 'none',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -264,29 +265,29 @@ export default function Clients() {
                             height: '34px',
                             borderRadius: '50%',
                             background: client.is_active ? 'rgba(41,181,204,0.15)' : 'rgba(61,79,106,0.3)',
-                            border: client.is_active ? '1px solid rgba(41,181,204,0.2)' : '1px solid rgba(255,255,255,0.08)',
+                            border: client.is_active ? '1px solid rgba(41,181,204,0.2)' : '1px solid var(--color-border)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontSize: '13px',
                             fontWeight: 700,
-                            color: client.is_active ? '#29B5CC' : '#888',
+                            color: client.is_active ? '#29B5CC' : 'var(--color-muted)',
                             flexShrink: 0,
                           }}
                         >
                           {(client.name ?? '')[0]?.toUpperCase()}
                         </div>
                         <div>
-                          <div style={{ fontSize: '14px', fontWeight: 500, color: '#e8edf5' }}>{client.name}</div>
-                          <div style={{ fontSize: '12px', color: '#555', marginTop: '1px' }}>{client.email}</div>
+                          <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-text)' }}>{client.name}</div>
+                          <div style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '1px' }}>{client.email}</div>
                           {!client.is_active && (
                             <span style={{
                               fontSize: '11px',
                               padding: '2px 7px',
-                              background: 'rgba(255,255,255,0.05)',
-                              border: '1px solid rgba(255,255,255,0.08)',
+                              background: 'var(--color-elevated)',
+                              border: '1px solid var(--color-border)',
                               borderRadius: '10px',
-                              color: '#666',
+                              color: 'var(--color-muted)',
                               marginTop: '3px',
                               display: 'inline-block',
                             }}>
@@ -314,10 +315,10 @@ export default function Clients() {
                           style={{
                             fontSize: '12px',
                             padding: '5px 12px',
-                            border: '1px solid rgba(255,255,255,0.08)',
+                            border: '1px solid var(--color-border)',
                             borderRadius: '6px',
                             background: 'transparent',
-                            color: '#666',
+                            color: 'var(--color-muted)',
                             cursor: 'pointer',
                           }}
                         >
@@ -331,7 +332,7 @@ export default function Clients() {
                             border: '1px solid rgba(239,68,68,0.25)',
                             borderRadius: '6px',
                             background: 'transparent',
-                            color: '#f87171',
+                            color: 'var(--color-danger)',
                             cursor: 'pointer',
                           }}
                         >
@@ -349,15 +350,15 @@ export default function Clients() {
                 <>
                   <button
                     onClick={() => setShowInactive(v => !v)}
-                    style={{ fontSize: '13px', color: '#555', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', marginBottom: '12px' }}
+                    style={{ fontSize: '13px', color: 'var(--color-subtle)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', marginBottom: '12px' }}
                   >
                     {showInactive ? 'Hide inactive clients' : `Show inactive clients (${inactiveClients.length})`}
                   </button>
                   {showInactive && (
                     <div style={isMobile ? { overflowX: 'auto' } : {}}>
                     <div style={{ ...CARD, padding: 0, minWidth: isMobile ? '520px' : undefined }}>
-                      <div style={SHIMMER} />
-                      <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <ShimmerLine />
+                      <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--color-elevated)' }}>
                         <span style={SECTION_LABEL}>Inactive</span>
                       </div>
                       {inactiveClients.map((client, i) => (
@@ -372,35 +373,35 @@ export default function Clients() {
                             justifyContent: 'space-between',
                             padding: '14px 20px',
                             opacity: 0.6,
-                            borderBottom: i < inactiveClients.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                            borderBottom: i < inactiveClients.length - 1 ? '1px solid var(--color-elevated)' : 'none',
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div
                               style={{
                                 width: '34px', height: '34px', borderRadius: '50%',
-                                background: 'rgba(61,79,106,0.3)', border: '1px solid rgba(255,255,255,0.08)',
+                                background: 'rgba(61,79,106,0.3)', border: '1px solid var(--color-border)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: '13px', fontWeight: 700, color: '#888', flexShrink: 0,
+                                fontSize: '13px', fontWeight: 700, color: 'var(--color-muted)', flexShrink: 0,
                               }}
                             >
                               {(client.name ?? '')[0]?.toUpperCase()}
                             </div>
                             <div>
-                              <div style={{ fontSize: '14px', fontWeight: 500, color: '#e8edf5' }}>{client.name}</div>
-                              <div style={{ fontSize: '12px', color: '#555', marginTop: '1px' }}>{client.email}</div>
+                              <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-text)' }}>{client.name}</div>
+                              <div style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '1px' }}>{client.email}</div>
                             </div>
                           </div>
                           <div style={{ display: 'flex', gap: '8px' }}>
                             <button
                               onClick={() => toggleActive(client)}
-                              style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', background: 'transparent', color: '#666', cursor: 'pointer' }}
+                              style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid var(--color-border)', borderRadius: '6px', background: 'transparent', color: 'var(--color-muted)', cursor: 'pointer' }}
                             >
                               Reactivate
                             </button>
                             <button
                               onClick={() => deleteClient(client)}
-                              style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '6px', background: 'transparent', color: '#f87171', cursor: 'pointer' }}
+                              style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '6px', background: 'transparent', color: 'var(--color-danger)', cursor: 'pointer' }}
                             >
                               Delete
                             </button>

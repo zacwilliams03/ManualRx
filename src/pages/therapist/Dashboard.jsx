@@ -7,7 +7,8 @@ import useIsMobile from '../../hooks/useIsMobile'
 import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import ParticleBackground from '../../components/ParticleBackground'
-import { CARD, SHIMMER, SECTION_LABEL } from '../../components/therapist/styles'
+import { CARD, SECTION_LABEL } from '../../components/therapist/styles'
+import ShimmerLine from '../../components/shared/ShimmerLine'
 import { freqLabel } from '../../utils/frequencyUtils'
 
 // ---------------------------------------------------------------------------
@@ -123,7 +124,7 @@ function LegendDot({ color, outline, label }) {
         border: outline ? '1px solid #3d4f6a' : 'none',
         flexShrink: 0,
       }} />
-      <span style={{ fontSize: '11px', color: '#888888' }}>{label}</span>
+      <span style={{ fontSize: '11px', color: 'var(--color-muted)' }}>{label}</span>
     </span>
   )
 }
@@ -144,11 +145,11 @@ function ClientAdherenceRow({ client, slots, pct, color, navigate }) {
         cursor: 'pointer',
         marginBottom: '2px',
       }}
-      onMouseEnter={e => (e.currentTarget.style.background = '#1a1a1a')}
+      onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-elevated)')}
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '13px', fontWeight: 500, color: '#f0f0f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {client.name}
         </div>
       </div>
@@ -198,7 +199,7 @@ function AdherenceCard({ prescriptions, loading, navigate }) {
     const missed = allSlots.filter(s => s.status === 'missed').length
     const pct = done + missed > 0 ? Math.round((done / (done + missed)) * 100) : null
     const color =
-      pct === null ? '#888888' : pct >= 80 ? '#29B5CC' : pct >= 60 ? '#fbbf24' : '#f87171'
+      pct === null ? 'var(--color-muted)' : pct >= 80 ? '#29B5CC' : pct >= 60 ? 'var(--color-warning)' : 'var(--color-danger)'
     return { client, allSlots, pct, color }
   })
 
@@ -207,7 +208,7 @@ function AdherenceCard({ prescriptions, loading, navigate }) {
 
   return (
     <div style={CARD}>
-      <div style={SHIMMER} />
+      <ShimmerLine />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
         <span style={SECTION_LABEL}>Client Adherence</span>
         {rows.length > 5 && (
@@ -220,9 +221,9 @@ function AdherenceCard({ prescriptions, loading, navigate }) {
         )}
       </div>
 
-      {loading && <div style={{ color: '#888888', fontSize: '13px' }}>Loading...</div>}
+      {loading && <div style={{ color: 'var(--color-muted)', fontSize: '13px' }}>Loading...</div>}
       {!loading && rows.length === 0 && (
-        <div style={{ color: '#888888', fontSize: '13px' }}>No clients with active repeating programs.</div>
+        <div style={{ color: 'var(--color-muted)', fontSize: '13px' }}>No clients with active repeating programs.</div>
       )}
 
       {firstFive.map(({ client, allSlots, pct, color }) => (
@@ -258,7 +259,7 @@ function AdherenceCard({ prescriptions, loading, navigate }) {
           <LegendDot color="#3d4f6a" label="Missed" />
           <LegendDot outline label="Today" />
         </div>
-        <span style={{ fontSize: '11px', color: '#555555' }}>Each dot = 1 due session</span>
+        <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>Each dot = 1 due session</span>
       </div>
     </div>
   )
@@ -271,8 +272,8 @@ function AlertRow({ alert, onDismiss, navigate }) {
   const [hovered, setHovered] = useState(false)
   const isOverdue = alert.type === 'overdue'
 
-  const dotColor = isOverdue ? '#f87171' : '#4ade80'
-  const textColor = isOverdue ? '#f87171' : '#4ade80'
+  const dotColor = isOverdue ? 'var(--color-danger)' : 'var(--color-success)'
+  const textColor = isOverdue ? 'var(--color-danger)' : 'var(--color-success)'
   const bg = isOverdue ? 'rgba(248,113,113,0.09)' : 'rgba(74,222,128,0.09)'
   const border = isOverdue ? '1px solid rgba(248,113,113,0.14)' : '1px solid rgba(74,222,128,0.14)'
 
@@ -294,12 +295,12 @@ function AlertRow({ alert, onDismiss, navigate }) {
           {label}
         </div>
         {alert.clientName && (
-          <div style={{ fontSize: '11px', color: '#888888', marginTop: '1px' }}>{alert.clientName}</div>
+          <div style={{ fontSize: '11px', color: 'var(--color-muted)', marginTop: '1px' }}>{alert.clientName}</div>
         )}
       </div>
       <button
         onClick={e => { e.stopPropagation(); onDismiss() }}
-        style={{ opacity: hovered ? 1 : 0, background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#888888', transition: 'opacity 0.15s', flexShrink: 0 }}
+        style={{ opacity: hovered ? 1 : 0, background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: 'var(--color-muted)', transition: 'opacity 0.15s', flexShrink: 0 }}
         aria-label="Dismiss"
       >
         <Trash2 size={14} />
@@ -331,12 +332,12 @@ function NeedsAttentionCard({ prescriptions, loading, dismissed, setDismissed, p
 
   return (
     <div style={CARD}>
-      <div style={SHIMMER} />
+      <ShimmerLine />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
         <span style={SECTION_LABEL}>Needs Attention</span>
       </div>
 
-      {loading && <div style={{ color: '#888888', fontSize: '13px' }}>Loading...</div>}
+      {loading && <div style={{ color: 'var(--color-muted)', fontSize: '13px' }}>Loading...</div>}
       {!loading && alerts.length === 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#29B5CC', fontSize: '13px' }}>
           <span>✓</span> All clients on track
@@ -365,13 +366,13 @@ function NeedsAttentionCard({ prescriptions, loading, dismissed, setDismissed, p
       {alerts.length > 4 && (
         <button
           onClick={() => setExpanded(e => !e)}
-          style={{ marginTop: '8px', fontSize: '12px', color: '#888888', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          style={{ marginTop: '8px', fontSize: '12px', color: 'var(--color-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
         >
           {expanded ? 'Show less' : `See ${hiddenCount} more`}
         </button>
       )}
 
-      <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(100,160,255,0.06)', fontSize: '11px', color: '#555555', lineHeight: 1.5 }}>
+      <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(100,160,255,0.06)', fontSize: '11px', color: 'var(--color-subtle)', lineHeight: 1.5 }}>
         Overdue: flagged after 2 consecutive misses. Program complete: all sessions finished.
       </div>
     </div>
@@ -401,15 +402,15 @@ function ActivityFeedCard({ profile, navigate }) {
 
   return (
     <div style={CARD}>
-      <div style={SHIMMER} />
+      <ShimmerLine />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
         <span style={SECTION_LABEL}>Recent Activity</span>
-        <span style={{ fontSize: '12px', color: '#888888' }}>Last 10 sessions</span>
+        <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>Last 10 sessions</span>
       </div>
 
-      {loading && <div style={{ color: '#888888', fontSize: '13px' }}>Loading...</div>}
+      {loading && <div style={{ color: 'var(--color-muted)', fontSize: '13px' }}>Loading...</div>}
       {!loading && feed.length === 0 && (
-        <div style={{ color: '#888888', fontSize: '13px' }}>No sessions logged yet.</div>
+        <div style={{ color: 'var(--color-muted)', fontSize: '13px' }}>No sessions logged yet.</div>
       )}
 
       {feed.map(log => {
@@ -430,15 +431,15 @@ function ActivityFeedCard({ profile, navigate }) {
           log.session_rpe !== null && log.session_rpe !== undefined
             ? log.session_rpe <= 6
               ? { bg: 'rgba(41,181,204,0.10)', text: '#29B5CC' }
-              : { bg: 'rgba(251,191,36,0.09)', text: '#fbbf24' }
+              : { bg: 'rgba(251,191,36,0.09)', text: 'var(--color-warning)' }
             : null
         const painColor =
           avgPain !== null
             ? avgPain <= 4
               ? { bg: 'rgba(41,181,204,0.10)', text: '#29B5CC' }
               : avgPain <= 7
-              ? { bg: 'rgba(251,191,36,0.09)', text: '#fbbf24' }
-              : { bg: 'rgba(248,113,113,0.09)', text: '#f87171' }
+              ? { bg: 'rgba(251,191,36,0.09)', text: 'var(--color-warning)' }
+              : { bg: 'rgba(248,113,113,0.09)', text: 'var(--color-danger)' }
             : null
 
         return (
@@ -454,7 +455,7 @@ function ActivityFeedCard({ profile, navigate }) {
               cursor: clientId ? 'pointer' : 'default',
               marginBottom: '2px',
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = '#1a1a1a')}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-elevated)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
             <div style={{
@@ -474,10 +475,10 @@ function ActivityFeedCard({ profile, navigate }) {
               {initials}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#f0f0f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {clientName}
               </div>
-              <div style={{ fontSize: '11px', color: '#888888', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: '11px', color: 'var(--color-muted)', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {prescName}
               </div>
             </div>
@@ -493,7 +494,7 @@ function ActivityFeedCard({ profile, navigate }) {
                 </span>
               )}
             </div>
-            <div style={{ fontSize: '11px', color: '#555555', flexShrink: 0, minWidth: '60px', textAlign: 'right' }}>
+            <div style={{ fontSize: '11px', color: 'var(--color-subtle)', flexShrink: 0, minWidth: '60px', textAlign: 'right' }}>
               {relativeTime(log.completed_at)}
             </div>
           </div>
@@ -509,12 +510,12 @@ function ActivityFeedCard({ profile, navigate }) {
 function DashboardHeader({ firstName, greeting, alertCount, activeClientCount }) {
   return (
     <div style={{ marginBottom: '28px' }}>
-      <h1 style={{ fontSize: '26px', fontWeight: 700, color: '#f0f0f0', margin: 0 }}>
+      <h1 style={{ fontSize: '26px', fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>
         Good {greeting}, {firstName}!
       </h1>
-      <p style={{ marginTop: '4px', fontSize: '14px', color: '#888888' }}>
+      <p style={{ marginTop: '4px', fontSize: '14px', color: 'var(--color-muted)' }}>
         {alertCount > 0
-          ? <><span style={{ color: '#f87171' }}>{alertCount} {alertCount === 1 ? 'client needs' : 'clients need'} attention</span>{' · '}<span style={{ color: '#29B5CC' }}>{activeClientCount} active {activeClientCount === 1 ? 'client' : 'clients'}</span></>
+          ? <><span style={{ color: 'var(--color-danger)' }}>{alertCount} {alertCount === 1 ? 'client needs' : 'clients need'} attention</span>{' · '}<span style={{ color: '#29B5CC' }}>{activeClientCount} active {activeClientCount === 1 ? 'client' : 'clients'}</span></>
           : <><span style={{ color: '#29B5CC' }}>All clients on track</span>{' · '}<span style={{ color: '#29B5CC' }}>{activeClientCount} active {activeClientCount === 1 ? 'client' : 'clients'}</span></>
         }
       </p>
