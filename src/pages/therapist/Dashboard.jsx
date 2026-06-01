@@ -30,7 +30,13 @@ function generateSlots(prescription, sessionLogs) {
   const logDates = (sessionLogs || []).map(l => new Date(l.completed_at))
 
   return Array.from({ length: numSlots }, (_, k) => {
-    if (k === 0) return { status: 'pending' }
+    if (k === 0) {
+      const windowStart = new Date(today)
+      windowStart.setDate(today.getDate() - frequency_days)
+      if (start_date && today <= new Date(start_date)) return { status: 'pending' }
+      const done = logDates.some(d => d >= windowStart)
+      return { status: done ? 'done' : 'pending' }
+    }
 
     const windowEnd = new Date(today)
     windowEnd.setDate(today.getDate() - k * frequency_days)
@@ -147,7 +153,7 @@ function ClientAdherenceRow({ client, slots, pct, color, navigate }) {
         </div>
       </div>
       <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', maxWidth: '120px' }}>
-        {slots.map((slot, i) => (
+        {[...slots].reverse().map((slot, i) => (
           <div
             key={i}
             style={{
