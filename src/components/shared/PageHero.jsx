@@ -2,9 +2,11 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import ParticleBackground from '../ParticleBackground'
 import useIsMobile from '../../hooks/useIsMobile'
+import { useTheme } from '../../context/ThemeContext'
 
 export default function PageHero({ title, subtitle, back, actions }) {
   const isMobile = useIsMobile()
+  const { theme } = useTheme()
 
   return (
     <motion.div
@@ -18,7 +20,7 @@ export default function PageHero({ title, subtitle, back, actions }) {
         borderBottom: '1px solid rgba(41,181,204,0.08)',
       }}
     >
-      <ParticleBackground position="absolute" particleCount={isMobile ? 20 : 60} spawnFromTop />
+      {theme === 'dark' && <ParticleBackground position="absolute" particleCount={isMobile ? 20 : 60} spawnFromTop />}
 
       <div
         style={{
@@ -33,7 +35,7 @@ export default function PageHero({ title, subtitle, back, actions }) {
         {back && (
           <Link
             to={back.to}
-            style={{ display: 'inline-block', fontSize: '12px', color: '#555', marginBottom: '10px' }}
+            style={{ display: 'inline-block', fontSize: '12px', color: 'var(--color-subtle)', marginBottom: '10px' }}
             className="hover:text-dark-muted transition-colors duration-150"
           >
             ← {back.label}
@@ -52,7 +54,7 @@ export default function PageHero({ title, subtitle, back, actions }) {
               style={{
                 fontSize: isMobile ? '22px' : '26px',
                 fontWeight: 700,
-                color: '#e8edf5',
+                color: 'var(--color-text)',
                 margin: '0 0 6px',
                 letterSpacing: '-0.02em',
                 fontFamily: '"DM Sans", system-ui, sans-serif',
@@ -61,7 +63,7 @@ export default function PageHero({ title, subtitle, back, actions }) {
               {title}
             </h1>
             {subtitle && (
-              <p style={{ fontSize: '13px', color: '#666', margin: 0 }}>{subtitle}</p>
+              <p style={{ fontSize: '13px', color: 'var(--color-muted)', margin: 0 }}>{subtitle}</p>
             )}
           </div>
 

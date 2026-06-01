@@ -17,8 +17,8 @@ export default function BottomNav() {
       aria-label="Main navigation"
       className="fixed bottom-0 inset-x-0 z-40"
       style={{
-        background: 'rgba(14,17,23,0.95)',
-        borderTop: '1px solid rgba(41,181,204,0.08)',
+        background: 'var(--color-surface)',
+        borderTop: '1px solid var(--color-border)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
         paddingBottom: 'env(safe-area-inset-bottom)',
