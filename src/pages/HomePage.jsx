@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import Lenis from 'lenis'
@@ -16,23 +16,40 @@ const NAV_LINKS = [
 // Icon is stored as a component reference (not JSX) so hoisting isn't required
 const FEATURES = [
   {
-    title: 'Prescribe in minutes',
+    title: 'Video Feedback Loop',
     description:
-      'Search a built-in exercise library, customise reps and sets, and send your client a complete program in under 5 minutes.',
-    Icon: PrescribeIcon,
+      'Attach demo videos to any exercise. Clients record their form and send it back — no WhatsApp needed.',
+    Icon: FeedbackVideoIcon,
   },
   {
-    title: 'Your own video library',
+    title: 'Pain & Volume Tracking',
     description:
-      "Upload your own exercise demonstration videos. They're stored permanently, attached to any exercise, and reused across all your clients — not just the built-in library.",
-    Icon: VideoIcon,
-    featured: true,
+      'Session-by-session charts visible to you and your client. Watch them improve in real time.',
+    Icon: TrackingIcon,
   },
   {
-    title: 'Client progress tracking',
+    title: 'Session Templates',
     description:
-      'Clients log their sets, reps, and pain ratings after each session. You see their progress in real time and adjust their program as they improve.',
-    Icon: ProgressIcon,
+      'Build a program once and prescribe it to any client instantly. Edit per-patient without touching the original.',
+    Icon: TemplatesIcon,
+  },
+  {
+    title: 'Clinic Branding',
+    description:
+      'Your logo sits at the top of every client session. Every rep reinforces your practice.',
+    Icon: BrandingIcon,
+  },
+  {
+    title: 'Notes & Feedback',
+    description:
+      'Leave cues on each exercise. Clients respond with notes and pain ratings — per set, not just per session.',
+    Icon: NotesIcon,
+  },
+  {
+    title: 'Adherence at a Glance',
+    description:
+      "Dot-pattern compliance view across all clients. Know who's keeping up without opening a single chart.",
+    Icon: AdherenceIcon,
   },
 ]
 
@@ -47,7 +64,7 @@ const STEPS = [
     num: '02',
     title: 'Build their program',
     description:
-      'Search the exercise library, configure reps and sets, add notes, and attach videos in minutes.',
+      'Search the exercise library, configure reps and sets, add notes, and attach videos. Or apply a template to populate a full program in seconds.',
   },
   {
     num: '03',
@@ -138,32 +155,62 @@ function fa(reduceMotion, delay = 0) {
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────
 
-function PrescribeIcon() {
+function FeedbackVideoIcon() {
   return (
     <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#29B5CC" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-      <line x1="16" y1="13" x2="8" y2="13" />
-      <line x1="16" y1="17" x2="8" y2="17" />
+      <rect x="2" y="7" width="13" height="10" rx="2" />
+      <path d="m22 8-6 4 6 4V8z" />
+      <path d="M8 5V2" />
+      <polyline points="6 3 8 1 10 3" />
     </svg>
   )
 }
 
-function VideoIcon() {
+function TrackingIcon() {
   return (
     <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#29B5CC" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="23 7 16 12 23 17 23 7" />
-      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+      <polyline points="16 7 22 7 22 13" />
     </svg>
   )
 }
 
-function ProgressIcon() {
+function TemplatesIcon() {
   return (
     <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#29B5CC" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="18" y1="20" x2="18" y2="10" />
-      <line x1="12" y1="20" x2="12" y2="4" />
-      <line x1="6" y1="20" x2="6" y2="14" />
+      <rect x="9" y="9" width="13" height="13" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  )
+}
+
+function BrandingIcon() {
+  return (
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#29B5CC" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <polyline points="9 12 11 14 15 10" />
+    </svg>
+  )
+}
+
+function NotesIcon() {
+  return (
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#29B5CC" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  )
+}
+
+function AdherenceIcon() {
+  return (
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#29B5CC" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="5"  cy="8"  r="2.5" fill="rgba(41,181,204,0.85)" stroke="none" />
+      <circle cx="12" cy="8"  r="2.5" fill="rgba(41,181,204,0.85)" stroke="none" />
+      <circle cx="19" cy="8"  r="2.5" />
+      <circle cx="5"  cy="16" r="2.5" fill="rgba(41,181,204,0.85)" stroke="none" />
+      <circle cx="12" cy="16" r="2.5" />
+      <circle cx="19" cy="16" r="2.5" />
     </svg>
   )
 }
@@ -273,127 +320,427 @@ function Nav({ scrollTo }) {
 
 // ─── App mockup ───────────────────────────────────────────────────────────
 
-function AppMockup() {
-  const clients = [
-    { initials: 'SJ', name: 'Sarah Johnson', sub: 'Active · 3 exercises', active: true },
-    { initials: 'MT', name: 'Mark Thompson', sub: 'Active · 5 exercises', active: false },
-    { initials: 'EL', name: 'Emma Liu', sub: 'Active · 2 exercises', active: false },
-    { initials: 'RB', name: 'Ryan Burke', sub: 'Inactive', active: false },
+function NavIcon({ type, active }) {
+  const c = active ? '#29B5CC' : '#555555'
+  const s = { width: '14px', height: '14px', flexShrink: 0, display: 'block' }
+  if (type === 'grid') return (
+    <svg style={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+      <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+    </svg>
+  )
+  if (type === 'clients') return (
+    <svg style={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  )
+  if (type === 'templates') return (
+    <svg style={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    </svg>
+  )
+  if (type === 'library') return (
+    <svg style={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6.5 6.5h11"/>
+      <path d="M4 12h16"/>
+      <path d="M6.5 17.5h11"/>
+      <circle cx="3" cy="6.5" r="1.5"/>
+      <circle cx="3" cy="12" r="1.5"/>
+      <circle cx="3" cy="17.5" r="1.5"/>
+    </svg>
+  )
+  if (type === 'settings') return (
+    <svg style={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  )
+  return null
+}
+
+function ChromeBar({ url }) {
+  return (
+    <div style={{
+      padding: '9px 12px', background: '#181818',
+      borderBottom: '1px solid rgba(255,255,255,0.06)',
+      display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0,
+    }}>
+      <div style={{ display: 'flex', gap: '5px', flexShrink: 0 }}>
+        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#FF5F57' }} />
+        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#FFBD2E' }} />
+        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#28CA41' }} />
+      </div>
+      <div style={{
+        flex: 1, background: '#111111', borderRadius: '4px',
+        padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '5px',
+        border: '1px solid rgba(255,255,255,0.06)',
+      }}>
+        <LockIcon />
+        <span style={{ fontSize: '11px', color: '#555555' }}>{url}</span>
+      </div>
+    </div>
+  )
+}
+
+function DualViewMockup() {
+  const [phoneUp, setPhoneUp] = useState(false)
+
+  const DOT = {
+    done:   { background: '#29B5CC', border: 'none' },
+    missed: { background: '#252830', border: '1px solid #333' },
+    today:  { background: 'transparent', border: '1px solid rgba(255,255,255,0.25)' },
+  }
+
+  const adherenceClients = [
+    {
+      name: 'James K.', pct: '96%', pctColor: '#29B5CC',
+      dots: ['done','done','done','done','done','done','done','done','done','done','done','today'],
+    },
+    {
+      name: 'Priya S.', pct: '88%', pctColor: '#29B5CC',
+      dots: ['done','done','done','done','done','done','done','done','missed','done','done','today'],
+    },
+    {
+      name: 'Sarah J.', pct: '75%', pctColor: '#29B5CC',
+      dots: ['done','done','done','done','done','done','done','missed','missed','missed','done','today'],
+    },
+    {
+      name: 'Mark T.', pct: '42%', pctColor: '#fbbf24',
+      dots: ['done','done','done','missed','missed','done','done','missed','missed','missed','done','today'],
+    },
+    {
+      name: 'Emma L.', pct: '17%', pctColor: '#f87171',
+      dots: ['done','done','missed','missed','missed','missed','missed','missed','missed','missed','missed','today'],
+    },
   ]
-  const exercises = [
-    { symbol: '↔', name: 'Cervical Rotation Stretch', detail: '3 sets · 10 reps · Hold 3s' },
-    { symbol: '↑', name: 'Chin Tucks', detail: '2 sets · 15 reps · Daily' },
-    { symbol: '◆', name: 'Shoulder Blade Squeeze', detail: '3 sets · 12 reps · 5kg' },
+
+  const alerts = [
+    { label: '5 missed in a row · Shoulder Rehab', client: 'Sarah J.', red: true },
+    { label: '3 missed in a row · Cervical Rehab',  client: 'Mark T.',  red: true },
+    { label: 'Completed full program · Hip Mobility', client: 'James K.', red: false },
+  ]
+
+  const navItems = [
+    { label: 'Dashboard',        icon: 'grid',      active: true  },
+    { label: 'Clients',          icon: 'clients',   active: false },
+    { label: 'Templates',        icon: 'templates', active: false },
+    { label: 'Exercise Library', icon: 'library',   active: false },
+  ]
+
+  const activity = [
+    { initials: 'TE', name: 'Tom E.',   program: 'Hip Rehab',       rpe: 3, pain: 7, time: 'Just now' },
+    { initials: 'JK', name: 'James K.', program: 'Shoulder Rehab',  rpe: 5, pain: 2, time: '12 min ago' },
+    { initials: 'PS', name: 'Priya S.', program: 'Neck Mobility',   rpe: 4, pain: 4, time: '38 min ago' },
+    { initials: 'SJ', name: 'Sarah J.', program: 'Lumbar Stability',rpe: 6, pain: 5, time: '1 hr ago' },
   ]
 
   return (
-    <div
-      aria-hidden="true"
-      style={{
-        width: '100%', borderRadius: '12px', overflow: 'hidden',
-        border: '1px solid rgba(255,255,255,0.1)',
-        boxShadow: '0 0 60px rgba(41,181,204,0.15), 0 0 120px rgba(41,181,204,0.06)',
-        background: '#111111',
-      }}
-    >
-      {/* Browser chrome */}
-      <div style={{
-        padding: '10px 14px', background: '#181818',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-        display: 'flex', alignItems: 'center', gap: '12px',
-      }}>
-        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-          <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#FF5F57' }} />
-          <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#FFBD2E' }} />
-          <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#28CA41' }} />
-        </div>
+    <div aria-hidden="true" style={{ position: 'relative', width: '100%', height: '530px' }}>
+
+      {/* Phone — Client exercise wizard */}
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0, zIndex: phoneUp ? 3 : 1 }}
+        transition={{ duration: 0.7, ease: 'easeOut' }}
+        style={{
+          position: 'absolute', right: 0, top: '15px', width: '238px',
+          zIndex: phoneUp ? 3 : 1, cursor: phoneUp ? 'default' : 'pointer',
+        }}
+        onClick={() => setPhoneUp(true)}
+        title={phoneUp ? undefined : 'Click to bring to front'}
+      >
+        {!phoneUp && (
+          <div style={{
+            position: 'absolute', top: '12px', left: '50%', transform: 'translateX(-50%)',
+            background: 'rgba(41,181,204,0.18)', border: '1px solid rgba(41,181,204,0.35)',
+            color: '#29B5CC', fontSize: '9px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px',
+            whiteSpace: 'nowrap', zIndex: 10, pointerEvents: 'none',
+          }}>
+            tap to view client
+          </div>
+        )}
         <div style={{
-          flex: 1, background: '#111111', borderRadius: '5px',
-          padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '6px',
-          border: '1px solid rgba(255,255,255,0.06)',
+          background: '#1c1c1e', borderRadius: '40px',
+          padding: '14px 7px 10px',
+          boxShadow: phoneUp
+            ? '0 0 40px rgba(41,181,204,0.2), 0 24px 64px rgba(0,0,0,0.75), inset 0 0 0 1px rgba(255,255,255,0.09)'
+            : '0 24px 64px rgba(0,0,0,0.75), inset 0 0 0 1px rgba(255,255,255,0.09)',
+          border: `1.5px solid ${phoneUp ? '#29B5CC' : '#2d2d2f'}`, position: 'relative',
         }}>
-          <LockIcon />
-          <span style={{ fontSize: '12px', color: '#555555' }}>app.manualrx.app/therapist</span>
-        </div>
-      </div>
-
-      {/* App body */}
-      <div style={{ display: 'flex', height: '380px' }}>
-        {/* Sidebar */}
-        <div style={{ width: '210px', flexShrink: 0, borderRight: '1px solid rgba(255,255,255,0.06)', overflowY: 'auto' }}>
-          <div style={{ padding: '14px 16px 10px', fontSize: '11px', color: '#555555', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>
-            Clients
-          </div>
-          {clients.map(c => (
-            <div key={c.initials} style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '9px 14px',
-              background: c.active ? 'rgba(41,181,204,0.12)' : 'transparent',
-            }}>
-              <div style={{
-                width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
-                background: c.active ? '#29B5CC' : '#2a2a2a',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '10px', fontWeight: 700,
-                color: c.active ? '#0a0a0a' : '#666666',
-              }}>
-                {c.initials}
+          {/* Notch */}
+          <div style={{
+            position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+            width: '80px', height: '24px', background: '#1c1c1e',
+            borderRadius: '0 0 16px 16px', zIndex: 3,
+          }} />
+          {/* Screen */}
+          <div style={{
+            background: '#0e1117', borderRadius: '28px',
+            overflow: 'hidden', height: '462px',
+            display: 'flex', flexDirection: 'column',
+          }}>
+            {/* Status bar */}
+            <div style={{ height: '28px', padding: '8px 18px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+              <span style={{ fontSize: '9px', fontWeight: 700, color: '#f0f0f0' }}>9:41</span>
+              <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '1.5px', alignItems: 'flex-end' }}>
+                  {[4, 6, 9, 11].map((h, i) => (
+                    <div key={i} style={{ width: '3px', height: `${h}px`, background: i < 3 ? '#f0f0f0' : '#444', borderRadius: '1px' }} />
+                  ))}
+                </div>
+                <div style={{ width: '22px', height: '11px', border: '1px solid rgba(255,255,255,0.35)', borderRadius: '2.5px', padding: '1.5px', display: 'flex', alignItems: 'center', position: 'relative' }}>
+                  <div style={{ width: '55%', height: '100%', background: '#4ade80', borderRadius: '1px' }} />
+                  <div style={{ position: 'absolute', right: '-3px', top: '50%', transform: 'translateY(-50%)', width: '2.5px', height: '5px', background: 'rgba(255,255,255,0.3)', borderRadius: '0 1px 1px 0' }} />
+                </div>
               </div>
+            </div>
+
+            {/* App top bar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 14px 6px', flexShrink: 0 }}>
+              <span style={{ fontSize: '11px', color: '#888' }}>← Back</span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                <div style={{ display: 'flex', gap: '3px' }}>
+                  <div style={{ width: '18px', height: '3px', background: '#555', borderRadius: '2px' }} />
+                  <div style={{ width: '18px', height: '3px', background: '#29B5CC', borderRadius: '2px' }} />
+                </div>
+                <span style={{ fontSize: '8px', color: '#888' }}>2 / 2</span>
+              </div>
+              <span style={{ fontSize: '9px', color: '#888' }}>ManualRx Rehab</span>
+            </div>
+
+            {/* Scrollable content */}
+            <div style={{ flex: 1, padding: '2px 14px 8px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+
+              {/* Title + badge */}
               <div>
-                <div style={{ fontSize: '12px', fontWeight: 500, color: '#f0f0f0' }}>{c.name}</div>
-                <div style={{ fontSize: '11px', color: '#555555' }}>{c.sub}</div>
+                <div style={{ fontSize: '16px', fontWeight: 700, color: '#f0f0f0', marginBottom: '6px', lineHeight: 1.25 }}>Barbell Back Squat</div>
+                <div style={{ display: 'inline-block', background: 'rgba(41,181,204,0.15)', color: '#29B5CC', border: '1px solid rgba(41,181,204,0.25)', fontSize: '10px', fontWeight: 600, padding: '2px 9px', borderRadius: '5px' }}>Hip</div>
+              </div>
+
+              {/* Video player — full width, native-style controls */}
+              <div style={{ borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#000' }}>
+                <div style={{ position: 'relative', height: '96px' }}>
+                  <img
+                    src="https://images.unsplash.com/photo-1770664612843-b44e26070024?auto=format&fit=crop&w=500&h=280&q=80"
+                    alt=""
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                </div>
+                {/* Native-style controls bar */}
+                <div style={{ background: '#1a1a1a', padding: '5px 10px 6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '5px' }}>
+                    {/* Play button */}
+                    <div style={{ width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderLeft: '8px solid #f0f0f0', flexShrink: 0 }} />
+                    <span style={{ fontSize: '9px', color: '#ccc', flexShrink: 0 }}>0:00 / 0:07</span>
+                    <div style={{ flex: 1 }} />
+                    {/* Volume icon */}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                    </svg>
+                    {/* Fullscreen icon */}
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                      <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                    </svg>
+                    {/* More icon */}
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round">
+                      <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+                    </svg>
+                  </div>
+                  {/* Scrubber */}
+                  <div style={{ position: 'relative', width: '100%', height: '3px', background: '#444', borderRadius: '2px' }}>
+                    <div style={{ width: '5%', height: '100%', background: '#f0f0f0', borderRadius: '2px' }} />
+                    <div style={{ position: 'absolute', top: '-4px', left: '5%', width: '9px', height: '9px', background: '#f0f0f0', borderRadius: '50%', transform: 'translateX(-50%)' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Target */}
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(100,160,255,0.1)', borderRadius: '8px', padding: '7px 12px', flexShrink: 0 }}>
+                <div style={{ fontSize: '7.5px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '3px' }}>Target</div>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: '#f0f0f0' }}>3 sets × 8 reps @ 80 kg</div>
+              </div>
+
+              {/* Set inputs */}
+              <div style={{ flexShrink: 0 }}>
+                <div style={{ fontSize: '15px', fontWeight: 700, color: '#f0f0f0', marginBottom: '7px' }}>
+                  Set 2 <span style={{ color: '#888', fontWeight: 400, fontSize: '13px' }}>of 3</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px', marginBottom: '8px' }}>
+                  {[{ label: 'Reps', val: '8' }, { label: 'Weight (kg, optional)', val: '80' }].map(f => (
+                    <div key={f.label}>
+                      <div style={{ fontSize: '9px', color: '#aaa', marginBottom: '4px' }}>{f.label}</div>
+                      <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '7px', padding: '7px 10px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 500, color: '#f0f0f0' }}>{f.val}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ background: '#29B5CC', color: '#0a0a0a', fontSize: '12px', fontWeight: 700, padding: '10px', borderRadius: '9px', textAlign: 'center' }}>
+                  Complete final set →
+                </div>
+              </div>
+
+              {/* Set 1 summary */}
+              <div style={{ background: 'rgba(41,181,204,0.06)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '8px', padding: '7px 12px', flexShrink: 0 }}>
+                <div style={{ fontSize: '10px', color: '#29B5CC' }}>Set 1: 8 reps @ 80 kg</div>
+              </div>
+
+              {/* Disclaimer */}
+              <div style={{ fontSize: '7.5px', color: '#555', lineHeight: 1.5, textAlign: 'center', paddingBottom: '2px' }}>
+                Stop and seek medical advice if you experience sudden severe pain, chest pain, or dizziness.
               </div>
             </div>
-          ))}
-        </div>
-
-        {/* Main panel */}
-        <div style={{ flex: 1, padding: '18px 20px', overflowY: 'auto' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <div>
-              <div style={{ fontSize: '17px', fontWeight: 700, color: '#f0f0f0' }}>Sarah Johnson</div>
-              <div style={{ fontSize: '12px', color: '#555555', marginTop: '2px' }}>Cervical rehab program · Week 2</div>
-            </div>
-            <div style={{
-              background: '#29B5CC', color: '#0a0a0a',
-              padding: '6px 12px', borderRadius: '6px',
-              fontSize: '12px', fontWeight: 600, flexShrink: 0,
-            }}>
-              + Add exercise
-            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {exercises.map(ex => (
-              <div key={ex.name} style={{
-                display: 'flex', alignItems: 'center', gap: '12px',
-                padding: '11px 14px', background: '#181818',
-                borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)',
+          {/* Home indicator */}
+          <div style={{ width: '70px', height: '4px', background: 'rgba(255,255,255,0.18)', margin: '8px auto 0', borderRadius: '2px' }} />
+        </div>
+      </motion.div>
+
+      {/* Browser — Therapist Dashboard */}
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: 'easeOut', delay: 0.15 }}
+        style={{
+          position: 'absolute', left: 0, top: 0,
+          width: '82%', borderRadius: '12px', overflow: 'hidden',
+          background: '#0d1117',
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 0 60px rgba(41,181,204,0.15), 0 0 120px rgba(41,181,204,0.06)',
+          zIndex: phoneUp ? 1 : 2, display: 'flex', flexDirection: 'column',
+          cursor: phoneUp ? 'pointer' : 'default',
+        }}
+        onClick={() => setPhoneUp(false)}
+      >
+        <ChromeBar url="manualrx.com/therapist" />
+
+        <div style={{ display: 'flex', height: '490px', overflow: 'hidden' }}>
+
+          {/* Sidebar */}
+          <div style={{
+            width: '148px', flexShrink: 0, background: '#0d1117',
+            borderRight: '1px solid rgba(100,160,255,0.06)',
+            display: 'flex', flexDirection: 'column', paddingTop: '16px',
+            textAlign: 'left',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '0 16px 16px', borderBottom: '1px solid rgba(100,160,255,0.06)', marginBottom: '8px' }}>
+              <div style={{ width: '2.5px', height: '20px', background: '#29B5CC', borderRadius: '2px', flexShrink: 0 }} />
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#f0f0f0', letterSpacing: '-0.01em' }}>ManualRx</span>
+            </div>
+            {navItems.map(n => (
+              <div key={n.label} style={{
+                display: 'flex', alignItems: 'center', gap: '9px',
+                padding: '8px 16px',
+                background: n.active ? 'rgba(41,181,204,0.10)' : 'transparent',
+                borderLeft: `2px solid ${n.active ? '#29B5CC' : 'transparent'}`,
+                marginLeft: '-1px', marginBottom: '1px',
               }}>
-                <div style={{
-                  width: '34px', height: '34px', borderRadius: '8px', flexShrink: 0,
-                  background: 'rgba(41,181,204,0.14)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#29B5CC', fontSize: '14px',
-                }}>
-                  {ex.symbol}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#f0f0f0' }}>{ex.name}</div>
-                  <div style={{ fontSize: '11px', color: '#555555', marginTop: '2px' }}>{ex.detail}</div>
-                </div>
-                <div style={{
-                  fontSize: '11px', color: '#29B5CC',
-                  background: 'rgba(41,181,204,0.1)',
-                  border: '1px solid rgba(41,181,204,0.2)',
-                  padding: '3px 8px', borderRadius: '4px', flexShrink: 0,
-                }}>
-                  Video attached
-                </div>
+                <NavIcon type={n.icon} active={n.active} />
+                <span style={{ fontSize: '11.5px', fontWeight: n.active ? 600 : 400, color: n.active ? '#29B5CC' : '#888888' }}>{n.label}</span>
               </div>
             ))}
+            <div style={{ flex: 1 }} />
+            <div style={{ padding: '0 16px 14px', borderTop: '1px solid rgba(100,160,255,0.06)', paddingTop: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '8px' }}>
+                <NavIcon type="settings" active={false} />
+                <span style={{ fontSize: '11.5px', color: '#888' }}>Settings</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(41,181,204,0.18)', color: '#29B5CC', fontSize: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>Z</div>
+                <span style={{ fontSize: '11.5px', color: '#888', flex: 1 }}>Zac</span>
+                <span style={{ fontSize: '9px', color: '#555' }}>∨</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Main content */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', textAlign: 'left' }}>
+
+            {/* Hero header */}
+            <div style={{ padding: '16px 20px 12px', position: 'relative', overflow: 'hidden', flexShrink: 0, borderBottom: '1px solid rgba(100,160,255,0.06)' }}>
+              <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 160% 160% at 0% -40%, rgba(41,181,204,0.07) 0%, transparent 65%)', pointerEvents: 'none' }} />
+              <div style={{ fontSize: '18px', fontWeight: 700, color: '#f0f0f0', marginBottom: '4px' }}>Good afternoon, Zac!</div>
+              <div style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: '#f87171' }}>3 need attention</span>
+                <span style={{ color: '#444' }}>·</span>
+                <span style={{ color: '#888' }}>21 active clients</span>
+              </div>
+            </div>
+
+            {/* Two-column section */}
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+
+              {/* CLIENT ADHERENCE */}
+              <div style={{ flex: 1, padding: '14px 16px', borderRight: '1px solid rgba(100,160,255,0.06)', overflowY: 'auto' }}>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: '#666', textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '12px' }}>Client Adherence</div>
+                {adherenceClients.map(c => (
+                  <div key={c.name} style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '10.5px', fontWeight: 600, color: '#f0f0f0', width: '52px', flexShrink: 0 }}>{c.name}</span>
+                    <div style={{ display: 'flex', gap: '2.5px', flex: 1, alignItems: 'center' }}>
+                      {c.dots.map((d, i) => (
+                        <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0, ...DOT[d] }} />
+                      ))}
+                    </div>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: c.pctColor, width: '28px', textAlign: 'right', flexShrink: 0 }}>{c.pct}</span>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', gap: '10px', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(100,160,255,0.06)' }}>
+                  {[{ d: 'done', label: 'Done' }, { d: 'missed', label: 'Missed' }, { d: 'today', label: 'Today' }].map(l => (
+                    <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0, ...DOT[l.d] }} />
+                      <span style={{ fontSize: '9px', color: '#888' }}>{l.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* NEEDS ATTENTION */}
+              <div style={{ width: '45%', padding: '14px 16px', overflow: 'hidden', flexShrink: 0 }}>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: '#666', textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '12px' }}>Needs Attention</div>
+                {alerts.map((a, i) => (
+                  <div key={i} style={{
+                    background: a.red ? 'rgba(248,113,113,0.06)' : 'rgba(74,222,128,0.06)',
+                    border: `1px solid ${a.red ? 'rgba(248,113,113,0.18)' : 'rgba(74,222,128,0.18)'}`,
+                    borderRadius: '8px', padding: '8px 10px', marginBottom: '7px',
+                    display: 'flex', alignItems: 'flex-start', gap: '8px',
+                  }}>
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: a.red ? '#f87171' : '#4ade80', marginTop: '3px', flexShrink: 0 }} />
+                    <div>
+                      <div style={{ fontSize: '9.5px', fontWeight: 500, color: '#f0f0f0', marginBottom: '2px', lineHeight: 1.35 }}>{a.label}</div>
+                      <div style={{ fontSize: '8.5px', color: '#888' }}>{a.client}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Recent Activity */}
+            <div style={{ borderTop: '1px solid rgba(100,160,255,0.06)', padding: '10px 16px', flexShrink: 0 }}>
+              <div style={{ fontSize: '9px', fontWeight: 700, color: '#666', textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '8px' }}>Recent Activity</div>
+              {activity.map((a, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: i < activity.length - 1 ? '7px' : 0 }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(41,181,204,0.15)', color: '#29B5CC', fontSize: '8px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{a.initials}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ fontSize: '10px', fontWeight: 600, color: '#f0f0f0' }}>{a.name}</span>
+                    <span style={{ fontSize: '9.5px', color: '#888' }}> · {a.program}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexShrink: 0 }}>
+                    <div style={{ background: 'rgba(41,181,204,0.12)', color: '#29B5CC', border: '1px solid rgba(41,181,204,0.2)', fontSize: '8px', fontWeight: 700, padding: '1px 5px', borderRadius: '3px' }}>RPE {a.rpe}</div>
+                    <div style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.2)', fontSize: '8px', fontWeight: 700, padding: '1px 5px', borderRadius: '3px' }}>Pain {a.pain}</div>
+                    <div style={{ fontSize: '8.5px', color: '#555', minWidth: '48px', textAlign: 'right' }}>{a.time}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
@@ -496,7 +843,7 @@ function Hero({ scrollTo }) {
           className="hidden md:block"
           style={{ width: '100%' }}
         >
-          <AppMockup />
+          <DualViewMockup />
         </motion.div>
       </div>
     </section>
@@ -534,7 +881,6 @@ function Features() {
               style={{
                 background: '#111111',
                 padding: '36px 30px',
-                borderTop: feature.featured ? '2px solid #29B5CC' : undefined,
               }}
             >
               <div style={{
@@ -547,7 +893,7 @@ function Features() {
               </div>
               <h3 style={{
                 fontSize: '16px', fontWeight: 600, margin: '0 0 10px',
-                color: feature.featured ? '#29B5CC' : '#f0f0f0',
+                color: '#f0f0f0',
               }}>
                 {feature.title}
               </h3>
