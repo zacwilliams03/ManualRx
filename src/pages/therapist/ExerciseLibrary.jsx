@@ -23,7 +23,7 @@ export default function ExerciseLibrary() {
 
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [category, setCategory] = useState('All')
+  const [selectedCategories, setSelectedCategories] = useState(new Set())
   const [page, setPage] = useState(0)
 
   useEffect(() => {
@@ -33,11 +33,11 @@ export default function ExerciseLibrary() {
 
   useEffect(() => {
     setPage(0)
-  }, [debouncedSearch, category])
+  }, [debouncedSearch, selectedCategories])
 
   useEffect(() => {
     if (profile?.id) fetchExercises()
-  }, [debouncedSearch, category, page, profile?.id])
+  }, [debouncedSearch, selectedCategories, page, profile?.id])
 
   async function fetchExercises() {
     setLoading(true)
@@ -50,10 +50,12 @@ export default function ExerciseLibrary() {
     if (debouncedSearch.trim()) {
       query = query.textSearch('fts', debouncedSearch.trim(), { type: 'websearch', config: 'english' })
     }
-    if (category === 'Custom') {
+    const bodyCategories = [...selectedCategories].filter(c => c !== 'Custom')
+    if (selectedCategories.has('Custom')) {
       query = query.eq('is_custom', true)
-    } else if (category !== 'All') {
-      query = query.contains('categories', [category])
+    }
+    if (bodyCategories.length > 0) {
+      query = query.overlaps('categories', bodyCategories)
     }
 
     query = query
@@ -128,21 +130,36 @@ export default function ExerciseLibrary() {
 
         {/* Category filter pills */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setCategory(cat)}
-              style={{
-                padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
-                background: category === cat ? 'rgba(41,181,204,0.12)' : 'var(--color-elevated)',
-                color: category === cat ? '#29B5CC' : 'var(--color-muted)',
-                borderWidth: '1px', borderStyle: 'solid',
-                borderColor: category === cat ? 'rgba(41,181,204,0.3)' : 'var(--color-border)',
-              }}
-            >
-              {cat}
-            </button>
-          ))}
+          {CATEGORIES.map(cat => {
+            const isAll = cat === 'All'
+            const active = isAll ? selectedCategories.size === 0 : selectedCategories.has(cat)
+            return (
+              <button
+                key={cat}
+                onClick={() => {
+                  if (isAll) {
+                    setSelectedCategories(new Set())
+                  } else {
+                    setSelectedCategories(prev => {
+                      const next = new Set(prev)
+                      if (next.has(cat)) next.delete(cat)
+                      else next.add(cat)
+                      return next
+                    })
+                  }
+                }}
+                style={{
+                  padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+                  background: active ? 'rgba(41,181,204,0.12)' : 'var(--color-elevated)',
+                  color: active ? '#29B5CC' : 'var(--color-muted)',
+                  borderWidth: '1px', borderStyle: 'solid',
+                  borderColor: active ? 'rgba(41,181,204,0.3)' : 'var(--color-border)',
+                }}
+              >
+                {cat}
+              </button>
+            )
+          })}
         </div>
 
         {loading && <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>Loading…</p>}
