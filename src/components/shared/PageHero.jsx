@@ -2,11 +2,8 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import ParticleBackground from '../ParticleBackground'
 import useIsMobile from '../../hooks/useIsMobile'
-import { useTheme } from '../../context/ThemeContext'
-
 export default function PageHero({ title, subtitle, back, actions }) {
   const isMobile = useIsMobile()
-  const { theme } = useTheme()
 
   return (
     <motion.div
@@ -20,7 +17,7 @@ export default function PageHero({ title, subtitle, back, actions }) {
         borderBottom: '1px solid rgba(41,181,204,0.08)',
       }}
     >
-      {theme === 'dark' && <ParticleBackground position="absolute" particleCount={isMobile ? 20 : 60} spawnFromTop />}
+      <ParticleBackground position="absolute" particleCount={isMobile ? 20 : 60} spawnFromTop />
 
       <div
         style={{
