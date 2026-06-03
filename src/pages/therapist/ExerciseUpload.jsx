@@ -21,6 +21,8 @@ export default function ExerciseUpload() {
   const [categories, setCategories] = useState([])
   const [defaultSets, setDefaultSets] = useState('')
   const [defaultReps, setDefaultReps] = useState('')
+  const [isTimed, setIsTimed] = useState(false)
+  const [isBilateral, setIsBilateral] = useState(false)
   const [videoFile, setVideoFile] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -82,6 +84,8 @@ export default function ExerciseUpload() {
         created_by: profile.id,
         default_sets: defaultSets ? parseInt(defaultSets) : null,
         default_reps: defaultReps ? parseInt(defaultReps) : null,
+        is_timed: isTimed,
+        is_bilateral: isBilateral,
       })
       .select('id')
       .single()
@@ -102,6 +106,8 @@ export default function ExerciseUpload() {
     setCategories([])
     setDefaultSets('')
     setDefaultReps('')
+    setIsTimed(false)
+    setIsBilateral(false)
     setVideoFile(null)
     setError(null)
     setUploadedId(null)
@@ -217,6 +223,42 @@ export default function ExerciseUpload() {
               />
             </div>
 
+            {/* Measurement type + bilateral */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div>
+                <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '6px' }}>
+                  Default measurement
+                </label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {[{ value: false, label: 'Reps' }, { value: true, label: 'Seconds' }].map(opt => (
+                    <button
+                      key={String(opt.value)}
+                      type="button"
+                      onClick={() => setIsTimed(opt.value)}
+                      style={{
+                        flex: 1, padding: '8px', fontSize: '12px', fontWeight: 500,
+                        borderRadius: '6px', cursor: 'pointer', transition: 'background 0.15s',
+                        border: isTimed === opt.value ? '1px solid #29B5CC' : '1px solid var(--color-border)',
+                        background: isTimed === opt.value ? '#29B5CC' : 'var(--color-elevated)',
+                        color: isTimed === opt.value ? '#000' : 'var(--color-muted)',
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={isBilateral}
+                  onChange={e => setIsBilateral(e.target.checked)}
+                  style={{ accentColor: '#29B5CC' }}
+                />
+                <span style={{ fontSize: '13px', color: 'var(--color-text)' }}>Bilateral by default (complete on both sides)</span>
+              </label>
+            </div>
+
             {/* Sets / Reps */}
             <div style={{ display: 'flex', gap: '12px' }}>
               <div style={{ flex: 1 }}>
@@ -230,7 +272,9 @@ export default function ExerciseUpload() {
                 />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '6px' }}>Default reps</label>
+                <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '6px' }}>
+                  {isTimed ? 'Default seconds' : 'Default reps'}
+                </label>
                 <input
                   type="number"
                   min="1"
