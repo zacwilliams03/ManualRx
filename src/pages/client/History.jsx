@@ -50,7 +50,7 @@ export default function History() {
         exercise_logs(
           id, sets_completed, reps_completed, weight_completed,
           sets_data, pain_rating, client_notes,
-          prescription_exercises(sets, reps, weight, exercises(name))
+          prescription_exercises(sets, reps, weight, measurement_type, exercises(name))
         )
       `)
       .eq('client_id', profile.id)
@@ -176,7 +176,8 @@ export default function History() {
 
                               {pe && (
                                 <p style={{ marginTop: '2px', fontSize: '11px', color: 'var(--color-subtle)', margin: '2px 0 0' }}>
-                                  Prescribed: {pe.sets} sets × {pe.reps} reps{pe.weight ? ` @ ${formatWeight(pe.weight, weightUnit)}` : ''}
+                                  Prescribed: {pe.sets} sets × {pe.reps} {pe.measurement_type === 'seconds' ? 'sec' : 'reps'}
+                                  {pe.weight ? ` @ ${formatWeight(pe.weight, weightUnit)}` : ''}
                                 </p>
                               )}
 
@@ -184,7 +185,8 @@ export default function History() {
                                 <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                   {el.sets_data.map((s, si) => (
                                     <p key={si} style={{ fontSize: '11px', color: 'var(--color-muted)', margin: 0 }}>
-                                      Set {si + 1}: {s.reps} reps{s.weight ? ` @ ${formatWeight(parseFloat(s.weight), weightUnit)}` : ''}
+                                      Set {si + 1}: {s.reps} {pe?.measurement_type === 'seconds' ? 'sec' : 'reps'}
+                                      {s.weight ? ` @ ${formatWeight(parseFloat(s.weight), weightUnit)}` : ''}
                                     </p>
                                   ))}
                                 </div>
