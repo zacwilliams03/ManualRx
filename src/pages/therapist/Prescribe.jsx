@@ -58,7 +58,9 @@ function ExerciseLogDetail({ el, videoUrls, onPlayVideo, weightUnit }) {
 
       {pe && (
         <p className="mt-0.5 text-xs text-dark-muted">
-          Prescribed: {pe.sets} sets × {pe.reps} reps{pe.weight ? ` @ ${formatWeight(pe.weight, weightUnit)}` : ''}
+          Prescribed: {pe.sets} sets × {pe.reps} {pe.measurement_type === 'seconds' ? 'sec' : 'reps'}
+          {pe.weight ? ` @ ${formatWeight(pe.weight, weightUnit)}` : ''}
+          {pe.bilateral ? ' — Both sides' : ''}
         </p>
       )}
 
@@ -66,7 +68,8 @@ function ExerciseLogDetail({ el, videoUrls, onPlayVideo, weightUnit }) {
         <div className="mt-1 space-y-0.5">
           {el.sets_data.map((s, si) => (
             <p key={si} className="text-xs text-dark-muted">
-              Set {si + 1}: {s.reps} reps{s.weight ? ` @ ${formatWeight(parseFloat(s.weight), weightUnit)}` : ''}
+              Set {si + 1}: {s.reps} {pe?.measurement_type === 'seconds' ? 'sec' : 'reps'}
+              {s.weight ? ` @ ${formatWeight(parseFloat(s.weight), weightUnit)}` : ''}
             </p>
           ))}
         </div>
@@ -169,7 +172,7 @@ export default function Prescribe() {
         exercise_logs(
           id, sets_completed, reps_completed, weight_completed,
           sets_data, pain_rating, client_notes, video_url,
-          prescription_exercises(sets, reps, weight, exercises(name))
+          prescription_exercises(sets, reps, weight, measurement_type, bilateral, exercises(name))
         )
       `)
       .in('prescription_id', prescriptionIds)
@@ -257,7 +260,7 @@ export default function Prescribe() {
 
     const { data: origExercises, error: exError } = await supabase
       .from('prescription_exercises')
-      .select('exercise_id, sets, reps, weight, therapist_notes')
+      .select('exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral')
       .eq('prescription_id', original.id)
 
     if (exError) { alert('Failed to copy exercises.'); setReactivating(null); return }
@@ -270,6 +273,8 @@ export default function Prescribe() {
         reps: e.reps,
         weight: e.weight,
         therapist_notes: e.therapist_notes,
+        measurement_type: e.measurement_type ?? 'reps',
+        bilateral: e.bilateral ?? false,
       }))
       const { error: copyError } = await supabase.from('prescription_exercises').insert(copies)
       if (copyError) { alert('Failed to copy exercises.'); setReactivating(null); return }
@@ -294,7 +299,7 @@ export default function Prescribe() {
     try {
       const { data: peData, error: peError } = await supabase
         .from('prescription_exercises')
-        .select('sets, reps, weight, therapist_notes, exercises(name)')
+        .select('sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(name)')
         .eq('prescription_id', prescription.id)
         .order('created_at', { ascending: true })
       if (peError) throw peError
@@ -305,6 +310,8 @@ export default function Prescribe() {
         reps: pe.reps,
         weight: pe.weight,
         therapist_notes: pe.therapist_notes,
+        measurement_type: pe.measurement_type ?? 'reps',
+        bilateral: pe.bilateral ?? false,
       }))
 
       const blob = await pdf(
@@ -348,7 +355,7 @@ export default function Prescribe() {
       const activeIds = activeSessions.map(s => s.id)
       const { data: peData, error: peError } = await supabase
         .from('prescription_exercises')
-        .select('prescription_id, sets, reps, weight, therapist_notes, exercises(name)')
+        .select('prescription_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(name)')
         .in('prescription_id', activeIds)
         .order('created_at', { ascending: true })
       if (peError) throw peError
@@ -362,6 +369,8 @@ export default function Prescribe() {
           reps: row.reps,
           weight: row.weight,
           therapist_notes: row.therapist_notes,
+          measurement_type: row.measurement_type ?? 'reps',
+          bilateral: row.bilateral ?? false,
         })
       }
 
@@ -404,7 +413,7 @@ export default function Prescribe() {
       const activeIds = activeSessions.map(s => s.id)
       const { data: peData, error: peError } = await supabase
         .from('prescription_exercises')
-        .select('prescription_id, sets, reps, weight, therapist_notes, exercises(name)')
+        .select('prescription_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(name)')
         .in('prescription_id', activeIds)
         .order('created_at', { ascending: true })
       if (peError) throw peError
@@ -418,6 +427,8 @@ export default function Prescribe() {
           reps: row.reps,
           weight: row.weight,
           therapist_notes: row.therapist_notes,
+          measurement_type: row.measurement_type ?? 'reps',
+          bilateral: row.bilateral ?? false,
         })
       }
 
