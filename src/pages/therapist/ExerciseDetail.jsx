@@ -66,7 +66,7 @@ export default function ExerciseDetail() {
     async function fetchExercise() {
       const { data, error } = await supabase
         .from('exercises')
-        .select('id, name, description, category, categories, video_url, thumbnail_url, is_custom, created_by, default_sets, default_reps')
+        .select('id, name, description, category, categories, video_url, thumbnail_url, is_custom, created_by, default_sets, default_reps, is_timed, is_bilateral')
         .eq('id', id)
         .single()
 
@@ -180,7 +180,8 @@ export default function ExerciseDetail() {
             <p style={{ fontSize: '13px', color: 'var(--color-muted)', marginBottom: '12px' }}>
               <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>{exercise.default_sets} sets</span>
               {' × '}
-              <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>{exercise.default_reps} reps</span>
+              <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>{exercise.default_reps} {exercise.is_timed ? 'sec' : 'reps'}</span>
+              {exercise.is_bilateral && <span style={{ marginLeft: '8px' }}>· Both sides</span>}
             </p>
           )}
 
