@@ -41,7 +41,7 @@ export default function TemplateEdit() {
       supabase.from('templates').select('id, name, category, duration_weeks').eq('id', templateId).single(),
       supabase
         .from('template_exercises')
-        .select('id, sets, reps, weight, therapist_notes, exercises(id, name, category, video_url)')
+        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(id, name, category, video_url)')
         .eq('template_id', templateId)
         .order('created_at', { ascending: true }),
       supabase
@@ -89,7 +89,7 @@ export default function TemplateEdit() {
     navigate('/therapist/templates')
   }
 
-  async function handleAddExercise({ exerciseId, sets, reps, weight, notes }) {
+  async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral }) {
     const { data, error: insertError } = await supabase
       .from('template_exercises')
       .insert({
@@ -99,8 +99,10 @@ export default function TemplateEdit() {
         reps,
         weight,
         therapist_notes: notes,
+        measurement_type: measurementType ?? 'reps',
+        bilateral: bilateral ?? false,
       })
-      .select('id, sets, reps, weight, therapist_notes, exercises(id, name, category, video_url)')
+      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(id, name, category, video_url)')
       .single()
     if (insertError) throw new Error(insertError.message)
     setExercises(prev => [...prev, data])
@@ -271,7 +273,9 @@ export default function TemplateEdit() {
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)' }}>{te.exercises?.name}</div>
                     <div style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '2px' }}>
-                      {te.sets} sets × {te.reps} reps{te.weight ? ` · ${formatWeight(te.weight, weightUnit)}` : ''}
+                      {te.sets} sets × {te.reps} {te.measurement_type === 'seconds' ? 'sec' : 'reps'}
+                      {te.weight ? ` · ${formatWeight(te.weight, weightUnit)}` : ''}
+                      {te.bilateral ? ' · Both sides' : ''}
                     </div>
                     {te.therapist_notes && (
                       <div style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px', fontStyle: 'italic' }}>{te.therapist_notes}</div>
