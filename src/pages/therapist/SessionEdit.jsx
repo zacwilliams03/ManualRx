@@ -42,7 +42,7 @@ export default function SessionEdit() {
       supabase.from('prescriptions').select('id, name, frequency_days, start_date, duration_weeks').eq('id', sessionId).single(),
       supabase
         .from('prescription_exercises')
-        .select('id, sets, reps, weight, therapist_notes, exercises(id, name, category, video_url)')
+        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(id, name, category, video_url)')
         .eq('prescription_id', sessionId),
     ])
 
@@ -90,7 +90,7 @@ export default function SessionEdit() {
     navigate(`/therapist/prescribe/${clientId}`)
   }
 
-  async function handleAddExercise({ exerciseId, sets, reps, weight, notes }) {
+  async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral }) {
     const { data, error: insertError } = await supabase
       .from('prescription_exercises')
       .insert({
@@ -100,8 +100,10 @@ export default function SessionEdit() {
         reps,
         weight,
         therapist_notes: notes,
+        measurement_type: measurementType ?? 'reps',
+        bilateral: bilateral ?? false,
       })
-      .select('id, sets, reps, weight, therapist_notes, exercises(id, name, category, video_url)')
+      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(id, name, category, video_url)')
       .single()
     if (insertError) throw new Error(insertError.message)
     setExercises(prev => [...prev, data])
@@ -292,7 +294,9 @@ export default function SessionEdit() {
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)' }}>{pe.exercises.name}</div>
                     <div style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '2px' }}>
-                      {pe.sets} sets × {pe.reps} reps{pe.weight ? ` · ${formatWeight(pe.weight, weightUnit)}` : ''}
+                      {pe.sets} sets × {pe.reps} {pe.measurement_type === 'seconds' ? 'sec' : 'reps'}
+                      {pe.weight ? ` · ${formatWeight(pe.weight, weightUnit)}` : ''}
+                      {pe.bilateral ? ' · Both sides' : ''}
                     </div>
                     {pe.therapist_notes && (
                       <div style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px', fontStyle: 'italic' }}>{pe.therapist_notes}</div>
