@@ -146,8 +146,9 @@ export function AllSessionsPDF({ clinicName, clientName, prescriptions, weightUn
               <View key={ei} style={styles.exerciseBlock}>
                 <Text style={styles.exerciseTitle}>{ei + 1}. {ex.name}</Text>
                 <Text style={styles.exerciseMeta}>
-                  {ex.sets} sets × {ex.reps} reps
+                  {ex.sets} sets × {ex.reps} {ex.measurement_type === 'seconds' ? 'sec' : 'reps'}
                   {ex.weight ? ` @ ${weightDisplay(ex.weight, weightUnit)}` : ' — Bodyweight'}
+                  {ex.bilateral ? ' — Both sides' : ''}
                 </Text>
                 {ex.therapist_notes ? (
                   <View style={styles.notesBox}>
