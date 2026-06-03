@@ -68,7 +68,7 @@ export default function SessionWizard() {
         supabase.from('prescriptions').select('id, name, therapist_id').eq('id', sessionId).single(),
         supabase
           .from('prescription_exercises')
-          .select('id, sets, reps, weight, therapist_notes, exercises(id, name, category, video_url)')
+          .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(id, name, category, video_url)')
           .eq('prescription_id', sessionId)
           .order('id', { ascending: true }),
         supabase
@@ -391,9 +391,17 @@ export default function SessionWizard() {
           <div style={{ background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '10px 14px' }}>
             <p style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-subtle)', marginBottom: '4px' }}>Target</p>
             <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', margin: 0 }}>
-              {ex.sets} sets × {ex.reps} reps{ex.weight ? ` @ ${formatWeight(ex.weight, weightUnit)}` : ''}
+              {ex.sets} sets × {ex.reps} {ex.measurement_type === 'seconds' ? 'sec' : 'reps'}
+              {ex.weight ? ` @ ${formatWeight(ex.weight, weightUnit)}` : ''}
             </p>
           </div>
+
+          {ex.bilateral && (
+            <div style={{ background: 'rgba(41,181,204,0.06)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '7px', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '16px' }}>↔</span>
+              <span style={{ fontSize: '13px', color: '#29B5CC' }}>Complete on both sides</span>
+            </div>
+          )}
 
           {ex.therapist_notes && (
             <p style={{ background: 'rgba(41,181,204,0.06)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '7px', padding: '8px 12px', fontSize: '13px', color: '#29B5CC', margin: 0 }}>
@@ -419,7 +427,9 @@ export default function SessionWizard() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>Reps</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
+                    {ex.measurement_type === 'seconds' ? 'Seconds' : 'Reps'}
+                  </label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -466,7 +476,8 @@ export default function SessionWizard() {
                       transition={{ duration: 0.25 }}
                       style={{ fontSize: '11px', color: '#29B5CC', margin: 0 }}
                     >
-                      Set {i + 1}: {s.reps} reps{s.weight ? ` @ ${s.weight} ${weightUnit}` : ''}
+                      Set {i + 1}: {s.reps} {ex.measurement_type === 'seconds' ? 'sec' : 'reps'}
+                      {s.weight ? ` @ ${s.weight} ${weightUnit}` : ''}
                     </motion.p>
                   ))}
                 </div>
@@ -479,7 +490,8 @@ export default function SessionWizard() {
               <div style={{ background: 'var(--color-elevated)', border: '1px solid rgba(41,181,204,0.12)', borderRadius: '8px', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {setsData.map((s, i) => (
                   <p key={i} style={{ fontSize: '11px', color: '#29B5CC', margin: 0 }}>
-                    Set {i + 1}: {s.reps} reps{s.weight ? ` @ ${s.weight} ${weightUnit}` : ''}
+                    Set {i + 1}: {s.reps} {ex.measurement_type === 'seconds' ? 'sec' : 'reps'}
+                    {s.weight ? ` @ ${s.weight} ${weightUnit}` : ''}
                   </p>
                 ))}
               </div>
