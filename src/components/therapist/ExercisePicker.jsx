@@ -41,6 +41,8 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
   const [configReps, setConfigReps] = useState('')
   const [configWeight, setConfigWeight] = useState('')
   const [configNotes, setConfigNotes] = useState('')
+  const [configMeasurementType, setConfigMeasurementType] = useState('reps')
+  const [configBilateral, setConfigBilateral] = useState(false)
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState(null)
 
@@ -58,7 +60,7 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
     setSearching(true)
     const { data } = await supabase
       .from('exercises')
-      .select('id, name, category, categories, default_sets, default_reps, video_url')
+      .select('id, name, category, categories, default_sets, default_reps, is_timed, is_bilateral, video_url')
       .textSearch('fts', debouncedSearch.trim(), { type: 'websearch', config: 'english' })
       .limit(10)
     setSearchResults(data ?? [])
@@ -69,7 +71,7 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
     setCategoryLoading(true)
     setPickerCategory(cat)
     setPickerView('category')
-    let query = supabase.from('exercises').select('id, name, category, categories, default_sets, default_reps, video_url')
+    let query = supabase.from('exercises').select('id, name, category, categories, default_sets, default_reps, is_timed, is_bilateral, video_url')
     if (cat === 'Custom') query = query.eq('is_custom', true)
     else query = query.contains('categories', [cat])
     const { data } = await query.order('name', { ascending: true })
@@ -83,6 +85,8 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
     setConfigReps(String(ex.default_reps ?? 10))
     setConfigWeight('')
     setConfigNotes('')
+    setConfigMeasurementType(ex.is_timed ? 'seconds' : 'reps')
+    setConfigBilateral(ex.is_bilateral ?? false)
     setAddError(null)
     setPickerView('configure')
   }
@@ -97,6 +101,8 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
         reps: parseInt(configReps) || null,
         weight: configWeight ? toCanonical(parseFloat(configWeight), weightUnit) : null,
         notes: configNotes.trim() || null,
+        measurementType: configMeasurementType,
+        bilateral: configBilateral,
       })
       setPickerView('browse')
       setPickerExercise(null)
@@ -235,6 +241,29 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
             )}
           </div>
           <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Measurement type toggle */}
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>Measurement</label>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {['reps', 'seconds'].map(type => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setConfigMeasurementType(type)}
+                    style={{
+                      flex: 1, padding: '8px', fontSize: '12px', fontWeight: 500,
+                      borderRadius: '6px', cursor: 'pointer', transition: 'background 0.15s',
+                      border: configMeasurementType === type ? '1px solid #29B5CC' : '1px solid var(--color-border)',
+                      background: configMeasurementType === type ? '#29B5CC' : 'var(--color-elevated)',
+                      color: configMeasurementType === type ? '#000' : 'var(--color-muted)',
+                    }}
+                  >
+                    {type === 'reps' ? 'Reps' : 'Seconds'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>Sets</label>
@@ -245,7 +274,9 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>Reps</label>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>
+                  {configMeasurementType === 'seconds' ? 'Seconds' : 'Reps'}
+                </label>
                 <input
                   type="number" min="1" value={configReps}
                   onChange={e => setConfigReps(e.target.value)}
@@ -262,6 +293,18 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
                 />
               </div>
             </div>
+
+            {/* Bilateral checkbox */}
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={configBilateral}
+                onChange={e => setConfigBilateral(e.target.checked)}
+                style={{ accentColor: '#29B5CC', width: '14px', height: '14px' }}
+              />
+              <span style={{ fontSize: '13px', color: 'var(--color-text)' }}>Complete on both sides</span>
+            </label>
+
             <div>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>
                 Notes for client <span style={{ fontWeight: 400, color: 'var(--color-subtle)' }}>(optional)</span>
