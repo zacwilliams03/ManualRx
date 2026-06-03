@@ -36,7 +36,7 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
       .from('templates')
       .select(`
         id, name, category, duration_weeks,
-        template_exercises(id, exercise_id, sets, reps, weight, therapist_notes, exercises(name))
+        template_exercises(id, exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(name))
       `)
       .eq('therapist_id', therapistId)
       .order('created_at', { ascending: false })
@@ -58,6 +58,8 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
       reps: String(te.reps ?? ''),
       weight: te.weight != null ? String(fromCanonical(te.weight, weightUnit)) : '',
       notes: te.therapist_notes ?? '',
+      measurementType: te.measurement_type ?? 'reps',
+      bilateral: te.bilateral ?? false,
     }))
     setCustomExercises(initial)
     setStep('customise')
@@ -92,6 +94,8 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
         reps: te.reps,
         weight: te.weight,
         therapist_notes: te.therapist_notes,
+        measurement_type: te.measurement_type ?? 'reps',
+        bilateral: te.bilateral ?? false,
       }))
       if (exerciseRows.length > 0) {
         const { error } = await supabase.from('prescription_exercises').insert(exerciseRows)
@@ -117,6 +121,8 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
         reps: parseInt(ex.reps) || null,
         weight: ex.weight ? toCanonical(parseFloat(ex.weight), weightUnit) : null,
         therapist_notes: ex.notes.trim() || null,
+        measurement_type: ex.measurementType ?? 'reps',
+        bilateral: ex.bilateral ?? false,
       }))
       if (exerciseRows.length > 0) {
         const { error } = await supabase.from('prescription_exercises').insert(exerciseRows)
