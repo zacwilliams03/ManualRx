@@ -162,9 +162,8 @@ export default function Prescribe() {
   useEffect(() => {
     if (activeTab !== 'history') return
     if (historyTabLoaded) return
+    if (loading) return  // wait for fetchData to complete so sessions is fully populated
 
-    // sessions may be empty if client has no prescriptions — that's fine,
-    // we still want to fetch check-in history.
     const prescriptionIds = (sessions ?? []).map(s => s.id)
 
     setHistoryTabLoading(true)
@@ -220,7 +219,7 @@ export default function Prescribe() {
       setHistoryTabLoading(false)
       setHistoryTabLoaded(true)
     })
-  }, [activeTab, sessions, historyTabLoaded])
+  }, [activeTab, sessions, historyTabLoaded, loading])
 
   useEffect(() => {
     if (!showPdfMenu) return
