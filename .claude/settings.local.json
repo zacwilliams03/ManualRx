@@ -17,7 +17,16 @@
       "Skill(superpowers:finishing-a-development-branch:*)",
       "Skill(superpowers:brainstorming)",
       "Skill(superpowers:brainstorming:*)",
-      "Read(//c/Users/Zacwi/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/brainstorming/**)"
+      "Read(//c/Users/Zacwi/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/brainstorming/**)",
+      "Read(//c/Users/Zacwi/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/subagent-driven-development/**)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(npx vitest *)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"console.log\\('Jun 1, 2026:', new Date\\('2026-06-01'\\).toDateString\\(\\), '\\(' + new Date\\('2026-06-01'\\).getDay\\(\\) + '\\)'\\); console.log\\('Jun 2, 2026:', new Date\\('2026-06-02'\\).toDateString\\(\\), '\\(' + new Date\\('2026-06-02'\\).getDay\\(\\) + '\\)'\\); console.log\\('Jun 3, 2026:', new Date\\('2026-06-03'\\).toDateString\\(\\), '\\(' + new Date\\('2026-06-03'\\).getDay\\(\\) + '\\)'\\); console.log\\('Jun 4, 2026:', new Date\\('2026-06-04'\\).toDateString\\(\\), '\\(' + new Date\\('2026-06-04'\\).getDay\\(\\) + '\\)'\\); console.log\\('Jun 8, 2026:', new Date\\('2026-06-08'\\).toDateString\\(\\), '\\(' + new Date\\('2026-06-08'\\).getDay\\(\\) + '\\)'\\); console.log\\('Jun 11, 2026:', new Date\\('2026-06-11'\\).toDateString\\(\\), '\\(' + new Date\\('2026-06-11'\\).getDay\\(\\) + '\\)'\\);\")",
+      "Bash(npm test *)",
+      "Bash(ls /mnt/c/Users/Zacwi/PrescriptR/src/pages/client/)",
+      "Read(//mnt/c/Users/Zacwi/PrescriptR/src/pages/**)"
     ]
   }
 }
