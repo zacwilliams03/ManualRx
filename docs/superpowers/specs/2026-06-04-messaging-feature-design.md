@@ -69,7 +69,7 @@ CREATE POLICY "client_own_messages" ON messages
 
 - **A message is unread** if `read_at IS NULL` and the sender is not the current user.
 - **Therapist unread count:** `COUNT(*) WHERE therapist_id = auth.uid() AND sender_role = 'client' AND read_at IS NULL`
-- **Client unread count:** `COUNT(*) WHERE client_id = clientRecord.id AND sender_role = 'therapist' AND read_at IS NULL`
+- **Client unread count:** `COUNT(*) WHERE client_id = <clients.id> AND sender_role = 'therapist' AND read_at IS NULL` — `clients.id` must be fetched first via `SELECT id FROM clients WHERE user_id = auth.uid()`, since `auth.uid()` ≠ `clients.id`.
 - **Mark as read:** Bulk `UPDATE messages SET read_at = now() WHERE therapist_id = ? AND client_id = ? AND read_at IS NULL AND sender_role = <other_party>` fires when a thread is opened, before the first render.
 
 ---
@@ -127,8 +127,10 @@ New page `ClientMessages.jsx`. Single thread — clients only ever have one conv
 
 **Thread body:** Same layout as therapist thread — therapist messages left, client messages right. Mark therapist messages as read on mount.
 
+**Client ID lookup:** Before rendering, fetch `clients.id` where `user_id = auth.uid()`. Use this as `client_id` in all queries and inserts. Do NOT use `profile.id` as `client_id` — `auth.uid()` ≠ `clients.id`. Follow the same pattern as `SessionWizard.jsx`.
+
 **Send input:** Textarea + Send button. On submit:
-1. INSERT: `{ therapist_id, client_id, sender_role: 'client', body }`
+1. INSERT: `{ therapist_id, client_id: <fetched clients.id>, sender_role: 'client', body }`
 2. Clear textarea
 3. Refetch immediately
 
@@ -136,7 +138,9 @@ New page `ClientMessages.jsx`. Single thread — clients only ever have one conv
 
 **Empty state:** "No messages yet. Send your therapist a message below."
 
-**Nav:** Add "Messages" tab to `BottomNav.jsx`. Use `MessageSquare` from lucide-react. Show unread dot badge (blue circle, no count) when `useUnreadCount` > 0.
+**Nav:** Add "Messages" tab to `BottomNav.jsx`. Use `MessageSquare` from lucide-react. Show unread dot badge (blue circle, no count) when unread count > 0.
+
+**BottomNav implementation note:** The current `BottomNav.jsx` uses a static `TABS` array rendered with a plain `map`. The unread dot requires per-tab conditional logic. Add an optional `showBadge: true` field to the Messages tab config entry. In the component body, call `useUnreadCount()` once at the top; inside the map, render the dot badge when `tab.showBadge && unreadCount > 0`. The `exact: false` flag must be set on the Messages tab so it remains active at `/client/messages`.
 
 ---
 
@@ -144,34 +148,49 @@ New page `ClientMessages.jsx`. Single thread — clients only ever have one conv
 
 Both therapist sidebar and client bottom nav use a `useUnreadCount` hook that fires a single `COUNT` query on mount. The badge refreshes each time the user navigates (component re-mounts). No global polling interval — a slightly stale count between navigations is acceptable for async messaging.
 
+**Important — `clientRecord` does not exist in `AuthContext`.** `useAuth()` exposes only `{ session, user, profile, loading, signOut }`. For the client path, the hook must fetch `clients.id` itself in a two-step async operation.
+
 ```js
 // useUnreadCount.js
 export function useUnreadCount() {
   const [count, setCount] = useState(0)
-  const { profile, clientRecord } = useAuth()
+  const { profile } = useAuth()
 
   useEffect(() => {
-    async function fetch() {
-      if (profile?.role === 'therapist') {
-        const { count } = await supabase
+    if (!profile) return
+    let cancelled = false
+
+    async function run() {
+      if (profile.role === 'therapist') {
+        const { count: c } = await supabase
           .from('messages')
           .select('*', { count: 'exact', head: true })
           .eq('therapist_id', profile.id)
           .eq('sender_role', 'client')
           .is('read_at', null)
-        setCount(count ?? 0)
-      } else if (clientRecord) {
-        const { count } = await supabase
+        if (!cancelled) setCount(c ?? 0)
+      } else {
+        // Step 1: resolve clients.id (auth.uid() ≠ clients.id)
+        const { data: clientRow } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('user_id', profile.id)
+          .single()
+        if (!clientRow || cancelled) return
+        // Step 2: count unread
+        const { count: c } = await supabase
           .from('messages')
           .select('*', { count: 'exact', head: true })
-          .eq('client_id', clientRecord.id)
+          .eq('client_id', clientRow.id)
           .eq('sender_role', 'therapist')
           .is('read_at', null)
-        setCount(count ?? 0)
+        if (!cancelled) setCount(c ?? 0)
       }
     }
-    fetch()
-  }, [profile, clientRecord])
+
+    run()
+    return () => { cancelled = true }
+  }, [profile])
 
   return count
 }
