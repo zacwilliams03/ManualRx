@@ -35,37 +35,54 @@ export default function TherapistMessages() {
   }, [profile?.id])
 
   async function fetchConversations() {
-    const { data, error: fetchError } = await supabase
-      .from('messages')
-      .select('id, client_id, sender_role, body, created_at, read_at, clients(name)')
-      .eq('therapist_id', profile.id)
-      .order('created_at', { ascending: false })
-      .limit(500)
+    const [clientsRes, messagesRes] = await Promise.all([
+      supabase
+        .from('clients')
+        .select('id, name')
+        .eq('therapist_id', profile.id)
+        .order('name'),
+      supabase
+        .from('messages')
+        .select('id, client_id, sender_role, body, created_at, read_at')
+        .eq('therapist_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(500),
+    ])
 
-    if (fetchError) {
-      setError('Failed to load messages.')
+    if (clientsRes.error) {
+      setError('Failed to load clients.')
       setLoading(false)
       return
     }
 
-    // Deduplicate: one entry per client, keeping the most recent message (first seen)
-    const map = {}
-    ;(data ?? []).forEach(msg => {
-      if (!map[msg.client_id]) {
-        map[msg.client_id] = {
-          client_id: msg.client_id,
-          client_name: msg.clients?.name ?? 'Unknown',
+    // Build message map: one entry per client (most recent message first)
+    const msgMap = {}
+    ;(messagesRes.data ?? []).forEach(msg => {
+      if (!msgMap[msg.client_id]) {
+        msgMap[msg.client_id] = {
           last_message: msg.body,
           last_message_at: msg.created_at,
           unread_count: 0,
         }
       }
       if (msg.sender_role === 'client' && !msg.read_at) {
-        map[msg.client_id].unread_count++
+        msgMap[msg.client_id].unread_count++
       }
     })
 
-    setConversations(Object.values(map))
+    // Merge: all clients, attach message data where it exists
+    const withMessages = []
+    const withoutMessages = []
+    ;(clientsRes.data ?? []).forEach(client => {
+      const msg = msgMap[client.id]
+      const entry = { client_id: client.id, client_name: client.name, ...msg }
+      if (msg) withMessages.push(entry)
+      else withoutMessages.push(entry)
+    })
+
+    // Clients with messages first (already sorted by last_message_at desc via query),
+    // then clients with no messages (already sorted alphabetically via query)
+    setConversations([...withMessages, ...withoutMessages])
     setLoading(false)
   }
 
@@ -83,7 +100,7 @@ export default function TherapistMessages() {
         ) : conversations.length === 0 ? (
           <div style={{ ...CARD, textAlign: 'center', padding: '40px 24px' }}>
             <p style={{ color: 'var(--color-muted)', fontSize: '14px', margin: 0 }}>
-              No messages yet. Your clients can message you from their Messages tab.
+              No clients yet. Add clients from the Clients page to start messaging.
             </p>
           </div>
         ) : (
@@ -124,15 +141,20 @@ export default function TherapistMessages() {
                     }}>
                       {conv.client_name}
                     </span>
-                    <span style={{ fontSize: '11px', color: 'var(--color-muted)', flexShrink: 0, marginLeft: '8px' }}>
-                      {relativeTime(conv.last_message_at)}
-                    </span>
+                    {conv.last_message_at && (
+                      <span style={{ fontSize: '11px', color: 'var(--color-muted)', flexShrink: 0, marginLeft: '8px' }}>
+                        {relativeTime(conv.last_message_at)}
+                      </span>
+                    )}
                   </div>
                   <p style={{
                     fontSize: '13px', color: 'var(--color-muted)', margin: 0,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    fontStyle: conv.last_message ? 'normal' : 'italic',
                   }}>
-                    {conv.last_message.length > 60 ? conv.last_message.slice(0, 60) + '…' : conv.last_message}
+                    {conv.last_message
+                      ? (conv.last_message.length > 60 ? conv.last_message.slice(0, 60) + '…' : conv.last_message)
+                      : 'No messages yet — send the first one'}
                   </p>
                 </div>
                 {conv.unread_count > 0 && (
