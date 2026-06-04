@@ -121,10 +121,10 @@ What the program check-in fields are used for in v1: display only (show which fo
 1. Prescribe page → "New Program" → "Apply program template"
 2. Modal: pick a program template → enter start date → "Apply"
 3. Inserts `programs` row with `start_date`
-4. For each `program_template_sessions` row:
-   - If `template_id` is set: copies exercises from that template into a new `prescriptions` row (same logic as existing `ApplyTemplateModal`); sets `source_template_id = template_id`
-   - If `template_id` is null: creates an empty `prescriptions` row with `name = session_name`
-   - Sets `program_id`, `week_number`, and `start_date = program.start_date + (week_number - 1) * 7 days`
+4. For each `program_template_sessions` row — processed as **sequential `await` calls in a `for...of` loop** (not batched), matching the pattern used in `ApplyTemplateModal`:
+   - If `template_id` is set: fetch `template_exercises` for that template, insert a `prescriptions` row, then insert all `prescription_exercises` rows copied from the template; sets `source_template_id = template_id`
+   - If `template_id` is null: insert an empty `prescriptions` row with `name = session_name` (no exercises)
+   - Both cases: sets `program_id`, `week_number`, and `start_date = program.start_date + (week_number - 1) * 7 days`
 5. Check-in form assignments from `program_template_week_checkins` and `program_templates.default_checkin_form_id` are copied into the new `program_week_checkins` and `programs.default_checkin_form_id` as configuration — no `check_in_instances` rows are created (see Check-in Integration above)
 6. Navigates back to Prescribe page
 
@@ -149,8 +149,35 @@ What the program check-in fields are used for in v1: display only (show which fo
 
 ### Prescribe page (`Prescribe.jsx`)
 
-**Prescribed Sessions tab — single unified list:**
-- Programs and standalone sessions render in one flat list, sorted by `programs.created_at` / `prescriptions.created_at` descending. Sort anchor for a program group is `programs.created_at`.
+**Prescribed Sessions tab — data fetching:**
+
+`Prescribe.jsx` makes two parallel fetches on mount (both scoped to `therapist_id` + `client_id`):
+
+1. **Programs query:**
+   ```js
+   supabase.from('programs')
+     .select('id, name, duration_weeks, start_date, created_at, default_checkin_form_id')
+     .eq('therapist_id', profile.id)
+     .eq('client_id', clientId)
+     .order('created_at', { ascending: false })
+   ```
+
+2. **Prescriptions query** (existing, unchanged shape):
+   ```js
+   supabase.from('prescriptions')
+     .select('id, name, frequency_days, start_date, created_at, program_id, week_number, ...')
+     .eq('therapist_id', profile.id)
+     .eq('client_id', clientId)
+     .order('created_at', { ascending: false })
+   ```
+
+**Client-side merge for rendering:**
+- Build a `Map<programId, { program, sessions: [] }>` from the programs result
+- Iterate prescriptions: if `program_id` is set, push into the matching program's sessions array; otherwise push into a `standaloneSessions` array
+- Render the unified list by interleaving programs and standalones sorted by their respective `created_at` descending. Sort key for a program group = `program.created_at`.
+
+**Unified list rendering:**
+- Programs and standalone sessions in one flat list, sorted by their `created_at` descending
 - Program group: a header card showing program name + week progress badge (e.g., "Week 3 of 12 · Started Jun 1") with an accent left border, followed by the program's sessions indented beneath it in week order
 - Standalone sessions render exactly as today
 - No section dividers separating programs from standalones
@@ -164,7 +191,7 @@ What the program check-in fields are used for in v1: display only (show which fo
 
 Two tabs:
 - **"Session Templates"** — existing list and behavior; "New Template" button relabeled **"New Session Template"**
-- **"Program Templates"** — lists `program_templates` rows with name, week count, session count (derived from a count query); button labeled **"New Program Template"**; clicking a template navigates to `/therapist/program-templates/:templateId`
+- **"Program Templates"** — lists `program_templates` rows with name, week count, and session count; button labeled **"New Program Template"**; clicking a template navigates to `/therapist/program-templates/:templateId`. Session count is fetched via PostgREST embed count: `.select('id, name, duration_weeks, created_at, program_template_sessions(count)')` — same pattern as the existing templates list uses for `template_exercises(count)`.
 
 The existing session template edit route `/therapist/templates/:templateId` → `TemplateEdit.jsx` is unchanged.
 
@@ -209,7 +236,7 @@ The existing session template edit route `/therapist/templates/:templateId` → 
 | DB migration | Supabase SQL Editor | New tables + index + prescriptions columns |
 
 No changes to `AppSidebar.jsx` (programs are accessed via the Clients → Prescribe flow, not top-level nav).  
-No changes to `SessionEdit.jsx` (receives `program_id`, `week_number`, `clientId` as URL params or query params; no internal changes needed).  
+No changes to `SessionEdit.jsx` — it receives context via **query params** (not URL params), appended to the existing route `/therapist/prescribe/:clientId/sessions/:sessionId?programId=...&weekNumber=...`. No new route needed; `SessionEdit` reads `useSearchParams()` and passes these values through on save so the back-navigation returns to the correct program editor URL. Adding a new URL-param route would collide with the existing `sessions/:sessionId` pattern.  
 No changes to the check-in system.
 
 ---
