@@ -765,7 +765,7 @@ git commit -m "feat: add client messages page"
 
 - [ ] **Step 1: Add imports to `src/App.jsx`**
 
-Add after the existing `CheckInWizard` import (line 23):
+Add after the existing `CheckInWizard` import. Search for `import CheckInWizard` to locate the line:
 
 ```jsx
 import TherapistMessages from './pages/therapist/TherapistMessages'
@@ -775,7 +775,7 @@ import ClientMessages from './pages/client/ClientMessages'
 
 - [ ] **Step 2: Add therapist routes in `src/App.jsx`**
 
-Add after the existing `checkins/:formId` route (after line 104):
+Add immediately after the existing `/therapist/checkins/:formId` route. Search for `checkins/:formId` to locate it:
 
 ```jsx
 <Route path="/therapist/messages" element={<ProtectedRoute requiredRole="therapist"><TherapistMessages /></ProtectedRoute>} />
@@ -784,7 +784,7 @@ Add after the existing `checkins/:formId` route (after line 104):
 
 - [ ] **Step 3: Add client route in `src/App.jsx`**
 
-Add after the existing `/client/checkin/:instanceId` route (after line 111):
+Add immediately after the existing `/client/checkin/:instanceId` route. Search for `checkin/:instanceId` to locate it:
 
 ```jsx
 <Route path="/client/messages" element={<ProtectedRoute requiredRole="client"><ClientMessages /></ProtectedRoute>} />
@@ -794,7 +794,7 @@ Add after the existing `/client/checkin/:instanceId` route (after line 111):
 
 - [ ] **Step 4: Add `MessageSquare` import and `useUnreadCount` to `src/components/therapist/AppSidebar.jsx`**
 
-Add `MessageSquare` to the existing lucide-react import line (line 6):
+Add `MessageSquare` to the existing lucide-react import. The import already contains `ClipboardList` — add `MessageSquare` alongside it:
 
 ```jsx
 import {
