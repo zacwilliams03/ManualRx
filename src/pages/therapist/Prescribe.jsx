@@ -162,25 +162,28 @@ export default function Prescribe() {
   useEffect(() => {
     if (activeTab !== 'history') return
     if (historyTabLoaded) return
-    if (!sessions || sessions.length === 0) return
 
-    const prescriptionIds = sessions.map(s => s.id)
+    // sessions may be empty if client has no prescriptions — that's fine,
+    // we still want to fetch check-in history.
+    const prescriptionIds = (sessions ?? []).map(s => s.id)
 
     setHistoryTabLoading(true)
     Promise.all([
-      supabase
-        .from('session_logs')
-        .select(`
-          id, completed_at, session_rpe, session_notes,
-          prescriptions(name),
-          exercise_logs(
-            id, sets_completed, reps_completed, weight_completed,
-            sets_data, pain_rating, client_notes, video_url,
-            prescription_exercises(sets, reps, weight, measurement_type, bilateral, exercises(name))
-          )
-        `)
-        .in('prescription_id', prescriptionIds)
-        .order('completed_at', { ascending: false }),
+      prescriptionIds.length > 0
+        ? supabase
+            .from('session_logs')
+            .select(`
+              id, completed_at, session_rpe, session_notes,
+              prescriptions(name),
+              exercise_logs(
+                id, sets_completed, reps_completed, weight_completed,
+                sets_data, pain_rating, client_notes, video_url,
+                prescription_exercises(sets, reps, weight, measurement_type, bilateral, exercises(name))
+              )
+            `)
+            .in('prescription_id', prescriptionIds)
+            .order('completed_at', { ascending: false })
+        : Promise.resolve({ data: [] }),
       supabase
         .from('check_in_instances')
         .select(`

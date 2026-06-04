@@ -22,7 +22,15 @@ const inputStyle = {
   outline: 'none',
 }
 
-const selectStyle = { ...inputStyle, cursor: 'pointer' }
+// Selects need an opaque background — transparent overlays on native <select>
+// show the OS chrome behind them, causing white-on-white text on Windows.
+const selectStyle = {
+  ...inputStyle,
+  cursor: 'pointer',
+  background: '#161b22',
+  color: '#e6edf3',
+  colorScheme: 'dark',
+}
 
 function todayISO() {
   return new Date().toISOString().split('T')[0]
@@ -234,8 +242,8 @@ export default function CheckInEdit() {
               value={selectedClientId}
               onChange={e => setSelectedClientId(e.target.value)}
             >
-              <option value="">Select a client…</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              <option value="" style={{ background: '#161b22', color: '#e6edf3' }}>Select a client…</option>
+              {clients.map(c => <option key={c.id} value={c.id} style={{ background: '#161b22', color: '#e6edf3' }}>{c.name}</option>)}
             </select>
           </motion.div>
         )}
@@ -303,12 +311,23 @@ export default function CheckInEdit() {
             <div>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>Appears on</label>
               <select style={selectStyle} value={dayOfWeek} onChange={e => setDayOfWeek(Number(e.target.value))}>
-                {DAY_NAMES.map((d, i) => <option key={i} value={i}>{d}</option>)}
+                {DAY_NAMES.map((d, i) => <option key={i} value={i} style={{ background: '#161b22', color: '#e6edf3' }}>{d}</option>)}
               </select>
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>Start date</label>
-              <input type="date" style={inputStyle} value={startDate} onChange={e => setStartDate(e.target.value)} />
+              <input
+                type="date"
+                style={inputStyle}
+                value={startDate}
+                onChange={e => {
+                  setStartDate(e.target.value)
+                  if (e.target.value) {
+                    // Use noon to avoid midnight UTC rolling into the previous day in UTC- zones
+                    setDayOfWeek(new Date(e.target.value + 'T12:00:00').getDay())
+                  }
+                }}
+              />
             </div>
           </div>
           <div>

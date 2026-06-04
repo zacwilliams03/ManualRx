@@ -174,45 +174,52 @@ export default function CheckIns() {
                       </div>
                     </div>
 
-                    {/* Response detail */}
+                    {/* Response detail — expand on View click */}
                     <AnimatePresence>
-                      {isExpanded && response && (
+                      {isExpanded && (
                         <motion.div
+                          key={`detail-${instance.id}`}
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
                           style={{ overflow: 'hidden' }}
                         >
                           <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid var(--color-border)' }}>
-                            <div style={{ fontSize: '11px', color: 'var(--color-subtle)', marginBottom: '12px' }}>
-                              Submitted {new Date(response.submitted_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
-                            </div>
-                            {(form?.check_in_questions ?? [])
-                              .sort((a, b) => a.order_index - b.order_index)
-                              .map(q => {
-                                const answer = response.answers?.[q.id]
-                                return (
-                                  <div key={q.id} style={{ marginBottom: '14px' }}>
-                                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-muted)', marginBottom: '6px' }}>{q.question_text}</div>
-                                    {q.question_type === 'scale' ? (
-                                      <div>
-                                        <div style={{ display: 'flex', gap: '5px' }}>
-                                          {[1,2,3,4,5].map(n => (
-                                            <div key={n} style={{ width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 600, background: answer === n ? '#29B5CC' : 'rgba(255,255,255,0.03)', border: answer === n ? '1px solid #29B5CC' : '1px solid rgba(100,160,255,0.12)', color: answer === n ? '#000' : 'var(--color-muted)' }}>{n}</div>
-                                          ))}
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--color-subtle)', marginTop: '4px', width: '160px' }}>
-                                          <span>1 – Not good</span><span>5 – Very good</span>
-                                        </div>
+                            {!response ? (
+                              <p style={{ fontSize: '12px', color: 'var(--color-muted)' }}>Response data not available.</p>
+                            ) : (
+                              <>
+                                <div style={{ fontSize: '11px', color: 'var(--color-subtle)', marginBottom: '12px' }}>
+                                  Submitted {new Date(response.submitted_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </div>
+                                {(form?.check_in_questions ?? [])
+                                  .sort((a, b) => a.order_index - b.order_index)
+                                  .map(q => {
+                                    const answer = response.answers?.[q.id]
+                                    return (
+                                      <div key={q.id} style={{ marginBottom: '14px' }}>
+                                        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-muted)', marginBottom: '6px' }}>{q.question_text}</div>
+                                        {q.question_type === 'scale' ? (
+                                          <div>
+                                            <div style={{ display: 'flex', gap: '5px' }}>
+                                              {[1,2,3,4,5].map(n => (
+                                                <div key={n} style={{ width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 600, background: answer === n ? '#29B5CC' : 'rgba(255,255,255,0.03)', border: answer === n ? '1px solid #29B5CC' : '1px solid rgba(100,160,255,0.12)', color: answer === n ? '#000' : 'var(--color-muted)' }}>{n}</div>
+                                              ))}
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--color-subtle)', marginTop: '4px', width: '160px' }}>
+                                              <span>1 – Not good</span><span>5 – Very good</span>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div style={{ fontSize: '13px', color: 'var(--color-text)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(100,160,255,0.08)', borderRadius: '6px', padding: '8px 10px', lineHeight: 1.5 }}>
+                                            {answer ?? '—'}
+                                          </div>
+                                        )}
                                       </div>
-                                    ) : (
-                                      <div style={{ fontSize: '13px', color: 'var(--color-text)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(100,160,255,0.08)', borderRadius: '6px', padding: '8px 10px', lineHeight: 1.5 }}>
-                                        {answer ?? '—'}
-                                      </div>
-                                    )}
-                                  </div>
-                                )
-                              })}
+                                    )
+                                  })}
+                              </>
+                            )}
                           </div>
                         </motion.div>
                       )}
