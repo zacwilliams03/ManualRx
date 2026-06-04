@@ -89,7 +89,7 @@ export default function TherapistMessages() {
   return (
     <SidebarLayout>
       <PageHero title="Messages" subtitle="Conversations with your clients" />
-      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 16px 40px' }}>
+      <div style={{ padding: '0 24px 40px' }}>
         {loading ? (
           <div style={{ ...CARD }}>
             <ShimmerLine />
