@@ -1,16 +1,19 @@
 import { useLocation, Link } from 'react-router-dom'
 import { useReducedMotion } from 'framer-motion'
-import { LayoutList, History, Settings } from 'lucide-react'
+import { LayoutList, History, MessageSquare, Settings } from 'lucide-react'
+import { useUnreadCount } from '../../hooks/useUnreadCount'
 
 const TABS = [
-  { to: '/client',          icon: LayoutList, label: 'Sessions', exact: true  },
-  { to: '/client/history',  icon: History,    label: 'History',  exact: false },
-  { to: '/client/settings', icon: Settings,   label: 'Settings', exact: false },
+  { to: '/client',          icon: LayoutList,    label: 'Sessions',  exact: true,  showBadge: false },
+  { to: '/client/history',  icon: History,       label: 'History',   exact: false, showBadge: false },
+  { to: '/client/messages', icon: MessageSquare, label: 'Messages',  exact: false, showBadge: true  },
+  { to: '/client/settings', icon: Settings,      label: 'Settings',  exact: false, showBadge: false },
 ]
 
 export default function BottomNav() {
   const { pathname } = useLocation()
   const prefersReduced = useReducedMotion()
+  const unreadCount = useUnreadCount()
 
   return (
     <nav
@@ -25,7 +28,7 @@ export default function BottomNav() {
       }}
     >
       <div className="flex items-stretch">
-        {TABS.map(({ to, icon: Icon, label, exact }) => {
+        {TABS.map(({ to, icon: Icon, label, exact, showBadge }) => {
           const active = exact ? pathname === to : pathname.startsWith(to)
           return (
             <Link
@@ -40,7 +43,20 @@ export default function BottomNav() {
               ].join(' ')}
               style={{ minHeight: '56px' }}
             >
-              <Icon size={20} strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
+              <div style={{ position: 'relative' }}>
+                <Icon size={20} strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
+                {showBadge && unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-3px',
+                    right: '-3px',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: '#3b82f6',
+                  }} />
+                )}
+              </div>
               <span className="text-[10px] font-medium leading-none">{label}</span>
             </Link>
           )

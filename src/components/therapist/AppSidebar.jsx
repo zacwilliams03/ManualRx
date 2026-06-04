@@ -7,6 +7,7 @@ import {
   FileText,
   Dumbbell,
   ClipboardList,
+  MessageSquare,
   Settings,
   ChevronUp,
   LogOut,
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
+import { useUnreadCount } from '../../hooks/useUnreadCount'
 
 // ─── Logo ────────────────────────────────────────────────────────────────────
 
@@ -49,7 +51,7 @@ function Logo() {
 
 // ─── NavItem ─────────────────────────────────────────────────────────────────
 
-function NavItem({ to, icon: Icon, label, activePrefixes, exact, onClose }) {
+function NavItem({ to, icon: Icon, label, activePrefixes, exact, onClose, badge }) {
   const { pathname } = useLocation()
   const prefixes = activePrefixes ?? [to]
   const active = exact ? pathname === to : prefixes.some(p => pathname.startsWith(p))
@@ -78,7 +80,16 @@ function NavItem({ to, icon: Icon, label, activePrefixes, exact, onClose }) {
         onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
       >
         <Icon size={17} strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
-        <span className="text-sm font-medium">{label}</span>
+        <span className="text-sm font-medium flex-1">{label}</span>
+        {badge > 0 && (
+          <span style={{
+            background: '#3b82f6', color: '#fff', borderRadius: '10px',
+            padding: '1px 6px', fontSize: '11px', fontWeight: 700,
+            flexShrink: 0, lineHeight: '16px',
+          }}>
+            {badge}
+          </span>
+        )}
       </Link>
     </div>
   )
@@ -342,6 +353,7 @@ function AccountSection() {
 // ─── AppSidebar ───────────────────────────────────────────────────────────────
 
 export default function AppSidebar({ onClose }) {
+  const unreadCount = useUnreadCount()
   return (
     <nav
       aria-label="Main navigation"
@@ -395,6 +407,14 @@ export default function AppSidebar({ onClose }) {
           icon={ClipboardList}
           label="Check-Ins"
           activePrefixes={['/therapist/checkins']}
+          onClose={onClose}
+        />
+        <NavItem
+          to="/therapist/messages"
+          icon={MessageSquare}
+          label="Messages"
+          activePrefixes={['/therapist/messages']}
+          badge={unreadCount}
           onClose={onClose}
         />
       </div>

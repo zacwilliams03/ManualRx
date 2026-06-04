@@ -21,6 +21,9 @@ import TemplateEdit from './pages/therapist/TemplateEdit'
 import CheckIns from './pages/therapist/CheckIns'
 import CheckInEdit from './pages/therapist/CheckInEdit'
 import CheckInWizard from './pages/client/CheckInWizard'
+import TherapistMessages from './pages/therapist/TherapistMessages'
+import TherapistThread from './pages/therapist/TherapistThread'
+import ClientMessages from './pages/client/ClientMessages'
 import History from './pages/client/History'
 import Join from './pages/Join'
 import Onboarding from './pages/therapist/Onboarding'
@@ -102,6 +105,8 @@ export default function App() {
           <Route path="/therapist/checkins" element={<ProtectedRoute requiredRole="therapist"><CheckIns /></ProtectedRoute>} />
           <Route path="/therapist/checkins/new" element={<ProtectedRoute requiredRole="therapist"><CheckInEdit /></ProtectedRoute>} />
           <Route path="/therapist/checkins/:formId" element={<ProtectedRoute requiredRole="therapist"><CheckInEdit /></ProtectedRoute>} />
+          <Route path="/therapist/messages" element={<ProtectedRoute requiredRole="therapist"><TherapistMessages /></ProtectedRoute>} />
+          <Route path="/therapist/messages/:clientId" element={<ProtectedRoute requiredRole="therapist"><TherapistThread /></ProtectedRoute>} />
 
           {/* Client — protected */}
           <Route path="/client" element={<ProtectedRoute requiredRole="client"><ClientDashboard /></ProtectedRoute>} />
@@ -109,6 +114,7 @@ export default function App() {
           <Route path="/client/sessions/:sessionId" element={<ProtectedRoute requiredRole="client"><SessionWizard /></ProtectedRoute>} />
           <Route path="/client/history" element={<ProtectedRoute requiredRole="client"><History /></ProtectedRoute>} />
           <Route path="/client/checkin/:instanceId" element={<ProtectedRoute requiredRole="client"><CheckInWizard /></ProtectedRoute>} />
+          <Route path="/client/messages" element={<ProtectedRoute requiredRole="client"><ClientMessages /></ProtectedRoute>} />
 
           {/* Anything else */}
           <Route path="*" element={<Navigate to="/" replace />} />
