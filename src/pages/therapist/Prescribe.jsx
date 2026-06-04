@@ -567,6 +567,12 @@ export default function Prescribe() {
                 )}
               </div>
             )}
+            <Link
+              to={`/therapist/messages/${clientId}`}
+              style={{ padding: '8px 14px', background: 'transparent', color: 'var(--color-muted)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', fontSize: '12px', textDecoration: 'none' }}
+            >
+              Message
+            </Link>
             {activeTab === 'prescriptions' && (
               <>
                 <button
