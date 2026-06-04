@@ -310,6 +310,19 @@ export default function Clients() {
                         >
                           View
                         </Link>
+                        <Link
+                          to={`/therapist/messages/${client.id}`}
+                          style={{
+                            fontSize: '12px',
+                            padding: '5px 12px',
+                            border: '1px solid rgba(41,181,204,0.3)',
+                            borderRadius: '6px',
+                            color: '#29B5CC',
+                            textDecoration: 'none',
+                          }}
+                        >
+                          Message
+                        </Link>
                         <button
                           onClick={() => toggleActive(client)}
                           style={{

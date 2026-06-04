@@ -23,6 +23,7 @@ export default function TherapistMessages() {
   const [conversations, setConversations] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     if (profile?.id) fetchConversations()
@@ -90,6 +91,24 @@ export default function TherapistMessages() {
     <SidebarLayout>
       <PageHero title="Messages" subtitle="Conversations with your clients" />
       <div style={{ padding: '0 24px 40px' }}>
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search clients…"
+          style={{
+            width: '100%',
+            maxWidth: '320px',
+            padding: '8px 14px',
+            background: 'var(--color-elevated)',
+            border: '1px solid var(--color-border)',
+            borderRadius: '7px',
+            color: 'var(--color-text)',
+            fontSize: '13px',
+            marginBottom: '20px',
+            outline: 'none',
+          }}
+        />
         {loading ? (
           <div style={{ ...CARD }}>
             <ShimmerLine />
@@ -105,7 +124,14 @@ export default function TherapistMessages() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {conversations.map(conv => (
+            {conversations.filter(c =>
+              c.client_name.toLowerCase().includes(search.trim().toLowerCase())
+            ).length === 0 && search.trim() ? (
+              <p style={{ color: 'var(--color-muted)', fontSize: '13px' }}>No clients match your search.</p>
+            ) : null}
+            {conversations.filter(c =>
+              c.client_name.toLowerCase().includes(search.trim().toLowerCase())
+            ).map(conv => (
               <button
                 key={conv.client_id}
                 type="button"
