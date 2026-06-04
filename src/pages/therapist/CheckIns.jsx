@@ -53,20 +53,38 @@ export default function CheckIns() {
   async function fetchInstances() {
     setInstancesLoading(true)
     // No explicit therapist filter — RLS policy "therapist_read_instances" restricts
-    // rows to instances belonging to this therapist's forms. The 100-row limit is
-    // applied after RLS filtering. If pagination is added later, filter explicitly
-    // via check_in_forms.therapist_id to avoid a full RLS scan.
-    const { data } = await supabase
+    // rows to instances belonging to this therapist's forms.
+    // check_in_responses is fetched separately to avoid the PostgREST reverse-FK
+    // schema cache issue (embedded reverse-FK queries silently return [] for new tables).
+    const { data: instanceData } = await supabase
       .from('check_in_instances')
       .select(`
         id, period_start_date, status,
         check_in_forms(id, name, start_date, check_in_questions(id, question_text, question_type, order_index)),
-        clients(name),
-        check_in_responses(id, answers, submitted_at)
+        clients(name)
       `)
       .order('period_start_date', { ascending: false })
       .limit(100)
-    setInstances(data ?? [])
+
+    if (!instanceData || instanceData.length === 0) {
+      setInstances([])
+      setInstancesLoading(false)
+      return
+    }
+
+    const instanceIds = instanceData.map(i => i.id)
+    const { data: responseData } = await supabase
+      .from('check_in_responses')
+      .select('id, instance_id, answers, submitted_at')
+      .in('instance_id', instanceIds)
+
+    const responseMap = Object.fromEntries((responseData ?? []).map(r => [r.instance_id, r]))
+    const merged = instanceData.map(i => ({
+      ...i,
+      check_in_responses: responseMap[i.id] ? [responseMap[i.id]] : [],
+    }))
+
+    setInstances(merged)
     setInstancesLoading(false)
   }
 

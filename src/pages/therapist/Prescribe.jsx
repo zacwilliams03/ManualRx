@@ -183,36 +183,52 @@ export default function Prescribe() {
             .in('prescription_id', prescriptionIds)
             .order('completed_at', { ascending: false })
         : Promise.resolve({ data: [] }),
+      // check_in_responses fetched separately — embedded reverse-FK queries
+      // return empty for new tables until PostgREST schema cache refreshes.
       supabase
         .from('check_in_instances')
         .select(`
-          period_start_date,
-          check_in_forms(name, check_in_questions(id, question_text, question_type, order_index)),
-          check_in_responses(id, answers, submitted_at)
+          id, period_start_date,
+          check_in_forms(name, check_in_questions(id, question_text, question_type, order_index))
         `)
         .eq('client_id', clientId)
         .eq('status', 'completed')
         .order('period_start_date', { ascending: false }),
-    ]).then(([sessionRes, checkInRes]) => {
+    ]).then(async ([sessionRes, checkInRes]) => {
       const sessionEntries = (sessionRes.data ?? []).map(log => ({
         type: 'session',
         date: new Date(log.completed_at),
         data: log,
       }))
-      const checkInEntries = (checkInRes.data ?? [])
-        .filter(i => i.check_in_responses?.length > 0)
-        .map(i => ({
-          type: 'checkin',
-          date: new Date(i.check_in_responses[0].submitted_at),
-          data: {
-            responseId: i.check_in_responses[0].id,
-            formName: i.check_in_forms?.name ?? 'Check-In',
-            periodStartDate: i.period_start_date,
-            answers: i.check_in_responses[0].answers ?? {},
-            questions: (i.check_in_forms?.check_in_questions ?? []).sort((a, b) => a.order_index - b.order_index),
-            submittedAt: i.check_in_responses[0].submitted_at,
-          },
-        }))
+
+      // Fetch responses for completed check-in instances
+      const checkInInstances = checkInRes.data ?? []
+      let checkInEntries = []
+      if (checkInInstances.length > 0) {
+        const { data: responseData } = await supabase
+          .from('check_in_responses')
+          .select('id, instance_id, answers, submitted_at')
+          .in('instance_id', checkInInstances.map(i => i.id))
+        const responseMap = Object.fromEntries((responseData ?? []).map(r => [r.instance_id, r]))
+        checkInEntries = checkInInstances
+          .filter(i => responseMap[i.id])
+          .map(i => {
+            const r = responseMap[i.id]
+            return {
+              type: 'checkin',
+              date: new Date(r.submitted_at),
+              data: {
+                responseId: r.id,
+                formName: i.check_in_forms?.name ?? 'Check-In',
+                periodStartDate: i.period_start_date,
+                answers: r.answers ?? {},
+                questions: (i.check_in_forms?.check_in_questions ?? []).sort((a, b) => a.order_index - b.order_index),
+                submittedAt: r.submitted_at,
+              },
+            }
+          })
+      }
+
       const merged = [...sessionEntries, ...checkInEntries].sort((a, b) => b.date - a.date)
       setHistoryTabLogs(sessionRes.data ?? [])
       setMergedTimeline(merged)
