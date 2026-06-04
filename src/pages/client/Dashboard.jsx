@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -8,7 +8,6 @@ import BottomNav from '../../components/client/BottomNav'
 import PageHero from '../../components/shared/PageHero'
 import { CARD } from '../../components/therapist/styles'
 import ShimmerLine from '../../components/shared/ShimmerLine'
-import { useNavigate } from 'react-router-dom'
 import { getCurrentPeriodStartDate, isFormActive } from '../../utils/checkInUtils'
 
 // frequencyLabel is defined locally — do not import from utils (that file may not exist)
