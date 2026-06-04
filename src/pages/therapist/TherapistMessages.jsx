@@ -28,6 +28,12 @@ export default function TherapistMessages() {
     if (profile?.id) fetchConversations()
   }, [profile?.id])
 
+  useEffect(() => {
+    if (!profile?.id) return
+    const id = setInterval(fetchConversations, 30000)
+    return () => clearInterval(id)
+  }, [profile?.id])
+
   async function fetchConversations() {
     const { data, error: fetchError } = await supabase
       .from('messages')

@@ -148,6 +148,8 @@ export default function ClientMessages() {
 
       {/* Input */}
       <div style={{
+        position: 'sticky',
+        bottom: 0,
         padding: '12px 20px',
         borderTop: '1px solid var(--color-border)',
         display: 'flex', gap: '10px',

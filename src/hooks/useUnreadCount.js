@@ -38,7 +38,11 @@ export function useUnreadCount() {
     }
 
     run()
-    return () => { cancelled = true }
+    const id = setInterval(run, 30000)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
   }, [profile])
 
   return count
