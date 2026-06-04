@@ -8,6 +8,8 @@ import BottomNav from '../../components/client/BottomNav'
 import PageHero from '../../components/shared/PageHero'
 import { CARD } from '../../components/therapist/styles'
 import ShimmerLine from '../../components/shared/ShimmerLine'
+import { useNavigate } from 'react-router-dom'
+import { getCurrentPeriodStartDate, isFormActive } from '../../utils/checkInUtils'
 
 // frequencyLabel is defined locally — do not import from utils (that file may not exist)
 function frequencyLabel(days) {
@@ -38,9 +40,12 @@ export default function ClientDashboard() {
   const { profile } = useAuth()
   const clinicName = useClinicName()
 
+  const navigate = useNavigate()
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [checkInInstances, setCheckInInstances] = useState([])
+  const [checkInsLoading, setCheckInsLoading] = useState(false)
 
   useEffect(() => {
     if (profile?.id) fetchSessions()
@@ -61,6 +66,8 @@ export default function ClientDashboard() {
       return
     }
 
+    fetchCheckIns(clientRecord.id)
+
     const { data, error: sessionsError } = await supabase
       .from('prescriptions')
       .select('id, name, frequency_days, start_date, duration_weeks, therapist_id, prescription_exercises(count), session_logs(completed_at)')
@@ -70,6 +77,46 @@ export default function ClientDashboard() {
     if (sessionsError) setError('Failed to load sessions.')
     else setSessions(data ?? [])
     setLoading(false)
+  }
+
+  async function fetchCheckIns(clientId) {
+    setCheckInsLoading(true)
+    try {
+      const { data: forms } = await supabase
+        .from('check_in_forms')
+        .select('id, name, day_of_week, start_date, duration_weeks, check_in_questions(count)')
+        .eq('client_id', clientId)
+        .eq('is_template', false)
+
+      const activeForms = (forms ?? []).filter(isFormActive)
+
+      await Promise.all(activeForms.map(async form => {
+        const period = getCurrentPeriodStartDate(form)
+        if (!period) return
+        const periodISO = period.toISOString().split('T')[0]
+        // ON CONFLICT (form_id, client_id, period_start_date) DO NOTHING — the unique
+        // constraint means a duplicate insert returns a Postgres error, which the outer
+        // try/catch silently swallows. This is the intended behaviour.
+        await supabase.from('check_in_instances').insert({
+          form_id: form.id,
+          client_id: clientId,
+          period_start_date: periodISO,
+        })
+      }))
+
+      const { data: pending } = await supabase
+        .from('check_in_instances')
+        .select('id, period_start_date, check_in_forms(name, check_in_questions(count))')
+        .eq('client_id', clientId)
+        .eq('status', 'pending')
+        .order('period_start_date', { ascending: false })
+
+      setCheckInInstances(pending ?? [])
+    } catch {
+      // Silent degradation — session cards still render
+    } finally {
+      setCheckInsLoading(false)
+    }
   }
 
   const activeSessions = sessions.filter(isActive)
@@ -94,6 +141,46 @@ export default function ClientDashboard() {
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '512px' }}>
+          {checkInInstances.map((instance, i) => (
+            <motion.div
+              key={instance.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: Math.min(i * 0.05, 0.2), duration: 0.25 }}
+              style={{
+                background: 'var(--color-surface)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(245,158,11,0.25)',
+                borderRadius: '14px',
+                padding: '18px 20px',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', background: 'linear-gradient(90deg, transparent, rgba(245,158,11,0.4), rgba(251,191,36,0.3), transparent)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '9999px', padding: '3px 9px', fontSize: '10px', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  ✦ Check-In
+                </span>
+                <span style={{ fontSize: '10px', color: 'var(--color-subtle)' }}>
+                  Due {new Date(instance.period_start_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '3px' }}>
+                {instance.check_in_forms?.name ?? 'Check-In'}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--color-muted)', marginBottom: '14px' }}>
+                {instance.check_in_forms?.check_in_questions?.[0]?.count ?? 0} questions · ~1 min
+              </div>
+              <button
+                onClick={() => navigate(`/client/checkin/${instance.id}`)}
+                style={{ width: '100%', padding: '11px', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '8px', color: '#f59e0b', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                Complete Check-In →
+              </button>
+            </motion.div>
+          ))}
+
           {activeSessions.map((s, i) => {
             const completions = s.session_logs ?? []
             const lastDone =
