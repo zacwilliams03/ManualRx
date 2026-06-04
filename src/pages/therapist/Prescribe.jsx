@@ -17,6 +17,7 @@ import PageHero from '../../components/shared/PageHero'
 import { CARD, SECTION_LABEL } from '../../components/therapist/styles'
 import ShimmerLine from '../../components/shared/ShimmerLine'
 import { frequencyLabel } from '../../utils/frequencyUtils'
+import { formatPeriodDate } from '../../utils/checkInUtils'
 import useIsMobile from '../../hooks/useIsMobile'
 
 const TAB_LABELS = { prescriptions: 'Prescribed Sessions', history: 'Session History', clientData: 'Client Data' }
@@ -138,6 +139,8 @@ export default function Prescribe() {
   const [historyTabLogs, setHistoryTabLogs] = useState([])
   const [historyTabLoading, setHistoryTabLoading] = useState(false)
   const [historyTabLoaded, setHistoryTabLoaded] = useState(false)
+  const [mergedTimeline, setMergedTimeline] = useState([])
+  const [expandedCheckInId, setExpandedCheckInId] = useState(null)
 
   const [pdfLoadingId, setPdfLoadingId] = useState(null)
   const [pdfError, setPdfError] = useState(null)
@@ -164,24 +167,56 @@ export default function Prescribe() {
     const prescriptionIds = sessions.map(s => s.id)
 
     setHistoryTabLoading(true)
-    supabase
-      .from('session_logs')
-      .select(`
-        id, completed_at, session_rpe, session_notes,
-        prescriptions(name),
-        exercise_logs(
-          id, sets_completed, reps_completed, weight_completed,
-          sets_data, pain_rating, client_notes, video_url,
-          prescription_exercises(sets, reps, weight, measurement_type, bilateral, exercises(name))
-        )
-      `)
-      .in('prescription_id', prescriptionIds)
-      .order('completed_at', { ascending: false })
-      .then(({ data }) => {
-        setHistoryTabLogs(data ?? [])
-        setHistoryTabLoading(false)
-        setHistoryTabLoaded(true)
-      })
+    Promise.all([
+      supabase
+        .from('session_logs')
+        .select(`
+          id, completed_at, session_rpe, session_notes,
+          prescriptions(name),
+          exercise_logs(
+            id, sets_completed, reps_completed, weight_completed,
+            sets_data, pain_rating, client_notes, video_url,
+            prescription_exercises(sets, reps, weight, measurement_type, bilateral, exercises(name))
+          )
+        `)
+        .in('prescription_id', prescriptionIds)
+        .order('completed_at', { ascending: false }),
+      supabase
+        .from('check_in_instances')
+        .select(`
+          period_start_date,
+          check_in_forms(name, check_in_questions(id, question_text, question_type, order_index)),
+          check_in_responses(id, answers, submitted_at)
+        `)
+        .eq('client_id', clientId)
+        .eq('status', 'completed')
+        .order('period_start_date', { ascending: false }),
+    ]).then(([sessionRes, checkInRes]) => {
+      const sessionEntries = (sessionRes.data ?? []).map(log => ({
+        type: 'session',
+        date: new Date(log.completed_at),
+        data: log,
+      }))
+      const checkInEntries = (checkInRes.data ?? [])
+        .filter(i => i.check_in_responses?.length > 0)
+        .map(i => ({
+          type: 'checkin',
+          date: new Date(i.check_in_responses[0].submitted_at),
+          data: {
+            responseId: i.check_in_responses[0].id,
+            formName: i.check_in_forms?.name ?? 'Check-In',
+            periodStartDate: i.period_start_date,
+            answers: i.check_in_responses[0].answers ?? {},
+            questions: (i.check_in_forms?.check_in_questions ?? []).sort((a, b) => a.order_index - b.order_index),
+            submittedAt: i.check_in_responses[0].submitted_at,
+          },
+        }))
+      const merged = [...sessionEntries, ...checkInEntries].sort((a, b) => b.date - a.date)
+      setHistoryTabLogs(sessionRes.data ?? [])
+      setMergedTimeline(merged)
+      setHistoryTabLoading(false)
+      setHistoryTabLoaded(true)
+    })
   }, [activeTab, sessions, historyTabLoaded])
 
   useEffect(() => {
@@ -665,54 +700,117 @@ export default function Prescribe() {
           {activeTab === 'history' && (
             <motion.div key="history" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
               {historyTabLoading && <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>Loading history…</p>}
-              {!historyTabLoading && historyTabLogs.length === 0 && (
+              {!historyTabLoading && mergedTimeline.length === 0 && (
                 <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>No completed sessions yet.</p>
               )}
-              {historyTabLogs.map((log, i) => (
-                <motion.div
-                  key={log.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2, delay: Math.min(i * 0.05, 0.3) }}
-                  style={{ ...CARD, padding: 0, marginBottom: '12px' }}
-                >
-                  <ShimmerLine />
-                  <button
-                    onClick={() => setExpandedLogId(prev => prev === log.id ? null : log.id)}
-                    style={{ width: '100%', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-                  >
-                    <div>
-                      <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-text)' }}>
-                        {log.prescriptions?.name ?? 'Session'}
-                      </div>
-                      <div style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '3px' }}>
-                        {new Date(log.completed_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
-                        {log.session_rpe != null ? ` · RPE ${log.session_rpe}` : ''}
-                      </div>
-                    </div>
-                    <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>{expandedLogId === log.id ? '▲' : '▼'}</span>
-                  </button>
-                  {expandedLogId === log.id && (
-                    <div style={{ borderTop: '1px solid var(--color-elevated)' }}>
-                      {(log.exercise_logs ?? []).map(el => (
-                        <div key={el.id} style={{ borderBottom: '1px solid var(--color-elevated)' }}>
-                          <ExerciseLogDetail
-                            el={el}
-                            videoUrls={videoUrls}
-                            onPlayVideo={playVideo}
-                            weightUnit={weightUnit}
-                          />
+              {mergedTimeline.map((entry, i) => {
+                if (entry.type === 'session') {
+                  const log = entry.data
+                  return (
+                    <motion.div
+                      key={log.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: Math.min(i * 0.05, 0.3) }}
+                      style={{ ...CARD, padding: 0, marginBottom: '12px' }}
+                    >
+                      <ShimmerLine />
+                      <button
+                        onClick={() => setExpandedLogId(prev => prev === log.id ? null : log.id)}
+                        style={{ width: '100%', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                      >
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-text)' }}>
+                            {log.prescriptions?.name ?? 'Session'}
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '3px' }}>
+                            {new Date(log.completed_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {log.session_rpe != null ? ` · RPE ${log.session_rpe}` : ''}
+                          </div>
                         </div>
-                      ))}
-                      {log.session_notes && (
-                        <div style={{ padding: '10px 20px', fontSize: '12px', color: 'var(--color-muted)' }}>
-                          Note: {log.session_notes}
+                        <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>{expandedLogId === log.id ? '▲' : '▼'}</span>
+                      </button>
+                      {expandedLogId === log.id && (
+                        <div style={{ borderTop: '1px solid var(--color-elevated)' }}>
+                          {(log.exercise_logs ?? []).map(el => (
+                            <div key={el.id} style={{ borderBottom: '1px solid var(--color-elevated)' }}>
+                              <ExerciseLogDetail
+                                el={el}
+                                videoUrls={videoUrls}
+                                onPlayVideo={playVideo}
+                                weightUnit={weightUnit}
+                              />
+                            </div>
+                          ))}
+                          {log.session_notes && (
+                            <div style={{ padding: '10px 20px', fontSize: '12px', color: 'var(--color-muted)' }}>
+                              Note: {log.session_notes}
+                            </div>
+                          )}
                         </div>
                       )}
-                    </div>
-                  )}
-                </motion.div>
-              ))}
+                    </motion.div>
+                  )
+                }
+
+                // Check-in entry
+                const ci = entry.data
+                const isExpanded = expandedCheckInId === ci.responseId
+                return (
+                  <motion.div
+                    key={ci.responseId}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, delay: Math.min(i * 0.05, 0.3) }}
+                    style={{ background: 'var(--color-surface)', backdropFilter: 'blur(12px)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: '14px', overflow: 'hidden', marginBottom: '12px', position: 'relative' }}
+                  >
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', background: 'linear-gradient(90deg, transparent, rgba(245,158,11,0.35), transparent)' }} />
+                    <button
+                      onClick={() => setExpandedCheckInId(isExpanded ? null : ci.responseId)}
+                      style={{ width: '100%', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#f59e0b' }}>✦ Check-In</span>
+                          <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-text)' }}>{ci.formName}</span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '3px' }}>
+                          {formatPeriodDate(ci.periodStartDate)} · Submitted {new Date(ci.submittedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>{isExpanded ? '▲' : '▼'}</span>
+                    </button>
+                    {isExpanded && (
+                      <div style={{ borderTop: '1px solid rgba(245,158,11,0.1)', padding: '14px 20px' }}>
+                        {ci.questions.map(q => {
+                          const answer = ci.answers[q.id]
+                          return (
+                            <div key={q.id} style={{ marginBottom: '14px' }}>
+                              <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-muted)', marginBottom: '6px' }}>{q.question_text}</div>
+                              {q.question_type === 'scale' ? (
+                                <div>
+                                  <div style={{ display: 'flex', gap: '4px' }}>
+                                    {[1,2,3,4,5].map(n => (
+                                      <div key={n} style={{ width: '26px', height: '26px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 600, background: answer === n ? '#29B5CC' : 'rgba(255,255,255,0.03)', border: answer === n ? '1px solid #29B5CC' : '1px solid rgba(100,160,255,0.1)', color: answer === n ? '#000' : 'var(--color-muted)' }}>{n}</div>
+                                    ))}
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--color-subtle)', marginTop: '4px', width: '155px' }}>
+                                    <span>1 – Not good</span><span>5 – Very good</span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{ fontSize: '12px', color: 'var(--color-text)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(100,160,255,0.08)', borderRadius: '6px', padding: '8px 10px', lineHeight: 1.5 }}>
+                                  {answer ?? '—'}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </motion.div>
+                )
+              })}
             </motion.div>
           )}
 
