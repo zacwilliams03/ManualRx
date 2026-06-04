@@ -28,10 +28,10 @@ export default function TherapistThread() {
   }, [profile?.id, clientId])
 
   useEffect(() => {
-    if (!profile?.id || !clientId) return
+    if (!profile?.id || !clientId || loading) return
     const id = setInterval(fetchMessages, 30000)
     return () => clearInterval(id)
-  }, [profile?.id, clientId])
+  }, [profile?.id, clientId, loading])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -58,6 +58,7 @@ export default function TherapistThread() {
   }
 
   async function fetchMessages() {
+    if (!profile?.id) return
     const { data } = await supabase
       .from('messages')
       .select('id, sender_role, body, created_at')
@@ -77,10 +78,12 @@ export default function TherapistThread() {
       body: body.trim(),
     })
     setSending(false)
-    if (!error) {
-      setBody('')
-      await fetchMessages()
+    if (error) {
+      console.error('Failed to send message:', error)
+      return
     }
+    setBody('')
+    await fetchMessages()
   }
 
   function handleKeyDown(e) {
