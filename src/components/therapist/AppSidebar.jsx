@@ -6,6 +6,7 @@ import {
   Users,
   FileText,
   Dumbbell,
+  ClipboardList,
   Settings,
   ChevronUp,
   LogOut,
@@ -387,6 +388,13 @@ export default function AppSidebar({ onClose }) {
           to="/therapist/exercises"
           icon={Dumbbell}
           label="Exercise Library"
+          onClose={onClose}
+        />
+        <NavItem
+          to="/therapist/checkins"
+          icon={ClipboardList}
+          label="Check-Ins"
+          activePrefixes={['/therapist/checkins']}
           onClose={onClose}
         />
       </div>
