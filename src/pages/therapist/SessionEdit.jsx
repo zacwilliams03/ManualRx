@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
@@ -15,6 +15,8 @@ import useIsMobile from '../../hooks/useIsMobile'
 
 export default function SessionEdit() {
   const { clientId, sessionId } = useParams()
+  const [searchParams] = useSearchParams()
+  const programId = searchParams.get('programId')
   const { profile } = useAuth()
   const navigate = useNavigate()
   const weightUnit = useWeightUnit()
@@ -145,7 +147,12 @@ export default function SessionEdit() {
     <SidebarLayout>
       <PageHero
         title={name || 'Edit Session'}
-        back={{ label: 'Back', to: `/therapist/prescribe/${clientId}` }}
+        back={{
+          label: programId ? 'Program' : 'Prescribe',
+          to: programId
+            ? `/therapist/prescribe/${clientId}/programs/${programId}`
+            : `/therapist/prescribe/${clientId}`
+        }}
         actions={
           <button
             onClick={saveMeta}
