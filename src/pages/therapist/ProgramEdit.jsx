@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
@@ -16,7 +16,7 @@ function addDaysToDate(dateStr, days) {
 export default function ProgramEdit() {
   const { clientId, programId, templateId } = useParams()
   const { profile } = useAuth()
-  const navigate = useNavigate()
+
 
   const mode = clientId ? 'program' : 'template'
   const entityId = mode === 'program' ? programId : templateId
