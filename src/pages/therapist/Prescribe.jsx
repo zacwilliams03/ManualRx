@@ -132,6 +132,7 @@ export default function Prescribe() {
   const [defaultFrequencyDays, setDefaultFrequencyDays] = useState(null)
 
   const [programs, setPrograms] = useState([])
+  const [expandedPrograms, setExpandedPrograms] = useState(new Set())
   const [showSessionDropdown, setShowSessionDropdown] = useState(false)
   const [showProgramDropdown, setShowProgramDropdown] = useState(false)
   const [showApplyProgramModal, setShowApplyProgramModal] = useState(false)
@@ -160,6 +161,10 @@ export default function Prescribe() {
   const [showPdfMenu, setShowPdfMenu] = useState(false)
   const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
   const pdfBtnRef = useRef(null)
+  const sessionDropdownBtnRef = useRef(null)
+  const programDropdownBtnRef = useRef(null)
+  const [sessionDropdownPos, setSessionDropdownPos] = useState({ top: 0, right: 0 })
+  const [programDropdownPos, setProgramDropdownPos] = useState({ top: 0, right: 0 })
   const [showEmailConfirm, setShowEmailConfirm] = useState(false)
   const [emailLoading, setEmailLoading] = useState(false)
   const [emailError, setEmailError] = useState(false)
@@ -615,59 +620,36 @@ export default function Prescribe() {
             </Link>
             {activeTab === 'prescriptions' && (
               <>
-                {/* New Session dropdown */}
-                <div data-session-dropdown style={{ position: 'relative' }}>
+                {/* New Session button — dropdown rendered at fixed position below PageHero */}
+                <div data-session-dropdown>
                   <button
-                    onClick={() => { setShowSessionDropdown(d => !d); setShowProgramDropdown(false) }}
+                    ref={sessionDropdownBtnRef}
+                    onClick={() => {
+                      const rect = sessionDropdownBtnRef.current.getBoundingClientRect()
+                      setSessionDropdownPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right })
+                      setShowSessionDropdown(d => !d)
+                      setShowProgramDropdown(false)
+                    }}
                     style={{ padding: '9px 18px', background: 'transparent', color: 'var(--color-muted)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', fontSize: '13px', cursor: 'pointer' }}
                   >
                     New Session ▾
                   </button>
-                  {showSessionDropdown && (
-                    <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, background: 'rgba(13,17,23,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '10px', minWidth: '190px', boxShadow: '0 12px 40px rgba(0,0,0,0.6)', zIndex: 200, overflow: 'hidden' }}>
-                      <button
-                        onClick={() => { setShowSessionDropdown(false); createSession() }}
-                        disabled={creating}
-                        style={{ width: '100%', padding: '11px 16px', background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', textAlign: 'left', cursor: 'pointer' }}
-                      >
-                        Create from scratch
-                      </button>
-                      <div style={{ height: '1px', background: 'rgba(41,181,204,0.1)', margin: '0 10px' }} />
-                      <button
-                        onClick={() => { setShowSessionDropdown(false); setShowApplyModal(true) }}
-                        style={{ width: '100%', padding: '11px 16px', background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', textAlign: 'left', cursor: 'pointer' }}
-                      >
-                        Apply session template
-                      </button>
-                    </div>
-                  )}
                 </div>
 
-                {/* New Program dropdown */}
-                <div data-program-dropdown style={{ position: 'relative' }}>
+                {/* New Program button — dropdown rendered at fixed position below PageHero */}
+                <div data-program-dropdown>
                   <button
-                    onClick={() => { setShowProgramDropdown(d => !d); setShowSessionDropdown(false) }}
+                    ref={programDropdownBtnRef}
+                    onClick={() => {
+                      const rect = programDropdownBtnRef.current.getBoundingClientRect()
+                      setProgramDropdownPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right })
+                      setShowProgramDropdown(d => !d)
+                      setShowSessionDropdown(false)
+                    }}
                     style={{ padding: '9px 18px', background: '#29B5CC', color: '#000', border: 'none', borderRadius: '7px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
                   >
                     New Program ▾
                   </button>
-                  {showProgramDropdown && (
-                    <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, background: 'rgba(13,17,23,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '10px', minWidth: '200px', boxShadow: '0 12px 40px rgba(0,0,0,0.6)', zIndex: 200, overflow: 'hidden' }}>
-                      <button
-                        onClick={() => { setShowProgramDropdown(false); setShowCreateProgramModal(true) }}
-                        style={{ width: '100%', padding: '11px 16px', background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', textAlign: 'left', cursor: 'pointer' }}
-                      >
-                        Create from scratch
-                      </button>
-                      <div style={{ height: '1px', background: 'rgba(41,181,204,0.1)', margin: '0 10px' }} />
-                      <button
-                        onClick={() => { setShowProgramDropdown(false); setShowApplyProgramModal(true) }}
-                        style={{ width: '100%', padding: '11px 16px', background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', textAlign: 'left', cursor: 'pointer' }}
-                      >
-                        Apply program template
-                      </button>
-                    </div>
-                  )}
                 </div>
               </>
             )}
@@ -764,21 +746,32 @@ export default function Prescribe() {
                         style={{ ...CARD, padding: 0, marginBottom: '14px', borderLeft: '3px solid rgba(41,181,204,0.4)' }}
                       >
                         <ShimmerLine />
-                        <div style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: item.sessions.length > 0 ? '1px solid var(--color-elevated)' : 'none' }}>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedPrograms(prev => {
+                            const next = new Set(prev)
+                            next.has(p.id) ? next.delete(p.id) : next.add(p.id)
+                            return next
+                          })}
+                          style={{ width: '100%', padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                        >
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>{expandedPrograms.has(p.id) ? '▼' : '▶'}</span>
                               <span style={{ fontSize: '14px', fontWeight: 700, color: '#29B5CC' }}>{p.name}</span>
+                              <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>{item.sessions.length} session{item.sessions.length !== 1 ? 's' : ''}</span>
                             </div>
-                            <p style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '3px' }}>{progressLabel}</p>
+                            <p style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '3px', paddingLeft: '18px' }}>{progressLabel}</p>
                           </div>
                           <button
-                            onClick={() => navigate(`/therapist/prescribe/${clientId}/programs/${p.id}`)}
-                            style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(41,181,204,0.3)', borderRadius: '6px', color: '#29B5CC', background: 'transparent', cursor: 'pointer' }}
+                            type="button"
+                            onClick={e => { e.stopPropagation(); navigate(`/therapist/prescribe/${clientId}/programs/${p.id}`) }}
+                            style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(41,181,204,0.3)', borderRadius: '6px', color: '#29B5CC', background: 'transparent', cursor: 'pointer', flexShrink: 0 }}
                           >
                             Edit
                           </button>
-                        </div>
-                        {[...item.sessions].sort((a, b) => (a.week_number ?? 0) - (b.week_number ?? 0)).map(s => {
+                        </button>
+                        {expandedPrograms.has(p.id) && [...item.sessions].sort((a, b) => (a.week_number ?? 0) - (b.week_number ?? 0)).map(s => {
                           const active = isActive(s)
                           const completedCount = parseInt(s.session_logs?.[0]?.count ?? 0)
                           return (
@@ -1001,6 +994,32 @@ export default function Prescribe() {
             fetchData()
           }}
         />
+      )}
+
+      {/* Session dropdown — fixed position to escape PageHero overflow:hidden */}
+      {showSessionDropdown && (
+        <div data-session-dropdown style={{ position: 'fixed', top: sessionDropdownPos.top, right: sessionDropdownPos.right, background: 'rgba(13,17,23,0.95)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '10px', minWidth: '190px', boxShadow: '0 12px 40px rgba(0,0,0,0.6)', zIndex: 200, overflow: 'hidden' }}>
+          <button onClick={() => { setShowSessionDropdown(false); createSession() }} disabled={creating} style={{ width: '100%', padding: '11px 16px', background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', textAlign: 'left', cursor: 'pointer' }}>
+            Create from scratch
+          </button>
+          <div style={{ height: '1px', background: 'rgba(41,181,204,0.1)', margin: '0 10px' }} />
+          <button onClick={() => { setShowSessionDropdown(false); setShowApplyModal(true) }} style={{ width: '100%', padding: '11px 16px', background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', textAlign: 'left', cursor: 'pointer' }}>
+            Apply session template
+          </button>
+        </div>
+      )}
+
+      {/* Program dropdown — fixed position to escape PageHero overflow:hidden */}
+      {showProgramDropdown && (
+        <div data-program-dropdown style={{ position: 'fixed', top: programDropdownPos.top, right: programDropdownPos.right, background: 'rgba(13,17,23,0.95)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '10px', minWidth: '200px', boxShadow: '0 12px 40px rgba(0,0,0,0.6)', zIndex: 200, overflow: 'hidden' }}>
+          <button onClick={() => { setShowProgramDropdown(false); setShowCreateProgramModal(true) }} style={{ width: '100%', padding: '11px 16px', background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', textAlign: 'left', cursor: 'pointer' }}>
+            Create from scratch
+          </button>
+          <div style={{ height: '1px', background: 'rgba(41,181,204,0.1)', margin: '0 10px' }} />
+          <button onClick={() => { setShowProgramDropdown(false); setShowApplyProgramModal(true) }} style={{ width: '100%', padding: '11px 16px', background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', textAlign: 'left', cursor: 'pointer' }}>
+            Apply program template
+          </button>
+        </div>
       )}
 
       {/* PDF dropdown — fixed position to escape PageHero overflow:hidden */}

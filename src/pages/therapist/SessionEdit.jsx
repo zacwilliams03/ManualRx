@@ -89,7 +89,9 @@ export default function SessionEdit() {
       duration_weeks: dw,
     }).eq('id', sessionId)
     setSavingMeta(false)
-    navigate(`/therapist/prescribe/${clientId}`)
+    navigate(programId
+      ? `/therapist/prescribe/${clientId}/programs/${programId}`
+      : `/therapist/prescribe/${clientId}`)
   }
 
   async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral }) {

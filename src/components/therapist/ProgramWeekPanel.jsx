@@ -12,8 +12,8 @@ function addDaysToDate(dateStr, days) {
 // Props:
 // mode: 'program' | 'template'
 // weekNumber: int
-// sessions: array of { id, name, frequencyDays?, isCustom } (normalized by parent)
-// checkinFormName: string | null — name of the check-in form assigned to this week
+// sessions: array of { id, name, frequencyDays?, isCustom, templateId? } (normalized by parent)
+// checkinFormName: string | null
 // checkinFormId: string | null
 // checkinForms: array of { id, name }
 // programId: string (mode='program')
@@ -21,7 +21,8 @@ function addDaysToDate(dateStr, days) {
 // clientId: string (mode='program')
 // therapistId: string
 // programStartDate: string|null (mode='program')
-// onRefresh: () => void — parent refreshes its data after any mutation
+// onRefresh: () => void
+// onRepeatWeek: (weekNumber: int) => void — copy this week's sessions to all other weeks
 export default function ProgramWeekPanel({
   mode,
   weekNumber,
@@ -35,6 +36,7 @@ export default function ProgramWeekPanel({
   therapistId,
   programStartDate,
   onRefresh,
+  onRepeatWeek,
 }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -75,18 +77,26 @@ export default function ProgramWeekPanel({
   async function handleCreateTemplateSession() {
     if (!newSessionName.trim()) return
     setSaving(true)
+    // Create a real session template so the user can add exercises via TemplateEdit
+    const { data: newTemplate, error: tErr } = await supabase
+      .from('templates')
+      .insert({ therapist_id: therapistId, name: newSessionName.trim() })
+      .select('id')
+      .single()
+    if (tErr) { setSaving(false); alert('Failed to create session.'); return }
     const { error } = await supabase
       .from('program_template_sessions')
       .insert({
         program_template_id: templateId,
         week_number: weekNumber,
         session_name: newSessionName.trim(),
-        template_id: null,
+        template_id: newTemplate.id,
       })
     setSaving(false)
-    if (error) { alert('Failed to create session.'); return }
+    if (error) { alert('Failed to link session.'); return }
     setShowNameModal(false)
-    onRefresh()
+    // Navigate to TemplateEdit so the user can add exercises
+    navigate(`/therapist/templates/${newTemplate.id}?backTo=/therapist/program-templates/${templateId}`)
   }
 
   async function handleRemoveSession(sessionId) {
@@ -186,13 +196,25 @@ export default function ProgramWeekPanel({
                       Edit
                     </button>
                   )}
-                  {mode === 'template' && s.isCustom && (
-                    <button
-                      onClick={() => { setRenamingId(s.id); setRenameValue(s.name) }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-muted)', padding: '2px' }}
-                    >
-                      <Pencil size={12} />
-                    </button>
+                  {mode === 'template' && (
+                    <>
+                      {s.templateId && (
+                        <button
+                          onClick={() => navigate(`/therapist/templates/${s.templateId}?backTo=/therapist/program-templates/${templateId}`)}
+                          style={{ fontSize: '11px', padding: '3px 8px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'none', color: 'var(--color-muted)', cursor: 'pointer' }}
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {s.isCustom && (
+                        <button
+                          onClick={() => { setRenamingId(s.id); setRenameValue(s.name) }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-muted)', padding: '2px' }}
+                        >
+                          <Pencil size={12} />
+                        </button>
+                      )}
+                    </>
                   )}
                   <button
                     onClick={() => handleRemoveSession(s.id)}
@@ -220,6 +242,15 @@ export default function ProgramWeekPanel({
             >
               + From Template
             </button>
+            {onRepeatWeek && sessions.length > 0 && (
+              <button
+                onClick={() => onRepeatWeek(weekNumber)}
+                style={{ fontSize: '12px', padding: '5px 10px', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '6px', background: 'none', color: 'var(--color-subtle)', cursor: 'pointer' }}
+                title="Copy this week's sessions to all other weeks"
+              >
+                ↻ Repeat to all weeks
+              </button>
+            )}
           </div>
 
           {/* Check-in form row */}
@@ -228,7 +259,7 @@ export default function ProgramWeekPanel({
             <select
               value={checkinFormId ?? ''}
               onChange={handleCheckinChange}
-              style={{ fontSize: '12px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '5px', color: 'var(--color-text)', padding: '3px 6px', flex: 1, maxWidth: '220px' }}
+              style={{ fontSize: '12px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '5px', color: 'var(--color-text)', padding: '3px 6px', flex: 1, maxWidth: '220px', colorScheme: 'dark' }}
             >
               <option value="">None (use default)</option>
               {checkinForms.map(f => (

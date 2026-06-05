@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
@@ -17,6 +17,8 @@ export default function TemplateEdit() {
   const { templateId } = useParams()
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const backTo = searchParams.get('backTo')
   const weightUnit = useWeightUnit()
   const isMobile = useIsMobile()
 
@@ -140,7 +142,7 @@ export default function TemplateEdit() {
     <SidebarLayout>
       <PageHero
         title={name || 'Edit Template'}
-        back={{ label: 'Templates', to: '/therapist/templates' }}
+        back={{ label: backTo ? 'Program Template' : 'Templates', to: backTo ?? '/therapist/templates' }}
         actions={
           <button
             onClick={saveMeta}

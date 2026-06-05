@@ -174,6 +174,60 @@ export default function ProgramEdit() {
     setTimeout(() => setToast(null), 3000)
   }
 
+  async function handleRepeatWeek(sourceWeekNum) {
+    const sourceSessions = sessionsForWeek(sourceWeekNum)
+    if (sourceSessions.length === 0) { alert('No sessions in this week to repeat.'); return }
+    const targetWeeks = weeks.filter(w => w !== sourceWeekNum)
+    if (!window.confirm(`Copy ${sourceSessions.length} session(s) from Week ${sourceWeekNum} to all other ${targetWeeks.length} week(s)?`)) return
+
+    if (mode === 'program') {
+      // Fetch exercises for each source prescription, then create copies in each target week
+      const rawSources = sessions.filter(s => s.week_number === sourceWeekNum)
+      for (const targetWeek of targetWeeks) {
+        for (const src of rawSources) {
+          const { data: newPrescription, error: pErr } = await supabase
+            .from('prescriptions')
+            .insert({
+              therapist_id: profile.id,
+              client_id: clientId,
+              name: src.name,
+              program_id: entityId,
+              week_number: targetWeek,
+              frequency_days: src.frequency_days,
+              start_date: startDate ? addDaysToDate(startDate, (targetWeek - 1) * 7) : null,
+              source_template_id: src.source_template_id ?? null,
+            })
+            .select('id')
+            .single()
+          if (pErr) continue
+          const { data: exercises } = await supabase
+            .from('prescription_exercises')
+            .select('exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral')
+            .eq('prescription_id', src.id)
+          if (exercises?.length > 0) {
+            await supabase.from('prescription_exercises').insert(
+              exercises.map(ex => ({ ...ex, prescription_id: newPrescription.id }))
+            )
+          }
+        }
+      }
+    } else {
+      const rawSources = sessions.filter(s => s.week_number === sourceWeekNum)
+      for (const targetWeek of targetWeeks) {
+        for (const src of rawSources) {
+          await supabase.from('program_template_sessions').insert({
+            program_template_id: entityId,
+            week_number: targetWeek,
+            session_name: src.session_name,
+            template_id: src.template_id ?? null,
+          })
+        }
+      }
+    }
+    await fetchEntity()
+    showToast(`Week ${sourceWeekNum} repeated to all other weeks`)
+  }
+
   const weeks = Array.from({ length: durationWeeks }, (_, i) => i + 1)
 
   function sessionsForWeek(weekNum) {
@@ -189,6 +243,7 @@ export default function ProgramEdit() {
         id: s.id,
         name: s.session_name,
         isCustom: !s.template_id,
+        templateId: s.template_id ?? null,
       }))
     }
   }
@@ -257,7 +312,7 @@ export default function ProgramEdit() {
                         const table = mode === 'program' ? 'programs' : 'program_templates'
                         await supabase.from(table).update({ duration_weeks: clamped }).eq('id', entityId)
                       }}
-                      style={{ width: '100%', padding: '8px 12px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', fontSize: '14px', color: 'var(--color-text)', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '8px 12px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', fontSize: '14px', color: 'var(--color-text)', outline: 'none', boxSizing: 'border-box', colorScheme: 'dark' }}
                     />
                   </div>
 
@@ -271,7 +326,7 @@ export default function ProgramEdit() {
                         type="date"
                         value={startDate}
                         onChange={handleStartDateChange}
-                        style={{ width: '100%', padding: '8px 12px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', fontSize: '14px', color: 'var(--color-text)', outline: 'none', boxSizing: 'border-box' }}
+                        style={{ width: '100%', padding: '8px 12px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', fontSize: '14px', color: 'var(--color-text)', outline: 'none', boxSizing: 'border-box', colorScheme: 'dark' }}
                       />
                     </div>
                   )}
@@ -283,7 +338,7 @@ export default function ProgramEdit() {
                   <select
                     value={defaultCheckinFormId ?? ''}
                     onChange={handleDefaultCheckinChange}
-                    style={{ padding: '8px 12px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', fontSize: '13px', color: 'var(--color-text)', width: '100%', maxWidth: '280px' }}
+                    style={{ padding: '8px 12px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', fontSize: '13px', color: 'var(--color-text)', width: '100%', maxWidth: '280px', colorScheme: 'dark' }}
                   >
                     <option value="">None</option>
                     {checkinForms.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
@@ -309,6 +364,7 @@ export default function ProgramEdit() {
                   therapistId={profile.id}
                   programStartDate={startDate || null}
                   onRefresh={fetchEntity}
+                  onRepeatWeek={handleRepeatWeek}
                 />
               ))}
             </div>
