@@ -9,7 +9,8 @@ import { fromCanonical, toCanonical } from '../../utils/weightUtils'
 // - defaultFrequencyDays: number|null
 // - onClose: () => void
 // - onApplied: () => void — called after successful apply; parent calls fetchData() to refresh sessions list
-export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequencyDays, onClose, onApplied }) {
+// - programContext: { programId: string, weekNumber: number, programStartDate: string|null } | undefined
+export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequencyDays, onClose, onApplied, programContext }) {
   const weightUnit = useWeightUnit()
 
   // step: 'pick' | 'options' | 'customise'
@@ -46,7 +47,11 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
 
   function selectTemplate(template) {
     setSelectedTemplate(template)
-    setStep('options')
+    if (programContext) {
+      applyAsIs(template)
+    } else {
+      setStep('options')
+    }
   }
 
   function startCustomise() {
@@ -65,16 +70,36 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
     setStep('customise')
   }
 
-  async function createPrescription() {
+  // Safely adds N days to a "YYYY-MM-DD" string using UTC to avoid timezone-offset bugs
+  function addDaysToDate(dateStr, days) {
+    const [y, m, d] = dateStr.split('-').map(Number)
+    return new Date(Date.UTC(y, m - 1, d + days)).toISOString().split('T')[0]
+  }
+
+  async function createPrescription(tmpl) {
+    const t = tmpl ?? selectedTemplate
+    let extraFields = {}
+    if (programContext) {
+      extraFields = {
+        program_id: programContext.programId,
+        week_number: programContext.weekNumber,
+        source_template_id: t.id,
+        start_date: programContext.programStartDate
+          ? addDaysToDate(programContext.programStartDate, (programContext.weekNumber - 1) * 7)
+          : null,
+      }
+    } else {
+      extraFields = { start_date: new Date().toISOString().split('T')[0] }
+    }
     const { data, error } = await supabase
       .from('prescriptions')
       .insert({
         therapist_id: therapistId,
         client_id: clientId,
-        name: selectedTemplate.name,
+        name: t.name,
         frequency_days: null,
-        duration_weeks: selectedTemplate.duration_weeks ?? null,
-        start_date: new Date().toISOString().split('T')[0],
+        duration_weeks: t.duration_weeks ?? null,
+        ...extraFields,
       })
       .select('id, name, frequency_days, created_at')
       .single()
@@ -82,12 +107,13 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
     return data
   }
 
-  async function applyAsIs() {
+  async function applyAsIs(tmpl) {
+    const t = tmpl ?? selectedTemplate
     setApplying(true)
     setApplyError(null)
     try {
-      const prescription = await createPrescription()
-      const exerciseRows = (selectedTemplate.template_exercises ?? []).map(te => ({
+      const prescription = await createPrescription(t)
+      const exerciseRows = (t.template_exercises ?? []).map(te => ({
         prescription_id: prescription.id,
         exercise_id: te.exercise_id,
         sets: te.sets,
