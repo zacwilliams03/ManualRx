@@ -291,7 +291,8 @@ export default function Prescribe() {
     if (sessionsRes.error) setError('Failed to load sessions.')
     else setSessions(sessionsRes.data)
     if (therapistRes.data?.default_frequency_days) setDefaultFrequencyDays(therapistRes.data.default_frequency_days)
-    setPrograms(programsRes.data ?? [])
+    if (programsRes.error) setError('Failed to load programs.')
+    else setPrograms(programsRes.data ?? [])
     setLoading(false)
   }
 
@@ -720,7 +721,8 @@ export default function Prescribe() {
                 for (const s of sessions) {
                   if (s.program_id && programMap.has(s.program_id)) {
                     programMap.get(s.program_id).sessions.push(s)
-                  } else if (!s.program_id) {
+                  } else {
+                    // program_id present but program not fetched, or no program_id — treat as standalone
                     standalones.push(s)
                   }
                 }
@@ -776,7 +778,7 @@ export default function Prescribe() {
                             Edit
                           </button>
                         </div>
-                        {item.sessions.sort((a, b) => (a.week_number ?? 0) - (b.week_number ?? 0)).map(s => {
+                        {[...item.sessions].sort((a, b) => (a.week_number ?? 0) - (b.week_number ?? 0)).map(s => {
                           const active = isActive(s)
                           const completedCount = parseInt(s.session_logs?.[0]?.count ?? 0)
                           return (
@@ -1086,7 +1088,7 @@ export default function Prescribe() {
               style={{ width: '100%', padding: '8px 12px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', fontSize: '13px', color: 'var(--color-text)', outline: 'none', marginBottom: '20px', boxSizing: 'border-box' }}
             />
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowCreateProgramModal(false)} style={{ flex: 1, padding: '9px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', color: 'var(--color-muted)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+              <button onClick={() => { setShowCreateProgramModal(false); setNewProgramName(''); setNewProgramWeeks(4) }} style={{ flex: 1, padding: '9px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', color: 'var(--color-muted)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
               <button
                 onClick={() => { setShowCreateProgramModal(false); createProgram(newProgramName || 'New Program', newProgramWeeks) }}
                 disabled={creatingProgram}
