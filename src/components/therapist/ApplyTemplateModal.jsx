@@ -45,10 +45,10 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
     setLoadingTemplates(false)
   }
 
-  function selectTemplate(template) {
+  async function selectTemplate(template) {
     setSelectedTemplate(template)
     if (programContext) {
-      applyAsIs(template)
+      await applyAsIs(template)
     } else {
       setStep('options')
     }
@@ -290,7 +290,7 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
 
             <div className="space-y-2">
               <button
-                onClick={applyAsIs}
+                onClick={() => applyAsIs()}
                 disabled={applying}
                 className="w-full rounded bg-brand-primary px-4 py-2.5 text-sm text-white hover:bg-brand-primary-dark disabled:opacity-50 cursor-pointer"
               >
