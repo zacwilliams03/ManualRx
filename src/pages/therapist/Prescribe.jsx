@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import ApplyTemplateModal from '../../components/therapist/ApplyTemplateModal'
+import ApplyProgramTemplateModal from '../../components/therapist/ApplyProgramTemplateModal'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
 import { useClinicName } from '../../hooks/useClinicName'
 import { formatWeight } from '../../utils/weightUtils'
@@ -130,6 +131,15 @@ export default function Prescribe() {
   const [reactivating, setReactivating] = useState(null)
   const [defaultFrequencyDays, setDefaultFrequencyDays] = useState(null)
 
+  const [programs, setPrograms] = useState([])
+  const [showSessionDropdown, setShowSessionDropdown] = useState(false)
+  const [showProgramDropdown, setShowProgramDropdown] = useState(false)
+  const [showApplyProgramModal, setShowApplyProgramModal] = useState(false)
+  const [creatingProgram, setCreatingProgram] = useState(false)
+  const [showCreateProgramModal, setShowCreateProgramModal] = useState(false)
+  const [newProgramName, setNewProgramName] = useState('')
+  const [newProgramWeeks, setNewProgramWeeks] = useState(4)
+
   const [activeTab, setActiveTab] = useState('prescriptions')
   const [showApplyModal, setShowApplyModal] = useState(false)
 
@@ -246,18 +256,34 @@ export default function Prescribe() {
     return () => document.removeEventListener('mousedown', handler)
   }, [showPdfMenu])
 
+  useEffect(() => {
+    if (!showSessionDropdown && !showProgramDropdown) return
+    const handler = (e) => {
+      if (!e.target.closest('[data-session-dropdown]')) setShowSessionDropdown(false)
+      if (!e.target.closest('[data-program-dropdown]')) setShowProgramDropdown(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showSessionDropdown, showProgramDropdown])
+
   async function fetchData() {
     setLoading(true)
     setError(null)
 
-    const [clientRes, sessionsRes, therapistRes] = await Promise.all([
+    const [clientRes, sessionsRes, therapistRes, programsRes] = await Promise.all([
       supabase.from('clients').select('id, name, email').eq('id', clientId).single(),
       supabase
         .from('prescriptions')
-        .select('id, name, frequency_days, start_date, duration_weeks, created_at, prescription_exercises(count), session_logs(count)')
+        .select('id, name, frequency_days, start_date, duration_weeks, created_at, program_id, week_number, prescription_exercises(count), session_logs(count)')
         .eq('client_id', clientId)
         .order('created_at', { ascending: true }),
       supabase.from('therapist_profiles').select('default_frequency_days').eq('user_id', profile.id).maybeSingle(),
+      supabase
+        .from('programs')
+        .select('id, name, duration_weeks, start_date, created_at')
+        .eq('therapist_id', profile.id)
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false }),
     ])
 
     if (clientRes.error) { setError('Client not found.'); setLoading(false); return }
@@ -265,6 +291,7 @@ export default function Prescribe() {
     if (sessionsRes.error) setError('Failed to load sessions.')
     else setSessions(sessionsRes.data)
     if (therapistRes.data?.default_frequency_days) setDefaultFrequencyDays(therapistRes.data.default_frequency_days)
+    setPrograms(programsRes.data ?? [])
     setLoading(false)
   }
 
@@ -283,6 +310,18 @@ export default function Prescribe() {
       return
     }
     navigate(`/therapist/prescribe/${clientId}/sessions/${data.id}`)
+  }
+
+  async function createProgram(name, durationWeeks) {
+    setCreatingProgram(true)
+    const { data, error: insertError } = await supabase
+      .from('programs')
+      .insert({ therapist_id: profile.id, client_id: clientId, name, duration_weeks: durationWeeks })
+      .select('id')
+      .single()
+    setCreatingProgram(false)
+    if (insertError) { alert('Failed to create program.'); return }
+    navigate(`/therapist/prescribe/${clientId}/programs/${data.id}`)
   }
 
   async function deleteSession(id, name) {
@@ -575,19 +614,60 @@ export default function Prescribe() {
             </Link>
             {activeTab === 'prescriptions' && (
               <>
-                <button
-                  onClick={() => setShowApplyModal(true)}
-                  style={{ padding: '8px 14px', background: 'transparent', color: '#29B5CC', border: '1px solid rgba(41,181,204,0.3)', borderRadius: '7px', fontSize: '13px', cursor: 'pointer' }}
-                >
-                  Apply Template
-                </button>
-                <button
-                  onClick={createSession}
-                  disabled={creating}
-                  style={{ padding: '9px 18px', background: '#29B5CC', color: '#000', border: 'none', borderRadius: '7px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', opacity: creating ? 0.6 : 1 }}
-                >
-                  {creating ? 'Creating…' : 'New session'}
-                </button>
+                {/* New Session dropdown */}
+                <div data-session-dropdown style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => { setShowSessionDropdown(d => !d); setShowProgramDropdown(false) }}
+                    style={{ padding: '9px 18px', background: 'transparent', color: 'var(--color-muted)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', fontSize: '13px', cursor: 'pointer' }}
+                  >
+                    New Session ▾
+                  </button>
+                  {showSessionDropdown && (
+                    <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, background: 'rgba(13,17,23,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '10px', minWidth: '190px', boxShadow: '0 12px 40px rgba(0,0,0,0.6)', zIndex: 200, overflow: 'hidden' }}>
+                      <button
+                        onClick={() => { setShowSessionDropdown(false); createSession() }}
+                        disabled={creating}
+                        style={{ width: '100%', padding: '11px 16px', background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', textAlign: 'left', cursor: 'pointer' }}
+                      >
+                        Create from scratch
+                      </button>
+                      <div style={{ height: '1px', background: 'rgba(41,181,204,0.1)', margin: '0 10px' }} />
+                      <button
+                        onClick={() => { setShowSessionDropdown(false); setShowApplyModal(true) }}
+                        style={{ width: '100%', padding: '11px 16px', background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', textAlign: 'left', cursor: 'pointer' }}
+                      >
+                        Apply session template
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* New Program dropdown */}
+                <div data-program-dropdown style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => { setShowProgramDropdown(d => !d); setShowSessionDropdown(false) }}
+                    style={{ padding: '9px 18px', background: '#29B5CC', color: '#000', border: 'none', borderRadius: '7px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    New Program ▾
+                  </button>
+                  {showProgramDropdown && (
+                    <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, background: 'rgba(13,17,23,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '10px', minWidth: '200px', boxShadow: '0 12px 40px rgba(0,0,0,0.6)', zIndex: 200, overflow: 'hidden' }}>
+                      <button
+                        onClick={() => { setShowProgramDropdown(false); setShowCreateProgramModal(true) }}
+                        style={{ width: '100%', padding: '11px 16px', background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', textAlign: 'left', cursor: 'pointer' }}
+                      >
+                        Create from scratch
+                      </button>
+                      <div style={{ height: '1px', background: 'rgba(41,181,204,0.1)', margin: '0 10px' }} />
+                      <button
+                        onClick={() => { setShowProgramDropdown(false); setShowApplyProgramModal(true) }}
+                        style={{ width: '100%', padding: '11px 16px', background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', textAlign: 'left', cursor: 'pointer' }}
+                      >
+                        Apply program template
+                      </button>
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>
@@ -633,90 +713,149 @@ export default function Prescribe() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              {sessions.length === 0 && (
-                <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>No sessions yet. Create the first one.</p>
-              )}
-              {sortedSessions.map((s, i) => {
-                const active = isActive(s)
-                const completedCount = parseInt(s.session_logs?.[0]?.count ?? 0)
-                const expected = expectedSessions(s)
+              {/* Build merged list: programs + standalones interleaved by created_at */}
+              {(() => {
+                const programMap = new Map(programs.map(p => [p.id, { program: p, sessions: [] }]))
+                const standalones = []
+                for (const s of sessions) {
+                  if (s.program_id && programMap.has(s.program_id)) {
+                    programMap.get(s.program_id).sessions.push(s)
+                  } else if (!s.program_id) {
+                    standalones.push(s)
+                  }
+                }
 
-                return (
-                  <motion.div
-                    key={s.id}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, delay: Math.min(i * 0.05, 0.3) }}
-                    style={{
-                      ...CARD,
-                      padding: 0,
-                      marginBottom: '14px',
-                      opacity: active ? 1 : 0.55,
-                    }}
-                  >
-                    <ShimmerLine />
-                    {/* Prescription header */}
-                    <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', borderBottom: '1px solid var(--color-elevated)' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-text)' }}>{s.name}</span>
-                          {!active && (
-                            <span style={{ fontSize: '11px', padding: '2px 7px', background: 'var(--color-border)', color: 'var(--color-muted)', borderRadius: '4px' }}>Inactive</span>
-                          )}
-                        </div>
-                        <p style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '4px' }}>
-                          {s.prescription_exercises[0]?.count ?? 0} exercises · {frequencyLabel(s.frequency_days)}
-                        </p>
-                        {active && s.duration_weeks && s.start_date && (
-                          <p style={{ fontSize: '12px', color: '#444', marginTop: '2px' }}>
-                            Active until {formatExpiryDate(s.start_date, s.duration_weeks)}
-                          </p>
-                        )}
-                        <p style={{ fontSize: '12px', color: '#444', marginTop: '2px' }}>
-                          {expected != null
-                            ? `${completedCount} / ${expected} sessions completed`
-                            : `${completedCount} session${completedCount !== 1 ? 's' : ''} completed`}
-                        </p>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          {!active && (
-                            <button
-                              onClick={() => reactivatePrescription(s)}
-                              disabled={reactivating === s.id}
-                              style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(41,181,204,0.3)', borderRadius: '6px', color: '#29B5CC', background: 'transparent', cursor: 'pointer', opacity: reactivating === s.id ? 0.6 : 1 }}
-                            >
-                              {reactivating === s.id ? 'Copying…' : 'Reactivate'}
-                            </button>
-                          )}
+                // Apply active-first sort to standalones (matches existing Prescribe behaviour)
+                const sortedStandalones = [...standalones].sort((a, b) => {
+                  const aActive = isActive(a), bActive = isActive(b)
+                  if (aActive !== bActive) return aActive ? -1 : 1
+                  return new Date(b.created_at) - new Date(a.created_at)
+                })
+
+                const items = [
+                  ...programs.map(p => ({ type: 'program', ...programMap.get(p.id), sortKey: new Date(p.created_at) })),
+                  ...sortedStandalones.map(s => ({ type: 'session', session: s, sortKey: new Date(s.created_at) })),
+                ].sort((a, b) => b.sortKey - a.sortKey)
+
+                if (items.length === 0) {
+                  return <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>No sessions or programs yet. Create the first one.</p>
+                }
+
+                return items.map((item, i) => {
+                  if (item.type === 'program') {
+                    const p = item.program
+                    const today = new Date()
+                    const started = p.start_date && new Date(p.start_date) <= today
+                    const currentWeek = p.start_date
+                      ? Math.min(p.duration_weeks, Math.max(1, Math.floor((today - new Date(p.start_date)) / (7 * 86400000)) + 1))
+                      : null
+                    const progressLabel = p.start_date
+                      ? (started ? `Week ${currentWeek} of ${p.duration_weeks}` : `Starts ${new Date(p.start_date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`)
+                      : `${p.duration_weeks} weeks · Not started`
+
+                    return (
+                      <motion.div
+                        key={`prog-${p.id}`}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2, delay: Math.min(i * 0.05, 0.3) }}
+                        style={{ ...CARD, padding: 0, marginBottom: '14px', borderLeft: '3px solid rgba(41,181,204,0.4)' }}
+                      >
+                        <ShimmerLine />
+                        <div style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: item.sessions.length > 0 ? '1px solid var(--color-elevated)' : 'none' }}>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '14px', fontWeight: 700, color: '#29B5CC' }}>{p.name}</span>
+                            </div>
+                            <p style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '3px' }}>{progressLabel}</p>
+                          </div>
                           <button
-                            onClick={() => downloadPDF(s)}
-                            disabled={pdfLoadingId === s.id}
-                            style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-muted)', background: 'transparent', cursor: 'pointer', opacity: pdfLoadingId === s.id ? 0.6 : 1 }}
-                          >
-                            {pdfLoadingId === s.id ? 'Generating…' : 'PDF'}
-                          </button>
-                          <Link
-                            to={`/therapist/prescribe/${clientId}/sessions/${s.id}`}
-                            style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-muted)', textDecoration: 'none' }}
+                            onClick={() => navigate(`/therapist/prescribe/${clientId}/programs/${p.id}`)}
+                            style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(41,181,204,0.3)', borderRadius: '6px', color: '#29B5CC', background: 'transparent', cursor: 'pointer' }}
                           >
                             Edit
-                          </Link>
-                          <button
-                            onClick={() => deleteSession(s.id, s.name)}
-                            style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px', color: 'var(--color-danger)', background: 'transparent', cursor: 'pointer' }}
-                          >
-                            Delete
                           </button>
                         </div>
-                        {pdfError === s.id && (
-                          <span style={{ fontSize: '11px', color: 'var(--color-danger)' }}>PDF failed</span>
-                        )}
+                        {item.sessions.sort((a, b) => (a.week_number ?? 0) - (b.week_number ?? 0)).map(s => {
+                          const active = isActive(s)
+                          const completedCount = parseInt(s.session_logs?.[0]?.count ?? 0)
+                          return (
+                            <div
+                              key={s.id}
+                              style={{ padding: '10px 20px 10px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--color-elevated)', opacity: active ? 1 : 0.55 }}
+                            >
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  {s.week_number && <span style={{ fontSize: '10px', color: 'var(--color-subtle)', background: 'var(--color-elevated)', padding: '1px 5px', borderRadius: '3px' }}>Wk {s.week_number}</span>}
+                                  <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)' }}>{s.name}</span>
+                                </div>
+                                <p style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px' }}>
+                                  {s.prescription_exercises[0]?.count ?? 0} ex · {frequencyLabel(s.frequency_days)} · {completedCount} done
+                                </p>
+                              </div>
+                              <Link
+                                to={`/therapist/prescribe/${clientId}/sessions/${s.id}?programId=${p.id}&weekNumber=${s.week_number}`}
+                                style={{ fontSize: '12px', padding: '4px 10px', border: '1px solid var(--color-border)', borderRadius: '5px', color: 'var(--color-muted)', textDecoration: 'none' }}
+                              >
+                                Edit
+                              </Link>
+                            </div>
+                          )
+                        })}
+                      </motion.div>
+                    )
+                  }
+
+                  // Standalone session
+                  const s = item.session
+                  const active = isActive(s)
+                  const completedCount = parseInt(s.session_logs?.[0]?.count ?? 0)
+                  const expected = expectedSessions(s)
+                  return (
+                    <motion.div
+                      key={s.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: Math.min(i * 0.05, 0.3) }}
+                      style={{ ...CARD, padding: 0, marginBottom: '14px', opacity: active ? 1 : 0.55 }}
+                    >
+                      <ShimmerLine />
+                      <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', borderBottom: '1px solid var(--color-elevated)' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-text)' }}>{s.name}</span>
+                            {!active && <span style={{ fontSize: '11px', padding: '2px 7px', background: 'var(--color-border)', color: 'var(--color-muted)', borderRadius: '4px' }}>Inactive</span>}
+                          </div>
+                          <p style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '4px' }}>
+                            {s.prescription_exercises[0]?.count ?? 0} exercises · {frequencyLabel(s.frequency_days)}
+                          </p>
+                          {active && s.duration_weeks && s.start_date && (
+                            <p style={{ fontSize: '12px', color: '#444', marginTop: '2px' }}>Active until {formatExpiryDate(s.start_date, s.duration_weeks)}</p>
+                          )}
+                          <p style={{ fontSize: '12px', color: '#444', marginTop: '2px' }}>
+                            {expected != null ? `${completedCount} / ${expected} sessions completed` : `${completedCount} session${completedCount !== 1 ? 's' : ''} completed`}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            {!active && (
+                              <button onClick={() => reactivatePrescription(s)} disabled={reactivating === s.id} style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(41,181,204,0.3)', borderRadius: '6px', color: '#29B5CC', background: 'transparent', cursor: 'pointer', opacity: reactivating === s.id ? 0.6 : 1 }}>
+                                {reactivating === s.id ? 'Copying…' : 'Reactivate'}
+                              </button>
+                            )}
+                            <button onClick={() => downloadPDF(s)} disabled={pdfLoadingId === s.id} style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-muted)', background: 'transparent', cursor: 'pointer', opacity: pdfLoadingId === s.id ? 0.6 : 1 }}>
+                              {pdfLoadingId === s.id ? 'Generating…' : 'PDF'}
+                            </button>
+                            <Link to={`/therapist/prescribe/${clientId}/sessions/${s.id}`} style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-muted)', textDecoration: 'none' }}>Edit</Link>
+                            <button onClick={() => deleteSession(s.id, s.name)} style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px', color: 'var(--color-danger)', background: 'transparent', cursor: 'pointer' }}>Delete</button>
+                          </div>
+                          {pdfError === s.id && <span style={{ fontSize: '11px', color: 'var(--color-danger)' }}>PDF failed</span>}
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                )
-              })}
+                    </motion.div>
+                  )
+                })
+              })()}
             </motion.div>
           )}
 
@@ -923,6 +1062,50 @@ export default function Prescribe() {
           <span style={{ color: '#29B5CC', fontSize: '14px' }}>✓</span>
           <span style={{ color: '#e2e8f0', fontSize: '13px' }}>PDF sent to {client?.email}</span>
         </div>
+      )}
+
+      {showCreateProgramModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '12px', padding: '24px', width: '320px' }}>
+            <p style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: 600, color: 'var(--color-text)' }}>New Program</p>
+            <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '5px' }}>Name</label>
+            <input
+              autoFocus
+              value={newProgramName}
+              onChange={e => setNewProgramName(e.target.value)}
+              placeholder="e.g. 12-Week Knee Rehab"
+              style={{ width: '100%', padding: '8px 12px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', fontSize: '13px', color: 'var(--color-text)', outline: 'none', marginBottom: '12px', boxSizing: 'border-box' }}
+            />
+            <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '5px' }}>Duration (weeks)</label>
+            <input
+              type="number"
+              min="1"
+              max="52"
+              value={newProgramWeeks}
+              onChange={e => setNewProgramWeeks(Math.max(1, parseInt(e.target.value) || 1))}
+              style={{ width: '100%', padding: '8px 12px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', fontSize: '13px', color: 'var(--color-text)', outline: 'none', marginBottom: '20px', boxSizing: 'border-box' }}
+            />
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => setShowCreateProgramModal(false)} style={{ flex: 1, padding: '9px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', color: 'var(--color-muted)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+              <button
+                onClick={() => { setShowCreateProgramModal(false); createProgram(newProgramName || 'New Program', newProgramWeeks) }}
+                disabled={creatingProgram}
+                style={{ flex: 1, padding: '9px', background: '#29B5CC', border: 'none', borderRadius: '7px', color: '#000', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showApplyProgramModal && (
+        <ApplyProgramTemplateModal
+          therapistId={profile.id}
+          clientId={clientId}
+          onClose={() => setShowApplyProgramModal(false)}
+          onApplied={() => { setShowApplyProgramModal(false); fetchData() }}
+        />
       )}
     </SidebarLayout>
   )
