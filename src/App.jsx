@@ -23,6 +23,7 @@ import CheckInEdit from './pages/therapist/CheckInEdit'
 import CheckInWizard from './pages/client/CheckInWizard'
 import TherapistMessages from './pages/therapist/TherapistMessages'
 import TherapistThread from './pages/therapist/TherapistThread'
+import ProgramEdit from './pages/therapist/ProgramEdit'
 import ClientMessages from './pages/client/ClientMessages'
 import History from './pages/client/History'
 import Join from './pages/Join'
@@ -107,6 +108,8 @@ export default function App() {
           <Route path="/therapist/checkins/:formId" element={<ProtectedRoute requiredRole="therapist"><CheckInEdit /></ProtectedRoute>} />
           <Route path="/therapist/messages" element={<ProtectedRoute requiredRole="therapist"><TherapistMessages /></ProtectedRoute>} />
           <Route path="/therapist/messages/:clientId" element={<ProtectedRoute requiredRole="therapist"><TherapistThread /></ProtectedRoute>} />
+          <Route path="/therapist/prescribe/:clientId/programs/:programId" element={<ProtectedRoute requiredRole="therapist"><ProgramEdit /></ProtectedRoute>} />
+          <Route path="/therapist/program-templates/:templateId" element={<ProtectedRoute requiredRole="therapist"><ProgramEdit /></ProtectedRoute>} />
 
           {/* Client — protected */}
           <Route path="/client" element={<ProtectedRoute requiredRole="client"><ClientDashboard /></ProtectedRoute>} />
