@@ -155,20 +155,25 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
   // programContext shape: { programId: string, weekNumber: number, programStartDate: string|null } | undefined
 ```
 
-Replace the `createPrescription` function:
+Replace the `createPrescription` function (and add the helper above it):
 
 ```jsx
+  // Safely adds N days to a "YYYY-MM-DD" string using UTC to avoid timezone-offset bugs
+  function addDaysToDate(dateStr, days) {
+    const [y, m, d] = dateStr.split('-').map(Number)
+    return new Date(Date.UTC(y, m - 1, d + days)).toISOString().split('T')[0]
+  }
+
   async function createPrescription(tmpl) {
     const t = tmpl ?? selectedTemplate
     let extraFields = {}
     if (programContext) {
-      const weekOffset = (programContext.weekNumber - 1) * 7 * 86400000
       extraFields = {
         program_id: programContext.programId,
         week_number: programContext.weekNumber,
         source_template_id: t.id,
         start_date: programContext.programStartDate
-          ? new Date(new Date(programContext.programStartDate).getTime() + weekOffset).toISOString().split('T')[0]
+          ? addDaysToDate(programContext.programStartDate, (programContext.weekNumber - 1) * 7)
           : null,
       }
     } else {
@@ -303,11 +308,16 @@ Collapsible week panel used inside `ProgramEdit`. Works in two modes:
 - [ ] **Step 1: Create the file**
 
 ```jsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronDown, ChevronRight, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import ApplyTemplateModal from './ApplyTemplateModal'
+
+function addDaysToDate(dateStr, days) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().split('T')[0]
+}
 
 // Props:
 // mode: 'program' | 'template'
@@ -357,7 +367,7 @@ export default function ProgramWeekPanel({
           program_id: programId,
           week_number: weekNumber,
           start_date: programStartDate
-            ? new Date(new Date(programStartDate).getTime() + (weekNumber - 1) * 7 * 86400000).toISOString().split('T')[0]
+            ? addDaysToDate(programStartDate, (weekNumber - 1) * 7)
             : null,
         })
         .select('id')
@@ -389,7 +399,13 @@ export default function ProgramWeekPanel({
   }
 
   async function handleRemoveSession(sessionId) {
-    if (!window.confirm('Remove this session from the program?')) return
+    // In program mode: unlink from this program (prescription becomes a standalone session
+    // visible on the Prescribe page). Does NOT delete the prescription or its session logs.
+    // In template mode: permanently deletes the program_template_sessions row.
+    const msg = mode === 'program'
+      ? 'Remove this session from the program? It will remain as a standalone session on the Prescribe page.'
+      : 'Remove this session from the template?'
+    if (!window.confirm(msg)) return
     if (mode === 'program') {
       await supabase.from('prescriptions').update({ program_id: null, week_number: null }).eq('id', sessionId)
     } else {
@@ -656,6 +672,11 @@ Modal for picking a program template + start date, then creating a `programs` ro
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 
+function addDaysToDate(dateStr, days) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().split('T')[0]
+}
+
 // Props:
 // therapistId: string
 // clientId: string
@@ -707,8 +728,7 @@ export default function ApplyProgramTemplateModal({ therapistId, clientId, onClo
 
       // 3. For each template session, create a prescription (sequential awaits)
       for (const ts of templateSessions) {
-        const weekOffset = (ts.week_number - 1) * 7 * 86400000
-        const sessionStartDate = new Date(new Date(startDate).getTime() + weekOffset).toISOString().split('T')[0]
+        const sessionStartDate = addDaysToDate(startDate, (ts.week_number - 1) * 7)
 
         const { data: prescription, error: pErr } = await supabase
           .from('prescriptions')
@@ -875,6 +895,11 @@ import ProgramWeekPanel from '../../components/therapist/ProgramWeekPanel'
 import ShimmerLine from '../../components/shared/ShimmerLine'
 import { CARD } from '../../components/therapist/styles'
 
+function addDaysToDate(dateStr, days) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().split('T')[0]
+}
+
 export default function ProgramEdit() {
   const { clientId, programId, templateId } = useParams()
   const { profile } = useAuth()
@@ -979,8 +1004,7 @@ export default function ProgramEdit() {
 
         for (const s of sessions) {
           if (!withLogs.has(s.id) && s.week_number) {
-            const weekOffset = (s.week_number - 1) * 7 * 86400000
-            const sessionStart = new Date(new Date(date).getTime() + weekOffset).toISOString().split('T')[0]
+            const sessionStart = addDaysToDate(date, (s.week_number - 1) * 7)
             await supabase.from('prescriptions').update({ start_date: sessionStart }).eq('id', s.id)
           }
         }
@@ -1113,6 +1137,12 @@ export default function ProgramEdit() {
                       onChange={async e => {
                         const val = parseInt(e.target.value) || 1
                         const clamped = Math.max(1, Math.min(52, val))
+                        if (clamped < durationWeeks) {
+                          const affected = sessions.filter(s => (s.week_number ?? s.week_number) > clamped)
+                          if (affected.length > 0) {
+                            if (!window.confirm(`Reducing to ${clamped} weeks will hide ${affected.length} session(s) in weeks ${clamped + 1}+. They remain in the database as standalone sessions but won't show in this editor. Continue?`)) return
+                          }
+                        }
                         setDurationWeeks(clamped)
                         const table = mode === 'program' ? 'programs' : 'program_templates'
                         await supabase.from(table).update({ duration_weeks: clamped }).eq('id', entityId)
@@ -1421,12 +1451,26 @@ Add the "Create program" modal and `ApplyProgramTemplateModal` just before the c
       )}
 ```
 
-Also add a click-outside handler for the dropdowns. Add to the existing `useEffect` block section:
+Also add `data-` attributes to both dropdown container `<div>`s so the click-outside handler can identify them. Update the two dropdown containers in the JSX:
+
+```jsx
+<div data-session-dropdown style={{ position: 'relative' }}>
+  ...
+</div>
+<div data-program-dropdown style={{ position: 'relative' }}>
+  ...
+</div>
+```
+
+Then add the click-outside handler using `closest()` — same pattern as the existing PDF menu handler:
 
 ```jsx
   useEffect(() => {
     if (!showSessionDropdown && !showProgramDropdown) return
-    const handler = () => { setShowSessionDropdown(false); setShowProgramDropdown(false) }
+    const handler = (e) => {
+      if (!e.target.closest('[data-session-dropdown]')) setShowSessionDropdown(false)
+      if (!e.target.closest('[data-program-dropdown]')) setShowProgramDropdown(false)
+    }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [showSessionDropdown, showProgramDropdown])
@@ -1449,9 +1493,16 @@ In the `activeTab === 'prescriptions'` section, replace the existing sessions li
                   }
                 }
 
+                // Apply active-first sort to standalones (matches existing Prescribe behaviour)
+                const sortedStandalones = [...standalones].sort((a, b) => {
+                  const aActive = isActive(a), bActive = isActive(b)
+                  if (aActive !== bActive) return aActive ? -1 : 1
+                  return new Date(b.created_at) - new Date(a.created_at)
+                })
+
                 const items = [
                   ...programs.map(p => ({ type: 'program', ...programMap.get(p.id), sortKey: new Date(p.created_at) })),
-                  ...standalones.map(s => ({ type: 'session', session: s, sortKey: new Date(s.created_at) })),
+                  ...sortedStandalones.map(s => ({ type: 'session', session: s, sortKey: new Date(s.created_at) })),
                 ].sort((a, b) => b.sortKey - a.sortKey)
 
                 if (items.length === 0) {
@@ -1662,6 +1713,7 @@ Replace the entire `return (...)` in `Templates.jsx`:
     <SidebarLayout>
       <PageHero
         title="Templates"
+        subtitle={activeTab === 'session' && !loading && templates.length > 0 ? `${templates.length} template${templates.length !== 1 ? 's' : ''}` : null}
         actions={
           activeTab === 'session' ? (
             <button
