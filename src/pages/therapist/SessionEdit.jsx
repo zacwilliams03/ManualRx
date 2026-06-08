@@ -135,7 +135,7 @@ export default function SessionEdit() {
       reps: String(pe.reps),
       weight: pe.weight ? String(fromCanonical(pe.weight, weightUnit)) : '',
       notes: pe.therapist_notes ?? '',
-      tempoEnabled: pe.tempo_eccentric != null,
+      tempoEnabled: pe.tempo_eccentric != null && pe.tempo_bottom_pause != null && pe.tempo_concentric != null && pe.tempo_top_pause != null,
       tempoDown: pe.tempo_eccentric != null ? String(pe.tempo_eccentric) : '',
       tempoHold: pe.tempo_bottom_pause != null ? String(pe.tempo_bottom_pause) : '',
       tempoUp: pe.tempo_concentric != null ? String(pe.tempo_concentric) : '',
@@ -178,7 +178,9 @@ export default function SessionEdit() {
       .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(id, name, category, video_url)')
       .single()
     setSavingEdit(false)
-    if (!updateError) {
+    if (updateError) {
+      setSaveEditError(updateError.message || 'Failed to save.')
+    } else {
       setExercises(prev => prev.map(e => e.id === peId ? data : e))
       setEditingId(null)
     }
