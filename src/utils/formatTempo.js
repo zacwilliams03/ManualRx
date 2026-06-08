@@ -1,5 +1,5 @@
 export function formatTempo(eccentric, bottomPause, concentric, topPause) {
-  if ([eccentric, bottomPause, concentric, topPause].some(v => v == null)) return null
+  if ([eccentric, bottomPause, concentric, topPause].some(v => v == null || (typeof v === 'number' && isNaN(v)))) return null
   return {
     compact: `${eccentric}-${bottomPause}-${concentric}-${topPause}`,
     breakdown: [

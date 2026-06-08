@@ -62,9 +62,6 @@ export default function SessionWizard() {
 
   useEffect(() => {
     setPainAcknowledged(false)
-  }, [step])
-
-  useEffect(() => {
     setShowTempo(false)
   }, [step])
 

@@ -27,4 +27,9 @@ describe('formatTempo', () => {
     expect(result).not.toBeNull()
     expect(result.compact).toBe('3-0-2-0')
   })
+
+  test('returns null when any value is NaN', () => {
+    expect(formatTempo(NaN, 1, 2, 1)).toBeNull()
+    expect(formatTempo(3, NaN, 2, 1)).toBeNull()
+  })
 })
