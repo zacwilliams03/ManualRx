@@ -363,25 +363,25 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
                   <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
                       <input type="number" min={1} max={9} value={configTempoDown} onChange={e => setConfigTempoDown(e.target.value)}
-                        style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', padding: '7px 4px' }} />
+                        style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', padding: '7px 4px', colorScheme: 'dark' }} />
                       <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>DOWN</span>
                     </div>
                     <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '20px' }}>—</span>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
                       <input type="number" min={0} max={9} value={configTempoHold} onChange={e => setConfigTempoHold(e.target.value)}
-                        style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', padding: '7px 4px' }} />
+                        style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', padding: '7px 4px', colorScheme: 'dark' }} />
                       <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>HOLD</span>
                     </div>
                     <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '20px' }}>—</span>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
                       <input type="number" min={1} max={9} value={configTempoUp} onChange={e => setConfigTempoUp(e.target.value)}
-                        style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', padding: '7px 4px' }} />
+                        style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', padding: '7px 4px', colorScheme: 'dark' }} />
                       <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>UP</span>
                     </div>
                     <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '20px' }}>—</span>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
                       <input type="number" min={0} max={9} value={configTempoTop} onChange={e => setConfigTempoTop(e.target.value)}
-                        style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', padding: '7px 4px' }} />
+                        style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', padding: '7px 4px', colorScheme: 'dark' }} />
                       <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>TOP</span>
                     </div>
                   </div>
@@ -390,11 +390,11 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
                     const c = parseInt(configTempoUp), t = parseInt(configTempoTop)
                     if ([e, b, c, t].some(isNaN)) return null
                     const tempo = formatTempo(e, b, c, t)
-                    return tempo ? (
+                    return (
                       <p style={{ margin: 0, fontSize: '11px', color: '#29B5CC', fontStyle: 'italic', background: 'rgba(41,181,204,0.06)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '6px', padding: '6px 10px' }}>
                         {tempo.breakdown.map(ph => `${ph.value}s ${ph.label}`).join(' · ')}
                       </p>
-                    ) : null
+                    )
                   })()}
                 </div>
               )}
