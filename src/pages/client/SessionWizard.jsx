@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
 import useIsMobile from '../../hooks/useIsMobile'
 import { toCanonical, fromCanonical, formatWeight } from '../../utils/weightUtils'
+import { formatTempo } from '../../utils/formatTempo'
 import VideoPlayer from '../../components/VideoPlayer'
 import { motion } from 'framer-motion'
 import { CARD } from '../../components/therapist/styles'
@@ -57,9 +58,14 @@ export default function SessionWizard() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [painAcknowledged, setPainAcknowledged] = useState(false)
+  const [showTempo, setShowTempo] = useState(false)
 
   useEffect(() => {
     setPainAcknowledged(false)
+  }, [step])
+
+  useEffect(() => {
+    setShowTempo(false)
   }, [step])
 
   useEffect(() => {
@@ -68,7 +74,7 @@ export default function SessionWizard() {
         supabase.from('prescriptions').select('id, name, therapist_id').eq('id', sessionId).single(),
         supabase
           .from('prescription_exercises')
-          .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(id, name, category, video_url)')
+          .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(id, name, category, video_url)')
           .eq('prescription_id', sessionId)
           .order('id', { ascending: true }),
         supabase
@@ -402,6 +408,43 @@ export default function SessionWizard() {
               <span style={{ fontSize: '13px', color: '#29B5CC' }}>Complete on both sides</span>
             </div>
           )}
+
+          {(() => {
+            const t = formatTempo(ex.tempo_eccentric, ex.tempo_bottom_pause, ex.tempo_concentric, ex.tempo_top_pause)
+            if (!t) return null
+            return (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '10px', color: 'var(--color-subtle)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Tempo</span>
+                  <span style={{ fontSize: '13px', color: 'var(--color-text)', fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.05em' }}>{t.compact}</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowTempo(v => !v)}
+                    style={{
+                      width: '18px', height: '18px', borderRadius: '50%', border: '1px solid rgba(41,181,204,0.3)',
+                      background: showTempo ? 'rgba(41,181,204,0.2)' : 'rgba(41,181,204,0.08)',
+                      color: '#29B5CC', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, lineHeight: 1,
+                    }}
+                  >
+                    ?
+                  </button>
+                </div>
+                {showTempo && (
+                  <div style={{ marginTop: '8px', background: 'rgba(41,181,204,0.06)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '7px', padding: '10px 12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px' }}>
+                      {t.breakdown.map(ph => (
+                        <React.Fragment key={ph.label}>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '14px', color: '#29B5CC' }}>{ph.value}</span>
+                          <span style={{ fontSize: '13px', color: 'var(--color-text)' }}>{ph.label}</span>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
           {ex.therapist_notes && (
             <p style={{ background: 'rgba(41,181,204,0.06)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '7px', padding: '8px 12px', fontSize: '13px', color: '#29B5CC', margin: 0 }}>
