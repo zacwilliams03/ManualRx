@@ -157,6 +157,29 @@ The `template_exercises` select at the top of this file (line ~40) currently fet
 - If the tempo toggle is on, all four fields must be filled and in range before saving. Validation runs inside the component (ExercisePicker's `handleConfirmAdd`, SessionEdit's save handler) and shows an inline error — `onAdd()` / the update mutation is never called with invalid state.
 - `formatTempo` returns `null` for any partial state — all consumers guard on null before rendering.
 
+### PDF Components
+
+Three PDF components render exercises identically using `@react-pdf/renderer` — all need the same tempo addition:
+
+- `src/components/therapist/PrescriptionPDF.jsx` — single session export
+- `src/components/therapist/AllSessionsPDF.jsx` — all sessions export
+- `src/components/therapist/ProgramPDF.jsx` — program export
+
+**Current exercise meta line pattern** (same in all three):
+```jsx
+{ex.sets} sets × {ex.reps} {ex.measurement_type === 'seconds' ? 'sec' : 'reps'}
+{ex.weight ? ` @ ${weightDisplay(ex.weight, weightUnit)}` : ' — Bodyweight'}
+{ex.bilateral ? ' — Both sides' : ''}
+```
+
+**Addition:** append ` — Tempo: {compact}` using `formatTempo`, consistent with the bilateral pattern. No interactive `?` in a PDF — show the compact code only. If tempo is null, nothing is appended.
+
+```jsx
+{(() => { const t = formatTempo(ex.tempo_eccentric, ex.tempo_bottom_pause, ex.tempo_concentric, ex.tempo_top_pause); return t ? ` — Tempo: ${t.compact}` : '' })()}
+```
+
+The data shapes passed into these components (from wherever they are called) must include the four tempo columns so they are available on each `ex` object.
+
 ---
 
 ## Out of Scope
@@ -165,4 +188,3 @@ The `template_exercises` select at the top of this file (line ~40) currently fet
 - Per-rep tempo timer or countdown
 - Non-numeric tempo notation (e.g. "X" for explosive)
 - Filtering or searching exercises by tempo
-- Tempo in exported PDFs (`PrescriptionPDF.jsx`, `AllSessionsPDF.jsx`)
