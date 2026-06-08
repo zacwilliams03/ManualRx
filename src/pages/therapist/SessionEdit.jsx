@@ -6,6 +6,7 @@ import SidebarLayout from '../../components/therapist/SidebarLayout'
 import ExercisePicker from '../../components/therapist/ExercisePicker'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
 import { formatWeight, fromCanonical, toCanonical } from '../../utils/weightUtils'
+import { formatTempo } from '../../utils/formatTempo'
 import { motion } from 'framer-motion'
 import PageHero from '../../components/shared/PageHero'
 import { CARD, SECTION_LABEL } from '../../components/therapist/styles'
@@ -36,6 +37,7 @@ export default function SessionEdit() {
   const [editingId, setEditingId] = useState(null)
   const [editValues, setEditValues] = useState({})
   const [savingEdit, setSavingEdit] = useState(false)
+  const [saveEditError, setSaveEditError] = useState(null)
 
   useEffect(() => {
     if (profile?.id) fetchData()
@@ -47,7 +49,7 @@ export default function SessionEdit() {
       supabase.from('prescriptions').select('id, name, frequency_days, start_date, duration_weeks').eq('id', sessionId).single(),
       supabase
         .from('prescription_exercises')
-        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(id, name, category, video_url)')
+        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(id, name, category, video_url)')
         .eq('prescription_id', sessionId),
     ])
 
@@ -97,7 +99,7 @@ export default function SessionEdit() {
       : `/therapist/prescribe/${clientId}`)
   }
 
-  async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral }) {
+  async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral, tempoEccentric, tempoBottomPause, tempoConcentric, tempoTopPause }) {
     const { data, error: insertError } = await supabase
       .from('prescription_exercises')
       .insert({
@@ -109,8 +111,12 @@ export default function SessionEdit() {
         therapist_notes: notes,
         measurement_type: measurementType ?? 'reps',
         bilateral: bilateral ?? false,
+        tempo_eccentric:    tempoEccentric    ?? null,
+        tempo_bottom_pause: tempoBottomPause  ?? null,
+        tempo_concentric:   tempoConcentric   ?? null,
+        tempo_top_pause:    tempoTopPause     ?? null,
       })
-      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(id, name, category, video_url)')
+      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(id, name, category, video_url)')
       .single()
     if (insertError) throw new Error(insertError.message)
     setExercises(prev => [...prev, data])
@@ -123,17 +129,38 @@ export default function SessionEdit() {
 
   function startEdit(pe) {
     setEditingId(pe.id)
+    setSaveEditError(null)
     setEditValues({
       sets: String(pe.sets),
       reps: String(pe.reps),
       weight: pe.weight ? String(fromCanonical(pe.weight, weightUnit)) : '',
       notes: pe.therapist_notes ?? '',
+      tempoEnabled: pe.tempo_eccentric != null,
+      tempoDown: pe.tempo_eccentric != null ? String(pe.tempo_eccentric) : '',
+      tempoHold: pe.tempo_bottom_pause != null ? String(pe.tempo_bottom_pause) : '',
+      tempoUp: pe.tempo_concentric != null ? String(pe.tempo_concentric) : '',
+      tempoTop: pe.tempo_top_pause != null ? String(pe.tempo_top_pause) : '',
     })
   }
 
   async function saveEdit(peId) {
-    setSavingEdit(true)
+    setSaveEditError(null)
     const v = editValues
+
+    if (v.tempoEnabled) {
+      const e = parseInt(v.tempoDown), b = parseInt(v.tempoHold)
+      const c = parseInt(v.tempoUp), t = parseInt(v.tempoTop)
+      const valid =
+        !isNaN(e) && !isNaN(b) && !isNaN(c) && !isNaN(t) &&
+        e >= 1 && e <= 9 && c >= 1 && c <= 9 &&
+        b >= 0 && b <= 9 && t >= 0 && t <= 9
+      if (!valid) {
+        setSaveEditError('Tempo: down and up must be 1–9; hold and top must be 0–9.')
+        return
+      }
+    }
+
+    setSavingEdit(true)
     const weightVal = v.weight.trim() ? toCanonical(parseFloat(v.weight), weightUnit) : null
     const { data, error: updateError } = await supabase
       .from('prescription_exercises')
@@ -142,9 +169,13 @@ export default function SessionEdit() {
         reps: parseInt(v.reps) || 1,
         weight: weightVal,
         therapist_notes: v.notes.trim() || null,
+        tempo_eccentric:    v.tempoEnabled ? parseInt(v.tempoDown) : null,
+        tempo_bottom_pause: v.tempoEnabled ? parseInt(v.tempoHold) : null,
+        tempo_concentric:   v.tempoEnabled ? parseInt(v.tempoUp)   : null,
+        tempo_top_pause:    v.tempoEnabled ? parseInt(v.tempoTop)   : null,
       })
       .eq('id', peId)
-      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(id, name, category, video_url)')
+      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(id, name, category, video_url)')
       .single()
     setSavingEdit(false)
     if (!updateError) {
@@ -374,6 +405,57 @@ export default function SessionEdit() {
                       placeholder="Therapist notes (optional)"
                       style={{ padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '12px', outline: 'none' }}
                     />
+                    {/* Tempo edit */}
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editValues.tempoEnabled ? '6px' : 0 }}>
+                        <span style={{ fontSize: '11px', color: 'var(--color-muted)', fontWeight: 500 }}>
+                          Tempo <span style={{ fontWeight: 400, color: 'var(--color-subtle)' }}>(optional)</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => { setSaveEditError(null); setEditValues(v => ({ ...v, tempoEnabled: !v.tempoEnabled })) }}
+                          style={{
+                            width: '28px', height: '16px', borderRadius: '8px', border: 'none',
+                            cursor: 'pointer', padding: 0, position: 'relative', transition: 'background 0.15s',
+                            background: editValues.tempoEnabled ? '#29B5CC' : 'var(--color-border)',
+                          }}
+                        >
+                          <span style={{
+                            display: 'block', width: '12px', height: '12px', borderRadius: '50%', background: '#fff',
+                            position: 'absolute', top: '2px', transition: 'left 0.15s',
+                            left: editValues.tempoEnabled ? '14px' : '2px',
+                          }} />
+                        </button>
+                      </div>
+                      {editValues.tempoEnabled && (
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                            <input type="number" min={1} max={9} value={editValues.tempoDown ?? ''} onChange={e => setEditValues(v => ({ ...v, tempoDown: e.target.value }))}
+                              style={{ width: '100%', padding: '5px 4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', textAlign: 'center', colorScheme: 'dark' }} />
+                            <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>DOWN</span>
+                          </div>
+                          <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '14px' }}>—</span>
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                            <input type="number" min={0} max={9} value={editValues.tempoHold ?? ''} onChange={e => setEditValues(v => ({ ...v, tempoHold: e.target.value }))}
+                              style={{ width: '100%', padding: '5px 4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', textAlign: 'center', colorScheme: 'dark' }} />
+                            <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>HOLD</span>
+                          </div>
+                          <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '14px' }}>—</span>
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                            <input type="number" min={1} max={9} value={editValues.tempoUp ?? ''} onChange={e => setEditValues(v => ({ ...v, tempoUp: e.target.value }))}
+                              style={{ width: '100%', padding: '5px 4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', textAlign: 'center', colorScheme: 'dark' }} />
+                            <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>UP</span>
+                          </div>
+                          <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '14px' }}>—</span>
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                            <input type="number" min={0} max={9} value={editValues.tempoTop ?? ''} onChange={e => setEditValues(v => ({ ...v, tempoTop: e.target.value }))}
+                              style={{ width: '100%', padding: '5px 4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', textAlign: 'center', colorScheme: 'dark' }} />
+                            <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>TOP</span>
+                          </div>
+                        </div>
+                      )}
+                      {saveEditError && <p style={{ fontSize: '12px', color: 'var(--color-danger)', margin: '4px 0 0' }}>{saveEditError}</p>}
+                    </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button
                         onClick={() => saveEdit(pe.id)}
@@ -404,6 +486,14 @@ export default function SessionEdit() {
                         {pe.weight ? ` · ${formatWeight(pe.weight, weightUnit)}` : ''}
                         {pe.bilateral ? ' · Both sides' : ''}
                       </div>
+                      {(() => {
+                        const t = formatTempo(pe.tempo_eccentric, pe.tempo_bottom_pause, pe.tempo_concentric, pe.tempo_top_pause)
+                        return t ? (
+                          <span style={{ display: 'inline-block', marginTop: '3px', background: 'rgba(41,181,204,0.1)', border: '1px solid rgba(41,181,204,0.2)', borderRadius: '4px', padding: '1px 7px', fontSize: '11px', color: '#29B5CC', fontFamily: 'monospace', fontWeight: 600 }}>
+                            ⏱ {t.compact}
+                          </span>
+                        ) : null
+                      })()}
                       {pe.therapist_notes && (
                         <div style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px', fontStyle: 'italic' }}>{pe.therapist_notes}</div>
                       )}
