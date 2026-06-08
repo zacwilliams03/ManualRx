@@ -37,7 +37,7 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
       .from('templates')
       .select(`
         id, name, category, duration_weeks,
-        template_exercises(id, exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(name))
+        template_exercises(id, exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(name))
       `)
       .eq('therapist_id', therapistId)
       .order('created_at', { ascending: false })
@@ -65,6 +65,10 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
       notes: te.therapist_notes ?? '',
       measurementType: te.measurement_type ?? 'reps',
       bilateral: te.bilateral ?? false,
+      tempoEccentric:   te.tempo_eccentric    ?? null,
+      tempoBottomPause: te.tempo_bottom_pause ?? null,
+      tempoConcentric:  te.tempo_concentric   ?? null,
+      tempoTopPause:    te.tempo_top_pause    ?? null,
     }))
     setCustomExercises(initial)
     setStep('customise')
@@ -122,6 +126,10 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
         therapist_notes: te.therapist_notes,
         measurement_type: te.measurement_type ?? 'reps',
         bilateral: te.bilateral ?? false,
+        tempo_eccentric:    te.tempo_eccentric    ?? null,
+        tempo_bottom_pause: te.tempo_bottom_pause ?? null,
+        tempo_concentric:   te.tempo_concentric   ?? null,
+        tempo_top_pause:    te.tempo_top_pause    ?? null,
       }))
       if (exerciseRows.length > 0) {
         const { error } = await supabase.from('prescription_exercises').insert(exerciseRows)
@@ -149,6 +157,10 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
         therapist_notes: ex.notes.trim() || null,
         measurement_type: ex.measurementType ?? 'reps',
         bilateral: ex.bilateral ?? false,
+        tempo_eccentric:    ex.tempoEccentric    ?? null,
+        tempo_bottom_pause: ex.tempoBottomPause  ?? null,
+        tempo_concentric:   ex.tempoConcentric   ?? null,
+        tempo_top_pause:    ex.tempoTopPause     ?? null,
       }))
       if (exerciseRows.length > 0) {
         const { error } = await supabase.from('prescription_exercises').insert(exerciseRows)
