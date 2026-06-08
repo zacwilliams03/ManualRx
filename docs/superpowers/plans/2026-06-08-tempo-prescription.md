@@ -165,7 +165,7 @@ import { formatTempo } from '../../utils/formatTempo'
 
 - [ ] **Step 2: Add tempo state variables**
 
-After the existing `const [addError, setAddError] = useState(null)` (line 47), add:
+After the existing `const [addError, setAddError] = useState(null)`, add:
 
 ```js
 const [configTempoEnabled, setConfigTempoEnabled] = useState(false)
@@ -189,7 +189,7 @@ setConfigTempoTop('')
 
 - [ ] **Step 4: Replace `handleConfirmAdd` with validated version**
 
-Replace the entire `handleConfirmAdd` function (lines 94–115) with:
+Replace the entire `handleConfirmAdd` function (starts with `async function handleConfirmAdd() {`) with:
 
 ```js
 async function handleConfirmAdd() {
@@ -345,7 +345,7 @@ import { formatTempo } from '../../utils/formatTempo'
 
 - [ ] **Step 2: Add `saveEditError` state**
 
-After `const [savingEdit, setSavingEdit] = useState(false)` (line 38), add:
+After `const [savingEdit, setSavingEdit] = useState(false)`, add:
 
 ```js
 const [saveEditError, setSaveEditError] = useState(null)
@@ -353,7 +353,7 @@ const [saveEditError, setSaveEditError] = useState(null)
 
 - [ ] **Step 3: Update `fetchData` select**
 
-In `fetchData`, change the `prescription_exercises` select (line 50) from:
+In `fetchData`, find the `prescription_exercises` `.select(...)` call and change it from:
 
 ```js
 .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(id, name, category, video_url)')
@@ -367,7 +367,7 @@ to:
 
 - [ ] **Step 4: Update `handleAddExercise` to accept and insert tempo fields**
 
-Replace the entire `handleAddExercise` function (lines 100–117) with:
+Replace the entire `handleAddExercise` function (starts with `async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral })`) with:
 
 ```js
 async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral, tempoEccentric, tempoBottomPause, tempoConcentric, tempoTopPause }) {
@@ -396,7 +396,7 @@ async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measur
 
 - [ ] **Step 5: Update `startEdit` to include tempo fields**
 
-Replace the `startEdit` function (lines 124–132) with:
+Replace the `startEdit` function (starts with `function startEdit(pe) {`) with:
 
 ```js
 function startEdit(pe) {
@@ -418,7 +418,7 @@ function startEdit(pe) {
 
 - [ ] **Step 6: Replace `saveEdit` with validated version**
 
-Replace the entire `saveEdit` function (lines 134–154) with:
+Replace the entire `saveEdit` function (starts with `async function saveEdit(peId) {`) with:
 
 ```js
 async function saveEdit(peId) {
@@ -489,7 +489,7 @@ After that `</div>`, add:
 
 - [ ] **Step 8: Add tempo section to edit mode form**
 
-In the edit mode section, after the notes `<input>` and before the `<div style={{ display: 'flex', gap: '8px' }}>` buttons row, add:
+In the edit mode section, after the notes `<input>` and before the `<div style={{ display: 'flex', gap: '8px' }}>` buttons row, add the following. Note: `{saveEditError && ...}` is placed at the bottom of this block outside the `tempoEnabled` conditional — it will always render when there is an error regardless of toggle state, which is correct since save errors can occur independently of tempo.
 
 ```jsx
 {/* Tempo edit */}
@@ -579,7 +579,7 @@ import { formatTempo } from '../../utils/formatTempo'
 
 - [ ] **Step 2: Update `fetchData` select**
 
-In `fetchData`, change the `template_exercises` select (line 46) from:
+In `fetchData`, find the `template_exercises` `.select(...)` call and change it from:
 
 ```js
 .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(id, name, category, video_url)')
@@ -593,7 +593,7 @@ to:
 
 - [ ] **Step 3: Update `handleAddExercise` to accept and insert tempo fields**
 
-Replace the entire `handleAddExercise` function (lines 94–110) with:
+Replace the entire `handleAddExercise` function (starts with `async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral })`) with:
 
 ```js
 async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral, tempoEccentric, tempoBottomPause, tempoConcentric, tempoTopPause }) {
@@ -744,17 +744,27 @@ At the top of `SessionWizard.jsx`, after existing imports:
 import { formatTempo } from '../../utils/formatTempo'
 ```
 
-- [ ] **Step 2: Add `showTempo` state**
+- [ ] **Step 2: Add `showTempo` state and reset effect**
 
-Near the top of the component, with the other `useState` declarations, add:
+Near the other `useState` declarations at the top of the component, add:
 
 ```js
 const [showTempo, setShowTempo] = useState(false)
 ```
 
+Then, directly after the existing `useEffect(() => { setPainAcknowledged(false) }, [step])` block, add the same pattern for `showTempo`:
+
+```js
+useEffect(() => {
+  setShowTempo(false)
+}, [step])
+```
+
+`step` is the same state variable used by the wizard for navigation (a number for exercise index, or `'intro'`/`'summary'`/`'done'`). This covers every step transition automatically — no need to touch individual handlers.
+
 - [ ] **Step 3: Update `prescription_exercises` select to include tempo columns**
 
-In the `useEffect` or data-fetching code that selects from `prescription_exercises` (line 71), change from:
+In the data-fetching `useEffect`, find the `prescription_exercises` `.select(...)` call (the one that includes `bilateral, exercises(id, name, ...)`). Change it from:
 
 ```js
 .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(id, name, category, video_url)')
@@ -765,10 +775,6 @@ to:
 ```js
 .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(id, name, category, video_url)')
 ```
-
-- [ ] **Step 4: Reset `showTempo` on exercise step change**
-
-Find where the exercise step changes (the "next exercise" or step navigation handler). Add `setShowTempo(false)` inside that handler before the step increment. This prevents the breakdown panel from staying open on the next exercise.
 
 - [ ] **Step 5: Add tempo row to the exercise view**
 
@@ -1012,9 +1018,13 @@ tempo_concentric:   e.tempo_concentric   ?? null,
 tempo_top_pause:    e.tempo_top_pause    ?? null,
 ```
 
+- [ ] **Step 8: Fix step numbering — (no step 8 previously; reserved for future use)**
+
 ### 8c — Test the PDF change
 
-- [ ] **Step 10: Write the failing test**
+Write these tests **after** all 8a and 8b changes are applied. Since the formatTempo import and IIFE changes are already in place before the tests run, the tests are expected to pass immediately — no red-phase possible without reverting changes. Their value is regression protection.
+
+- [ ] **Step 10: Write the tests**
 
 In `AllSessionsPDF.test.jsx`, add a new test at the end of the describe block:
 
@@ -1070,17 +1080,7 @@ test('renders exercise without tempo without crashing', async () => {
 })
 ```
 
-- [ ] **Step 11: Run to verify tests fail**
-
-```bash
-npm test AllSessionsPDF
-```
-
-Expected: 2 new failures — `formatTempo` not yet imported in AllSessionsPDF.
-
-(If they pass before Step 3 changes were made, that means the PDF component is not yet importing formatTempo — check Step 2 was applied.)
-
-- [ ] **Step 12: Run after all 8a–8b changes are in**
+- [ ] **Step 11: Run all tests**
 
 ```bash
 npm test
