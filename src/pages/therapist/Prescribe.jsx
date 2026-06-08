@@ -12,6 +12,7 @@ import { sanitise } from '../../utils/pdfUtils'
 import { pdf } from '@react-pdf/renderer'
 import { PrescriptionPDF } from '../../components/therapist/PrescriptionPDF'
 import { AllSessionsPDF } from '../../components/therapist/AllSessionsPDF'
+import { ProgramPDF } from '../../components/therapist/ProgramPDF'
 import { ClientDataTab } from './ClientDataTab'
 import { motion, AnimatePresence } from 'framer-motion'
 import PageHero from '../../components/shared/PageHero'
@@ -155,6 +156,7 @@ export default function Prescribe() {
 
   const [pdfLoadingId, setPdfLoadingId] = useState(null)
   const [pdfError, setPdfError] = useState(null)
+  const [programPdfLoadingId, setProgramPdfLoadingId] = useState(null)
   const [allPdfLoading, setAllPdfLoading] = useState(false)
   const [allPdfError, setAllPdfError] = useState(false)
 
@@ -436,6 +438,71 @@ export default function Prescribe() {
     }
   }
 
+  async function downloadProgramPDF(program, programSessions) {
+    setProgramPdfLoadingId(program.id)
+    try {
+      const prescriptionIds = programSessions.map(s => s.id)
+      const { data: peData, error: peError } = await supabase
+        .from('prescription_exercises')
+        .select('prescription_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(name)')
+        .in('prescription_id', prescriptionIds)
+        .order('created_at', { ascending: true })
+      if (peError) throw peError
+
+      const exercisesByPrescription = {}
+      for (const pe of peData ?? []) {
+        if (!exercisesByPrescription[pe.prescription_id]) exercisesByPrescription[pe.prescription_id] = []
+        exercisesByPrescription[pe.prescription_id].push({
+          name: pe.exercises?.name ?? 'Exercise',
+          sets: pe.sets,
+          reps: pe.reps,
+          weight: pe.weight,
+          therapist_notes: pe.therapist_notes,
+          measurement_type: pe.measurement_type ?? 'reps',
+          bilateral: pe.bilateral ?? false,
+        })
+      }
+
+      const sortedSessions = [...programSessions].sort((a, b) => (a.week_number ?? 0) - (b.week_number ?? 0))
+      const weekMap = {}
+      for (const s of sortedSessions) {
+        const wk = s.week_number ?? 1
+        if (!weekMap[wk]) weekMap[wk] = []
+        weekMap[wk].push({
+          name: s.name,
+          frequencyDays: s.frequency_days ?? null,
+          exercises: exercisesByPrescription[s.id] ?? [],
+        })
+      }
+      const weeks = Object.keys(weekMap).sort((a, b) => Number(a) - Number(b)).map(wk => ({
+        weekNumber: Number(wk),
+        sessions: weekMap[wk],
+      }))
+
+      const blob = await pdf(
+        <ProgramPDF
+          clinicName={clinicName}
+          clientName={client?.name ?? 'Client'}
+          programName={program.name}
+          startDate={program.start_date ?? null}
+          weeks={weeks}
+          weightUnit={weightUnit}
+        />
+      ).toBlob()
+
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${sanitise(client?.name ?? 'client')}-${sanitise(program.name)}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Program PDF generation failed:', err)
+    } finally {
+      setProgramPdfLoadingId(null)
+    }
+  }
+
   // Active first, then inactive; within each group sort by created_at ascending
   const sortedSessions = [...sessions].sort((a, b) => {
     const aActive = isActive(a), bActive = isActive(b)
@@ -630,7 +697,7 @@ export default function Prescribe() {
                       setShowSessionDropdown(d => !d)
                       setShowProgramDropdown(false)
                     }}
-                    style={{ padding: '9px 18px', background: 'transparent', color: 'var(--color-muted)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', fontSize: '13px', cursor: 'pointer' }}
+                    style={{ padding: '9px 18px', background: 'transparent', color: '#29B5CC', border: '1px solid rgba(41,181,204,0.45)', borderRadius: '7px', fontSize: '13px', cursor: 'pointer' }}
                   >
                     New Session ▾
                   </button>
@@ -763,13 +830,23 @@ export default function Prescribe() {
                             </div>
                             <p style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '3px', paddingLeft: '18px' }}>{progressLabel}</p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={e => { e.stopPropagation(); navigate(`/therapist/prescribe/${clientId}/programs/${p.id}`) }}
-                            style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(41,181,204,0.3)', borderRadius: '6px', color: '#29B5CC', background: 'transparent', cursor: 'pointer', flexShrink: 0 }}
-                          >
-                            Edit
-                          </button>
+                          <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => downloadProgramPDF(p, item.sessions)}
+                              disabled={programPdfLoadingId === p.id}
+                              style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-muted)', background: 'transparent', cursor: 'pointer', opacity: programPdfLoadingId === p.id ? 0.6 : 1 }}
+                            >
+                              {programPdfLoadingId === p.id ? 'Generating…' : 'PDF'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/therapist/prescribe/${clientId}/programs/${p.id}`)}
+                              style={{ fontSize: '12px', padding: '5px 12px', border: '1px solid rgba(41,181,204,0.3)', borderRadius: '6px', color: '#29B5CC', background: 'transparent', cursor: 'pointer' }}
+                            >
+                              Edit
+                            </button>
+                          </div>
                         </button>
                         {expandedPrograms.has(p.id) && [...item.sessions].sort((a, b) => (a.week_number ?? 0) - (b.week_number ?? 0)).map(s => {
                           const active = isActive(s)

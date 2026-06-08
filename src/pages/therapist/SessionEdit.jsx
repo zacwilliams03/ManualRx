@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import ExercisePicker from '../../components/therapist/ExercisePicker'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
-import { formatWeight } from '../../utils/weightUtils'
+import { formatWeight, fromCanonical, toCanonical } from '../../utils/weightUtils'
 import { motion } from 'framer-motion'
 import PageHero from '../../components/shared/PageHero'
 import { CARD, SECTION_LABEL } from '../../components/therapist/styles'
@@ -33,6 +33,9 @@ export default function SessionEdit() {
   const [durationWeeks, setDurationWeeks] = useState(null)
   const [customWeeks, setCustomWeeks] = useState('')
   const [savingMeta, setSavingMeta] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [editValues, setEditValues] = useState({})
+  const [savingEdit, setSavingEdit] = useState(false)
 
   useEffect(() => {
     if (profile?.id) fetchData()
@@ -116,6 +119,38 @@ export default function SessionEdit() {
   async function removeExercise(peId) {
     await supabase.from('prescription_exercises').delete().eq('id', peId)
     setExercises(prev => prev.filter(e => e.id !== peId))
+  }
+
+  function startEdit(pe) {
+    setEditingId(pe.id)
+    setEditValues({
+      sets: String(pe.sets),
+      reps: String(pe.reps),
+      weight: pe.weight ? String(fromCanonical(pe.weight, weightUnit)) : '',
+      notes: pe.therapist_notes ?? '',
+    })
+  }
+
+  async function saveEdit(peId) {
+    setSavingEdit(true)
+    const v = editValues
+    const weightVal = v.weight.trim() ? toCanonical(parseFloat(v.weight), weightUnit) : null
+    const { data, error: updateError } = await supabase
+      .from('prescription_exercises')
+      .update({
+        sets: parseInt(v.sets) || 1,
+        reps: parseInt(v.reps) || 1,
+        weight: weightVal,
+        therapist_notes: v.notes.trim() || null,
+      })
+      .eq('id', peId)
+      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(id, name, category, video_url)')
+      .single()
+    setSavingEdit(false)
+    if (!updateError) {
+      setExercises(prev => prev.map(e => e.id === peId ? data : e))
+      setEditingId(null)
+    }
   }
 
   if (loading) {
@@ -299,25 +334,96 @@ export default function SessionEdit() {
                 key={pe.id}
                 style={{ padding: '12px 20px', borderBottom: i < exercises.length - 1 ? '1px solid var(--color-elevated)' : 'none' }}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
-                  <div>
-                    <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)' }}>{pe.exercises.name}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '2px' }}>
-                      {pe.sets} sets × {pe.reps} {pe.measurement_type === 'seconds' ? 'sec' : 'reps'}
-                      {pe.weight ? ` · ${formatWeight(pe.weight, weightUnit)}` : ''}
-                      {pe.bilateral ? ' · Both sides' : ''}
+                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', marginBottom: '6px' }}>{pe.exercises.name}</div>
+                {editingId === pe.id ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
+                        Sets
+                        <input
+                          type="number" min="1"
+                          value={editValues.sets}
+                          onChange={e => setEditValues(v => ({ ...v, sets: e.target.value }))}
+                          style={{ width: '60px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
+                        {pe.measurement_type === 'seconds' ? 'Seconds' : 'Reps'}
+                        <input
+                          type="number" min="1"
+                          value={editValues.reps}
+                          onChange={e => setEditValues(v => ({ ...v, reps: e.target.value }))}
+                          style={{ width: '70px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
+                        Weight ({weightUnit})
+                        <input
+                          type="number" min="0" step="0.5"
+                          value={editValues.weight}
+                          onChange={e => setEditValues(v => ({ ...v, weight: e.target.value }))}
+                          placeholder="—"
+                          style={{ width: '80px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
+                        />
+                      </label>
                     </div>
-                    {pe.therapist_notes && (
-                      <div style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px', fontStyle: 'italic' }}>{pe.therapist_notes}</div>
-                    )}
+                    <input
+                      type="text"
+                      value={editValues.notes}
+                      onChange={e => setEditValues(v => ({ ...v, notes: e.target.value }))}
+                      placeholder="Therapist notes (optional)"
+                      style={{ padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '12px', outline: 'none' }}
+                    />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => saveEdit(pe.id)}
+                        disabled={savingEdit}
+                        style={{ fontSize: '12px', padding: '4px 12px', background: '#29B5CC', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                      >
+                        {savingEdit ? 'Saving…' : 'Save'}
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        style={{ fontSize: '12px', padding: '4px 10px', background: 'none', color: 'var(--color-muted)', border: '1px solid var(--color-border)', borderRadius: '6px', cursor: 'pointer' }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => removeExercise(pe.id)}
+                        style={{ fontSize: '12px', padding: '4px 10px', background: 'none', color: 'var(--color-danger)', border: 'none', cursor: 'pointer', marginLeft: 'auto' }}
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => removeExercise(pe.id)}
-                    style={{ fontSize: '12px', color: 'var(--color-danger)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
-                  >
-                    Remove
-                  </button>
-                </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                    <div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-subtle)' }}>
+                        {pe.sets} sets × {pe.reps} {pe.measurement_type === 'seconds' ? 'sec' : 'reps'}
+                        {pe.weight ? ` · ${formatWeight(pe.weight, weightUnit)}` : ''}
+                        {pe.bilateral ? ' · Both sides' : ''}
+                      </div>
+                      {pe.therapist_notes && (
+                        <div style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px', fontStyle: 'italic' }}>{pe.therapist_notes}</div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                      <button
+                        onClick={() => startEdit(pe)}
+                        style={{ fontSize: '12px', color: 'var(--color-accent)', background: 'none', border: 'none', cursor: 'pointer' }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => removeExercise(pe.id)}
+                        style={{ fontSize: '12px', color: 'var(--color-danger)', background: 'none', border: 'none', cursor: 'pointer' }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {pe.exercises.video_url && <VideoPlayer url={pe.exercises.video_url} className="w-full rounded mt-2" />}
               </div>
             ))
