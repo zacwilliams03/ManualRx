@@ -1,5 +1,6 @@
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
 import { weightDisplay, formatPdfDate } from '../../utils/pdfUtils'
+import { formatTempo } from '../../utils/formatTempo'
 
 const NAVY = '#1E2D3D'
 const TEAL = '#29B5CC'
@@ -128,6 +129,7 @@ export function PrescriptionPDF({ clinicName, clientName, prescriptionName, exer
               {ex.sets} sets × {ex.reps} {ex.measurement_type === 'seconds' ? 'sec' : 'reps'}
               {ex.weight ? ` @ ${weightDisplay(ex.weight, weightUnit)}` : ' — Bodyweight'}
               {ex.bilateral ? ' — Both sides' : ''}
+              {(() => { const t = formatTempo(ex.tempo_eccentric, ex.tempo_bottom_pause, ex.tempo_concentric, ex.tempo_top_pause); return t ? ` — Tempo: ${t.compact}` : '' })()}
             </Text>
             {ex.therapist_notes ? (
               <View style={styles.notesBox}>

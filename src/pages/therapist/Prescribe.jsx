@@ -360,7 +360,7 @@ export default function Prescribe() {
 
     const { data: origExercises, error: exError } = await supabase
       .from('prescription_exercises')
-      .select('exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral')
+      .select('exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause')
       .eq('prescription_id', original.id)
 
     if (exError) { alert('Failed to copy exercises.'); setReactivating(null); return }
@@ -375,6 +375,10 @@ export default function Prescribe() {
         therapist_notes: e.therapist_notes,
         measurement_type: e.measurement_type ?? 'reps',
         bilateral: e.bilateral ?? false,
+        tempo_eccentric:    e.tempo_eccentric    ?? null,
+        tempo_bottom_pause: e.tempo_bottom_pause ?? null,
+        tempo_concentric:   e.tempo_concentric   ?? null,
+        tempo_top_pause:    e.tempo_top_pause    ?? null,
       }))
       const { error: copyError } = await supabase.from('prescription_exercises').insert(copies)
       if (copyError) { alert('Failed to copy exercises.'); setReactivating(null); return }
@@ -399,7 +403,7 @@ export default function Prescribe() {
     try {
       const { data: peData, error: peError } = await supabase
         .from('prescription_exercises')
-        .select('sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(name)')
+        .select('sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(name)')
         .eq('prescription_id', prescription.id)
         .order('created_at', { ascending: true })
       if (peError) throw peError
@@ -412,6 +416,10 @@ export default function Prescribe() {
         therapist_notes: pe.therapist_notes,
         measurement_type: pe.measurement_type ?? 'reps',
         bilateral: pe.bilateral ?? false,
+        tempo_eccentric:    pe.tempo_eccentric    ?? null,
+        tempo_bottom_pause: pe.tempo_bottom_pause ?? null,
+        tempo_concentric:   pe.tempo_concentric   ?? null,
+        tempo_top_pause:    pe.tempo_top_pause    ?? null,
       }))
 
       const blob = await pdf(
@@ -444,7 +452,7 @@ export default function Prescribe() {
       const prescriptionIds = programSessions.map(s => s.id)
       const { data: peData, error: peError } = await supabase
         .from('prescription_exercises')
-        .select('prescription_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(name)')
+        .select('prescription_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(name)')
         .in('prescription_id', prescriptionIds)
         .order('created_at', { ascending: true })
       if (peError) throw peError
@@ -460,6 +468,10 @@ export default function Prescribe() {
           therapist_notes: pe.therapist_notes,
           measurement_type: pe.measurement_type ?? 'reps',
           bilateral: pe.bilateral ?? false,
+          tempo_eccentric:    pe.tempo_eccentric    ?? null,
+          tempo_bottom_pause: pe.tempo_bottom_pause ?? null,
+          tempo_concentric:   pe.tempo_concentric   ?? null,
+          tempo_top_pause:    pe.tempo_top_pause    ?? null,
         })
       }
 
@@ -520,7 +532,7 @@ export default function Prescribe() {
       const activeIds = activeSessions.map(s => s.id)
       const { data: peData, error: peError } = await supabase
         .from('prescription_exercises')
-        .select('prescription_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(name)')
+        .select('prescription_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(name)')
         .in('prescription_id', activeIds)
         .order('created_at', { ascending: true })
       if (peError) throw peError
@@ -536,6 +548,10 @@ export default function Prescribe() {
           therapist_notes: row.therapist_notes,
           measurement_type: row.measurement_type ?? 'reps',
           bilateral: row.bilateral ?? false,
+          tempo_eccentric:    row.tempo_eccentric    ?? null,
+          tempo_bottom_pause: row.tempo_bottom_pause ?? null,
+          tempo_concentric:   row.tempo_concentric   ?? null,
+          tempo_top_pause:    row.tempo_top_pause    ?? null,
         })
       }
 
@@ -578,7 +594,7 @@ export default function Prescribe() {
       const activeIds = activeSessions.map(s => s.id)
       const { data: peData, error: peError } = await supabase
         .from('prescription_exercises')
-        .select('prescription_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(name)')
+        .select('prescription_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(name)')
         .in('prescription_id', activeIds)
         .order('created_at', { ascending: true })
       if (peError) throw peError
@@ -594,6 +610,10 @@ export default function Prescribe() {
           therapist_notes: row.therapist_notes,
           measurement_type: row.measurement_type ?? 'reps',
           bilateral: row.bilateral ?? false,
+          tempo_eccentric:    row.tempo_eccentric    ?? null,
+          tempo_bottom_pause: row.tempo_bottom_pause ?? null,
+          tempo_concentric:   row.tempo_concentric   ?? null,
+          tempo_top_pause:    row.tempo_top_pause    ?? null,
         })
       }
 

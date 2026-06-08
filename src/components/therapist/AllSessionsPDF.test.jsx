@@ -80,4 +80,54 @@ describe('AllSessionsPDF', () => {
     expect(blob).toBeInstanceOf(Blob)
     expect(blob.size).toBeGreaterThan(0)
   })
+
+  test('renders exercise with tempo without crashing', async () => {
+    const props = {
+      ...BASE_PROPS,
+      prescriptions: [
+        {
+          name: 'Tempo Session',
+          frequencyLabel: 'Daily',
+          exercises: [
+            {
+              name: 'Romanian Deadlift',
+              sets: 3, reps: 10, weight: 60,
+              therapist_notes: null,
+              measurement_type: 'reps',
+              bilateral: false,
+              tempo_eccentric: 3, tempo_bottom_pause: 1, tempo_concentric: 2, tempo_top_pause: 1,
+            },
+          ],
+        },
+      ],
+    }
+    const blob = await pdf(<AllSessionsPDF {...props} />).toBlob()
+    expect(blob).toBeInstanceOf(Blob)
+    expect(blob.size).toBeGreaterThan(0)
+  })
+
+  test('renders exercise without tempo without crashing', async () => {
+    const props = {
+      ...BASE_PROPS,
+      prescriptions: [
+        {
+          name: 'No Tempo Session',
+          frequencyLabel: 'Daily',
+          exercises: [
+            {
+              name: 'Squat',
+              sets: 3, reps: 10, weight: 80,
+              therapist_notes: null,
+              measurement_type: 'reps',
+              bilateral: false,
+              tempo_eccentric: null, tempo_bottom_pause: null, tempo_concentric: null, tempo_top_pause: null,
+            },
+          ],
+        },
+      ],
+    }
+    const blob = await pdf(<AllSessionsPDF {...props} />).toBlob()
+    expect(blob).toBeInstanceOf(Blob)
+    expect(blob.size).toBeGreaterThan(0)
+  })
 })
