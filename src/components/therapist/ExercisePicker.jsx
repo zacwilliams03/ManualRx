@@ -64,12 +64,23 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
 
   async function runSearch() {
     setSearching(true)
-    const { data } = await supabase
+    const term = debouncedSearch.trim()
+    const { data, error } = await supabase
       .from('exercises')
       .select('id, name, category, categories, default_sets, default_reps, is_timed, is_bilateral, video_url')
-      .textSearch('fts', debouncedSearch.trim(), { type: 'websearch', config: 'english' })
+      .textSearch('fts', term, { type: 'websearch', config: 'english' })
       .limit(10)
-    setSearchResults(data ?? [])
+    if (error || !data?.length) {
+      const { data: fallback } = await supabase
+        .from('exercises')
+        .select('id, name, category, categories, default_sets, default_reps, is_timed, is_bilateral, video_url')
+        .ilike('name', `%${term}%`)
+        .order('name')
+        .limit(10)
+      setSearchResults(fallback ?? [])
+    } else {
+      setSearchResults(data)
+    }
     setSearching(false)
   }
 
@@ -364,7 +375,7 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
                       <input type="number" min={1} max={9} value={configTempoDown} onChange={e => setConfigTempoDown(e.target.value)}
                         style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', padding: '7px 4px', colorScheme: 'dark' }} />
-                      <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>DOWN</span>
+                      <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Ecc.</span>
                     </div>
                     <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '20px' }}>—</span>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
@@ -376,7 +387,7 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
                       <input type="number" min={1} max={9} value={configTempoUp} onChange={e => setConfigTempoUp(e.target.value)}
                         style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', padding: '7px 4px', colorScheme: 'dark' }} />
-                      <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>UP</span>
+                      <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Con.</span>
                     </div>
                     <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '20px' }}>—</span>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
@@ -392,7 +403,7 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
                     const tempo = formatTempo(e, b, c, t)
                     return (
                       <p style={{ margin: 0, fontSize: '11px', color: '#29B5CC', fontStyle: 'italic', background: 'rgba(41,181,204,0.06)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '6px', padding: '6px 10px' }}>
-                        {tempo.breakdown.map(ph => `${ph.value}s ${ph.label}`).join(' · ')}
+                        {tempo.breakdown.map(ph => `${ph.value} ${ph.label}`).join(' · ')}
                       </p>
                     )
                   })()}
