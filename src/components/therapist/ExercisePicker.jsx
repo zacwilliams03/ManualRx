@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { toCanonical } from '../../utils/weightUtils'
 import useIsMobile from '../../hooks/useIsMobile'
 import ShimmerLine from '../shared/ShimmerLine'
+import { formatTempo } from '../../utils/formatTempo'
 
 const CATEGORIES = [
   'Custom', 'Cervical', 'Thoracic', 'Lumbar',
@@ -45,6 +46,11 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
   const [configBilateral, setConfigBilateral] = useState(false)
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState(null)
+  const [configTempoEnabled, setConfigTempoEnabled] = useState(false)
+  const [configTempoDown, setConfigTempoDown] = useState('')
+  const [configTempoHold, setConfigTempoHold] = useState('')
+  const [configTempoUp, setConfigTempoUp] = useState('')
+  const [configTempoTop, setConfigTempoTop] = useState('')
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300)
@@ -88,12 +94,33 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
     setConfigMeasurementType(ex.is_timed ? 'seconds' : 'reps')
     setConfigBilateral(ex.is_bilateral ?? false)
     setAddError(null)
+    setConfigTempoEnabled(false)
+    setConfigTempoDown('')
+    setConfigTempoHold('')
+    setConfigTempoUp('')
+    setConfigTempoTop('')
     setPickerView('configure')
   }
 
   async function handleConfirmAdd() {
-    setAdding(true)
     setAddError(null)
+
+    if (configTempoEnabled) {
+      const e = parseInt(configTempoDown)
+      const b = parseInt(configTempoHold)
+      const c = parseInt(configTempoUp)
+      const t = parseInt(configTempoTop)
+      const valid =
+        !isNaN(e) && !isNaN(b) && !isNaN(c) && !isNaN(t) &&
+        e >= 1 && e <= 9 && c >= 1 && c <= 9 &&
+        b >= 0 && b <= 9 && t >= 0 && t <= 9
+      if (!valid) {
+        setAddError('Tempo: down and up must be 1–9; hold and top must be 0–9.')
+        return
+      }
+    }
+
+    setAdding(true)
     try {
       await onAdd({
         exerciseId: pickerExercise.id,
@@ -103,6 +130,10 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
         notes: configNotes.trim() || null,
         measurementType: configMeasurementType,
         bilateral: configBilateral,
+        tempoEccentric:   configTempoEnabled ? parseInt(configTempoDown) : null,
+        tempoBottomPause: configTempoEnabled ? parseInt(configTempoHold) : null,
+        tempoConcentric:  configTempoEnabled ? parseInt(configTempoUp)   : null,
+        tempoTopPause:    configTempoEnabled ? parseInt(configTempoTop)   : null,
       })
       setPickerView('browse')
       setPickerExercise(null)
@@ -304,6 +335,70 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
               />
               <span style={{ fontSize: '13px', color: 'var(--color-text)' }}>Complete on both sides</span>
             </label>
+
+            {/* Tempo — optional */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: configTempoEnabled ? '8px' : 0 }}>
+                <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)' }}>
+                  Tempo <span style={{ fontWeight: 400, color: 'var(--color-subtle)' }}>(optional)</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setConfigTempoEnabled(v => !v)}
+                  style={{
+                    width: '32px', height: '18px', borderRadius: '9px', border: 'none',
+                    cursor: 'pointer', padding: 0, position: 'relative', transition: 'background 0.15s',
+                    background: configTempoEnabled ? '#29B5CC' : 'var(--color-border)',
+                  }}
+                >
+                  <span style={{
+                    display: 'block', width: '14px', height: '14px', borderRadius: '50%', background: '#fff',
+                    position: 'absolute', top: '2px', transition: 'left 0.15s',
+                    left: configTempoEnabled ? '16px' : '2px',
+                  }} />
+                </button>
+              </div>
+              {configTempoEnabled && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                      <input type="number" min={1} max={9} value={configTempoDown} onChange={e => setConfigTempoDown(e.target.value)}
+                        style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', padding: '7px 4px' }} />
+                      <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>DOWN</span>
+                    </div>
+                    <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '20px' }}>—</span>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                      <input type="number" min={0} max={9} value={configTempoHold} onChange={e => setConfigTempoHold(e.target.value)}
+                        style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', padding: '7px 4px' }} />
+                      <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>HOLD</span>
+                    </div>
+                    <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '20px' }}>—</span>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                      <input type="number" min={1} max={9} value={configTempoUp} onChange={e => setConfigTempoUp(e.target.value)}
+                        style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', padding: '7px 4px' }} />
+                      <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>UP</span>
+                    </div>
+                    <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '20px' }}>—</span>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                      <input type="number" min={0} max={9} value={configTempoTop} onChange={e => setConfigTempoTop(e.target.value)}
+                        style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', padding: '7px 4px' }} />
+                      <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>TOP</span>
+                    </div>
+                  </div>
+                  {(() => {
+                    const e = parseInt(configTempoDown), b = parseInt(configTempoHold)
+                    const c = parseInt(configTempoUp), t = parseInt(configTempoTop)
+                    if ([e, b, c, t].some(isNaN)) return null
+                    const tempo = formatTempo(e, b, c, t)
+                    return tempo ? (
+                      <p style={{ margin: 0, fontSize: '11px', color: '#29B5CC', fontStyle: 'italic', background: 'rgba(41,181,204,0.06)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '6px', padding: '6px 10px' }}>
+                        {tempo.breakdown.map(ph => `${ph.value}s ${ph.label}`).join(' · ')}
+                      </p>
+                    ) : null
+                  })()}
+                </div>
+              )}
+            </div>
 
             <div>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>
