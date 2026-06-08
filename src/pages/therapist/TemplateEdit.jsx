@@ -6,6 +6,7 @@ import SidebarLayout from '../../components/therapist/SidebarLayout'
 import ExercisePicker from '../../components/therapist/ExercisePicker'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
 import { formatWeight } from '../../utils/weightUtils'
+import { formatTempo } from '../../utils/formatTempo'
 import { motion } from 'framer-motion'
 import PageHero from '../../components/shared/PageHero'
 import { CARD, SECTION_LABEL } from '../../components/therapist/styles'
@@ -43,7 +44,7 @@ export default function TemplateEdit() {
       supabase.from('templates').select('id, name, category, duration_weeks').eq('id', templateId).single(),
       supabase
         .from('template_exercises')
-        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(id, name, category, video_url)')
+        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(id, name, category, video_url)')
         .eq('template_id', templateId)
         .order('created_at', { ascending: true }),
       supabase
@@ -91,7 +92,7 @@ export default function TemplateEdit() {
     navigate('/therapist/templates')
   }
 
-  async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral }) {
+  async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral, tempoEccentric, tempoBottomPause, tempoConcentric, tempoTopPause }) {
     const { data, error: insertError } = await supabase
       .from('template_exercises')
       .insert({
@@ -103,8 +104,12 @@ export default function TemplateEdit() {
         therapist_notes: notes,
         measurement_type: measurementType ?? 'reps',
         bilateral: bilateral ?? false,
+        tempo_eccentric:    tempoEccentric    ?? null,
+        tempo_bottom_pause: tempoBottomPause  ?? null,
+        tempo_concentric:   tempoConcentric   ?? null,
+        tempo_top_pause:    tempoTopPause     ?? null,
       })
-      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, exercises(id, name, category, video_url)')
+      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(id, name, category, video_url)')
       .single()
     if (insertError) throw new Error(insertError.message)
     setExercises(prev => [...prev, data])
@@ -279,6 +284,14 @@ export default function TemplateEdit() {
                       {te.weight ? ` · ${formatWeight(te.weight, weightUnit)}` : ''}
                       {te.bilateral ? ' · Both sides' : ''}
                     </div>
+                    {(() => {
+                      const t = formatTempo(te.tempo_eccentric, te.tempo_bottom_pause, te.tempo_concentric, te.tempo_top_pause)
+                      return t ? (
+                        <span style={{ display: 'inline-block', marginTop: '3px', background: 'rgba(41,181,204,0.1)', border: '1px solid rgba(41,181,204,0.2)', borderRadius: '4px', padding: '1px 7px', fontSize: '11px', color: '#29B5CC', fontFamily: 'monospace', fontWeight: 600 }}>
+                          ⏱ {t.compact}
+                        </span>
+                      ) : null
+                    })()}
                     {te.therapist_notes && (
                       <div style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px', fontStyle: 'italic' }}>{te.therapist_notes}</div>
                     )}
