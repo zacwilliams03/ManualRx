@@ -130,11 +130,12 @@ export default function SessionEdit() {
         }))
       )
       if (setsError) throw new Error(setsError.message)
-      const { data: fresh } = await supabase
+      const { data: fresh, error: freshError } = await supabase
         .from('prescription_exercises')
         .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
         .eq('id', data.id)
         .single()
+      if (freshError || !fresh) throw new Error('Failed to refresh exercise after adding per-set rows.')
       setExercises(prev => [...prev, fresh])
     } else {
       setExercises(prev => [...prev, data])
@@ -162,7 +163,7 @@ export default function SessionEdit() {
       tempoTop: pe.tempo_top_pause != null ? String(pe.tempo_top_pause) : '',
       perSetEnabled: perSetRows.length > 0,
       perSetRows: perSetRows
-        .sort((a, b) => a.set_number - b.set_number)
+        .slice().sort((a, b) => a.set_number - b.set_number)
         .map(s => ({
           reps: String(s.reps),
           weight: s.weight != null ? String(parseFloat(fromCanonical(s.weight, weightUnit).toFixed(1))) : '',
@@ -229,13 +230,17 @@ export default function SessionEdit() {
     }
 
     // Re-fetch to get clean canonical data with child rows (avoids manual unit conversion of local state)
-    const { data: fresh } = await supabase
+    const { data: fresh, error: freshError } = await supabase
       .from('prescription_exercises')
       .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
       .eq('id', peId)
       .single()
 
     setSavingEdit(false)
+    if (freshError || !fresh) {
+      setSaveEditError('Saved, but failed to refresh — please reload.')
+      return
+    }
     setExercises(prev => prev.map(e => e.id === peId ? fresh : e))
     setEditingId(null)
   }
