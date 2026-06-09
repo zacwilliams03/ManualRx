@@ -397,7 +397,7 @@ export default function Prescribe() {
       if (exErr) { alert('Failed to copy exercises.'); setReactivating(null); return }
       const sets = e.prescription_exercise_sets ?? []
       if (sets.length > 0) {
-        await supabase.from('prescription_exercise_sets').insert(
+        const { error: setErr } = await supabase.from('prescription_exercise_sets').insert(
           sets.map(s => ({
             prescription_exercise_id: newEx.id,
             set_number: s.set_number,
@@ -405,6 +405,7 @@ export default function Prescribe() {
             weight: s.weight ?? null,
           }))
         )
+        if (setErr) { alert('Failed to copy exercise sets.'); setReactivating(null); return }
       }
     }
 
