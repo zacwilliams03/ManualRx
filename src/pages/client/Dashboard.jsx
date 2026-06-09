@@ -72,7 +72,7 @@ export default function ClientDashboard() {
 
     const { data, error: sessionsError } = await supabase
       .from('prescriptions')
-      .select('id, name, frequency_days, start_date, duration_weeks, therapist_id, prescription_exercises(count), session_logs(completed_at)')
+      .select('id, name, frequency_days, start_date, duration_weeks, therapist_id, week_number, prescription_exercises(count), session_logs(completed_at)')
       .eq('client_id', clientRecord.id)
       .order('created_at', { ascending: true })
 
@@ -152,7 +152,7 @@ export default function ClientDashboard() {
           clinicName={clinicName ?? ''}
           clientName={profile.name ?? profile.email ?? ''}
           prescriptionName={session.name}
-          frequencyLabel={frequencyLabel(session.frequency_days)}
+          frequencyLabel={[session.week_number ? `Week ${session.week_number}` : null, frequencyLabel(session.frequency_days)].filter(Boolean).join(' · ')}
           exercises={mapped}
           weightUnit={weightUnit}
         />
@@ -211,6 +211,7 @@ export default function ClientDashboard() {
 
       const prescriptions = toDownload.map(session => ({
         name: session.name,
+        weekNumber: session.week_number ?? null,
         frequencyLabel: frequencyLabel(session.frequency_days),
         exercises: (byId[session.id] ?? []).map(mapEx),
       }))

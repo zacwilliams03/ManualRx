@@ -48,9 +48,15 @@ const styles = StyleSheet.create({
   sectionBlock: { marginBottom: 18 },
   sectionHeader: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     marginBottom: 8,
   },
+  weekTag: {
+    backgroundColor: TEAL, borderRadius: 3,
+    paddingVertical: 2, paddingHorizontal: 6,
+    marginRight: 8,
+  },
+  weekTagText: { color: '#FFFFFF', fontSize: 7, fontFamily: 'Helvetica-Bold' },
   sectionName: { fontFamily: 'Helvetica-Bold', fontSize: 13, color: NAVY, marginRight: 8 },
   sectionFreq: { fontSize: 9, color: TEAL },
   tempoNote: {
@@ -100,6 +106,11 @@ export function AllSessionsPDF({ clinicName, clientName, prescriptions, weightUn
         {prescriptions.map((presc, pi) => (
           <View key={pi} style={styles.sectionBlock}>
             <View style={styles.sectionHeader}>
+              {presc.weekNumber ? (
+                <View style={styles.weekTag}>
+                  <Text style={styles.weekTagText}>Week {presc.weekNumber}</Text>
+                </View>
+              ) : null}
               <Text style={styles.sectionName}>{presc.name}</Text>
               {presc.frequencyLabel ? <Text style={styles.sectionFreq}>{presc.frequencyLabel}</Text> : null}
             </View>
