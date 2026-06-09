@@ -44,7 +44,7 @@ export default function TemplateEdit() {
       supabase.from('templates').select('id, name, category, duration_weeks').eq('id', templateId).single(),
       supabase
         .from('template_exercises')
-        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(id, name, category, video_url)')
+        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
         .eq('template_id', templateId)
         .order('created_at', { ascending: true }),
       supabase
@@ -92,7 +92,7 @@ export default function TemplateEdit() {
     navigate('/therapist/templates')
   }
 
-  async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral, tempoEccentric, tempoBottomPause, tempoConcentric, tempoTopPause }) {
+  async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral, tempoEccentric, tempoBottomPause, tempoConcentric, tempoTopPause, perSetSets }) {
     const { data, error: insertError } = await supabase
       .from('template_exercises')
       .insert({
@@ -109,10 +109,30 @@ export default function TemplateEdit() {
         tempo_concentric:   tempoConcentric   ?? null,
         tempo_top_pause:    tempoTopPause     ?? null,
       })
-      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(id, name, category, video_url)')
+      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
       .single()
     if (insertError) throw new Error(insertError.message)
-    setExercises(prev => [...prev, data])
+
+    if (perSetSets?.length > 0) {
+      const { error: setsError } = await supabase.from('template_exercise_sets').insert(
+        perSetSets.map(s => ({
+          template_exercise_id: data.id,
+          set_number: s.set_number,
+          reps: s.reps,
+          weight: s.weight ?? null,
+        }))
+      )
+      if (setsError) throw new Error(setsError.message)
+      const { data: fresh, error: freshError } = await supabase
+        .from('template_exercises')
+        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+        .eq('id', data.id)
+        .single()
+      if (freshError || !fresh) throw new Error('Failed to refresh exercise after adding per-set rows.')
+      setExercises(prev => [...prev, fresh])
+    } else {
+      setExercises(prev => [...prev, data])
+    }
   }
 
   async function removeExercise(teId) {
@@ -279,19 +299,39 @@ export default function TemplateEdit() {
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)' }}>{te.exercises?.name}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '2px' }}>
-                      {te.sets} sets × {te.reps} {te.measurement_type === 'seconds' ? 'sec' : 'reps'}
-                      {te.weight ? ` · ${formatWeight(te.weight, weightUnit)}` : ''}
-                      {te.bilateral ? ' · Both sides' : ''}
-                    </div>
-                    {(() => {
-                      const t = formatTempo(te.tempo_eccentric, te.tempo_bottom_pause, te.tempo_concentric, te.tempo_top_pause)
-                      return t ? (
-                        <span style={{ display: 'inline-block', marginTop: '3px', background: 'rgba(41,181,204,0.1)', border: '1px solid rgba(41,181,204,0.2)', borderRadius: '4px', padding: '1px 7px', fontSize: '11px', color: '#29B5CC', fontFamily: 'monospace', fontWeight: 600 }}>
-                          ⏱ {t.compact}
-                        </span>
-                      ) : null
-                    })()}
+                    {te.template_exercise_sets?.length > 0 ? (
+                      <div style={{ marginTop: '2px' }}>
+                        <div style={{ fontSize: '11px', color: '#29B5CC', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                          Per-set · {te.template_exercise_sets.length} sets
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 1fr', gap: '2px 8px' }}>
+                          {te.template_exercise_sets
+                            .slice().sort((a, b) => a.set_number - b.set_number)
+                            .flatMap((s, i) => [
+                              <span key={`${i}-n`} style={{ fontFamily: 'monospace', fontWeight: 700, color: '#29B5CC', fontSize: '11px' }}>{s.set_number}</span>,
+                              <span key={`${i}-r`} style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{s.reps} {te.measurement_type === 'seconds' ? 'sec' : 'reps'}</span>,
+                              <span key={`${i}-w`} style={{ fontSize: '12px', color: 'var(--color-subtle)' }}>{s.weight != null ? formatWeight(s.weight, weightUnit) : 'Bodyweight'}</span>,
+                            ])
+                          }
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '2px' }}>
+                          {te.sets} sets × {te.reps} {te.measurement_type === 'seconds' ? 'sec' : 'reps'}
+                          {te.weight ? ` · ${formatWeight(te.weight, weightUnit)}` : ''}
+                          {te.bilateral ? ' · Both sides' : ''}
+                        </div>
+                        {(() => {
+                          const t = formatTempo(te.tempo_eccentric, te.tempo_bottom_pause, te.tempo_concentric, te.tempo_top_pause)
+                          return t ? (
+                            <span style={{ display: 'inline-block', marginTop: '3px', background: 'rgba(41,181,204,0.1)', border: '1px solid rgba(41,181,204,0.2)', borderRadius: '4px', padding: '1px 7px', fontSize: '11px', color: '#29B5CC', fontFamily: 'monospace', fontWeight: 600 }}>
+                              ⏱ {t.compact}
+                            </span>
+                          ) : null
+                        })()}
+                      </>
+                    )}
                     {te.therapist_notes && (
                       <div style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px', fontStyle: 'italic' }}>{te.therapist_notes}</div>
                     )}
