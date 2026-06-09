@@ -31,8 +31,8 @@
 Use the existing app brand tokens — do **not** introduce new shades:
 - `NAVY = '#1E2D3D'` — primary text
 - `TEAL = '#29B5CC'` — accent, table header background, exercise number
-- `TEAL_LIGHT = '#E8F9FC'` — meta strip background, per-set row tint
-- `TEAL_BORDER = '#A8E6F0'` — meta strip border, row separators
+- `TEAL_LIGHT = '#E8F9FC'` — meta strip background, per-set row tint (**updated from `#E1F5FA`** — apply consistently across all three components)
+- `TEAL_BORDER = '#A8E6F0'` — meta strip border, row separators (**new constant**; replaces the old `BORDER = '#D4E8E8'` in all three components — retire `BORDER` entirely)
 - `GREY = '#6B7280'` — secondary text (notes, bodyweight, dashes)
 - `WHITE = '#FFFFFF'` — table header text
 
@@ -61,6 +61,7 @@ Same pill style but shows only `Client` and `Date` — no single session name si
 ```
 [ Client: Jane Smith ]  [ Date: 9 Jun 2026 ]
 ```
+`Date` is the **generation date** (today), same as the existing component — not a prescription date.
 
 ### Program meta (ProgramPDF only)
 - Programme name as a large (15px bold) title
@@ -85,9 +86,10 @@ Each session renders one table with these columns:
 ### Per-set rows (when `prescription_exercise_sets.length > 0`)
 1. **Name row:** # cell | EXERCISE cell (name + "PER-SET" badge) | SETS blank | REPS/SEC blank | WEIGHT blank | **TEMPO cell** (badge if tempo set, "—" in grey if not). The name row does NOT colspan — it keeps all six cells so tempo is always visible.
 2. **Sub-header row:** blank | "Set / Reps / Weight" labels (6.5pt grey uppercase) filling EXERCISE + SETS + REPS/SEC + WEIGHT cells | TEMPO blank. Background `#F0FDFF`.
-3. **Set rows:** blank # | set number (TEAL bold) in EXERCISE column | reps (NAVY bold) in REPS/SEC | weight in WEIGHT | TEMPO blank. Background `#F0FDFF`.
+3. **Set rows:** blank # | set number (TEAL bold) in EXERCISE column | reps (NAVY bold) in REPS/SEC | weight in WEIGHT | TEMPO: empty `<View style={{ width: 50 }} />` (must be present to maintain column alignment). Background `#F0FDFF`.
 4. All sub-rows share a 1pt `TEAL_BORDER` bottom only on the last set row.
 5. Notes (if any) appear as a teal left-border box in the EXERCISE column below the last sub-row.
+6. Sub-header row TEMPO cell: also an empty `<View style={{ width: 50 }} />` — same reason.
 
 ### Notes
 - Rendered as a `View` with `borderLeftWidth: 2, borderLeftColor: TEAL, backgroundColor: TEAL_LIGHT, padding: 6, borderRadius: 4, marginTop: 4`.
@@ -142,11 +144,21 @@ If any exercise in the document has tempo, render at the bottom of the last page
 - **Per-card:** small download icon button on each active session card in `src/pages/client/Dashboard.jsx`.
 - **Download All:** a secondary button in the page hero/header area (below the page title). Only shown when the client has ≥ 1 active session.
 
-### Data fetching
-When a client triggers a download, fetch on demand (not preloaded):
+### Header data — no extra queries needed
+Dashboard already has everything the PDF header requires:
 
+| PDF prop | Source | Notes |
+|---|---|---|
+| `clinicName` | `useClinicName()` — already called in Dashboard | Works for clients via `clients.therapist_id` join |
+| `clientName` | `profile.name` from `useAuth()` | `profile` is `{ id, email, role, name, theme }` — use `profile.name` |
+| `weightUnit` | `useWeightUnit()` — add to Dashboard | For clients reads from `clients.weight_unit` |
+| `therapistId` | `session.therapist_id` from the already-loaded `sessions` state | Present in Dashboard's existing select |
+
+**No additional Supabase round-trips are needed for the PDF header.**
+
+### On-demand exercise fetch (triggered on button click)
 ```js
-// Single session
+// Single session — prescriptionId from the card, therapistId not needed for this query
 supabase
   .from('prescription_exercises')
   .select('sets, reps, weight, therapist_notes, measurement_type, bilateral,
@@ -157,35 +169,18 @@ supabase
   .order('id', { ascending: true })
 ```
 
-Also fetch therapist clinic name and client's own display name for the PDF header.
-
-Therapist info:
-```js
-supabase
-  .from('therapist_profiles')
-  .select('clinic_name')
-  .eq('user_id', therapistId)
-  .single()
-```
-
-Client name:
-```js
-supabase
-  .from('profiles')
-  .select('full_name')
-  .eq('id', profile.id)
-  .single()
-```
-
 ### Download All
-Fetch all active prescriptions for the client (same query structure as therapist's `downloadAllPDF` in `Prescribe.jsx`), then pass to `AllSessionsPDF`.
+Fetch exercises for every active prescription in `sessions` state (iterate over them), then pass to `AllSessionsPDF`. Mirror the therapist's `downloadAllPDF` pattern in `Prescribe.jsx`.
 
 ### Loading state
-Show a spinner inside the download button while fetching + rendering. Disable button during download to prevent double-clicks.
+Track a `downloadingId` state: `null` when idle, a prescription ID when a single download is in progress, or `'all'` when the download-all is in progress. The relevant button shows a spinner and is disabled while its ID matches `downloadingId`.
+
+### Error handling
+Track a `downloadError` state string. On fetch or PDF render failure, set a brief message ("Failed to download PDF"). Render it as a small red text below the "Download All" button (or inline on the card for per-card failures). Auto-clear after 5 seconds via `setTimeout`.
 
 ### Filename
-- Single: `{sessionName}.pdf` (slugified)
-- All: `{clientName}-all-sessions.pdf`
+- Single: `{session.name}.pdf` (spaces replaced with hyphens, lowercased)
+- All: `{profile.name}-all-sessions.pdf`
 
 ---
 
@@ -196,10 +191,27 @@ Show a spinner inside the download button while fetching + rendering. Disable bu
 | `src/components/therapist/PrescriptionPDF.jsx` | Full redesign — tabular layout |
 | `src/components/therapist/AllSessionsPDF.jsx` | Full redesign — tabular layout |
 | `src/components/therapist/ProgramPDF.jsx` | Full redesign — week/session/table layout |
-| `src/components/therapist/AllSessionsPDF.test.jsx` | Update snapshot/render tests |
+| `src/components/therapist/AllSessionsPDF.test.jsx` | Update and extend render tests (see below) |
 | `src/pages/client/Dashboard.jsx` | Add per-card download icon + Download All button |
 
 No new files required — client reuses the existing PDF components.
+
+### Test cases required for `AllSessionsPDF.test.jsx`
+
+All tests use `pdf(<AllSessionsPDF {...props} />).toBlob()` and assert `blob instanceof Blob && blob.size > 0`.
+
+| Test | Key exercise props |
+|---|---|
+| Renders with a normal reps exercise | `measurement_type: 'reps', sets: 3, reps: 10, weight: 60`, no per-set, no tempo |
+| Renders with a seconds exercise | `measurement_type: 'seconds', sets: 3, reps: 45, weight: null` — verifies "45 sec" unit path |
+| Renders with a tempo exercise | `tempo_eccentric: 3, tempo_bottom_pause: 1, tempo_concentric: 2, tempo_top_pause: 0` |
+| Renders with per-set rows | `prescription_exercise_sets: [{ set_number:1, reps:10, weight:40 }, ...]` — verifies sub-row path |
+| Renders with per-set + tempo | Both of the above combined — verifies tempo badge still appears on per-set name row |
+| Renders bodyweight exercise | `weight: null`, `measurement_type: 'reps'` — verifies "BW" path |
+| Renders exercise with notes | `therapist_notes: 'Keep back flat'` — verifies notes box renders |
+| Renders empty exercises array | `exercises: []` — verifies no crash on empty session |
+
+These same cases apply to `PrescriptionPDF` — add a `PrescriptionPDF.test.jsx` if it doesn't exist yet, or add cases to the existing test file.
 
 ---
 
