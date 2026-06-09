@@ -182,4 +182,33 @@ describe('AllSessionsPDF', () => {
     expect(blob).toBeInstanceOf(Blob)
     expect(blob.size).toBeGreaterThan(0)
   })
+
+  test('renders per-set exercise with tempo without crashing', async () => {
+    const props = {
+      ...BASE_PROPS,
+      prescriptions: [
+        {
+          name: 'Pyramid + Tempo Session',
+          frequencyLabel: 'Daily',
+          exercises: [
+            {
+              name: 'Romanian Deadlift',
+              sets: 3, reps: null, weight: null,
+              therapist_notes: 'Keep back flat.',
+              measurement_type: 'reps', bilateral: false,
+              tempo_eccentric: 3, tempo_bottom_pause: 1, tempo_concentric: 2, tempo_top_pause: 0,
+              prescription_exercise_sets: [
+                { set_number: 1, reps: 10, weight: 40 },
+                { set_number: 2, reps: 8,  weight: 55 },
+                { set_number: 3, reps: 6,  weight: 70 },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const blob = await pdf(<AllSessionsPDF {...props} />).toBlob()
+    expect(blob).toBeInstanceOf(Blob)
+    expect(blob.size).toBeGreaterThan(0)
+  })
 })
