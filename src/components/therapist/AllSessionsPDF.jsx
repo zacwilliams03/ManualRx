@@ -1,6 +1,7 @@
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
 import { weightDisplay, formatPdfDate } from '../../utils/pdfUtils'
 import { formatTempo } from '../../utils/formatTempo'
+import { formatPerSetSummary } from '../../utils/formatPerSetSummary'
 
 const NAVY = '#1E2D3D'
 const TEAL = '#29B5CC'
@@ -155,12 +156,25 @@ export function AllSessionsPDF({ clinicName, clientName, prescriptions, weightUn
             {presc.exercises.map((ex, ei) => (
               <View key={ei} style={styles.exerciseBlock}>
                 <Text style={styles.exerciseTitle}>{ei + 1}. {ex.name}</Text>
-                <Text style={styles.exerciseMeta}>
-                  {ex.sets} sets × {ex.reps} {ex.measurement_type === 'seconds' ? 'sec' : 'reps'}
-                  {ex.weight ? ` @ ${weightDisplay(ex.weight, weightUnit)}` : ' — Bodyweight'}
-                  {ex.bilateral ? ' — Both sides' : ''}
-                  {(() => { const t = formatTempo(ex.tempo_eccentric, ex.tempo_bottom_pause, ex.tempo_concentric, ex.tempo_top_pause); return t ? ` — Tempo: ${t.compact}` : '' })()}
-                </Text>
+                {(() => {
+                  const perSet = ex.prescription_exercise_sets ?? []
+                  if (perSet.length > 0) {
+                    return (
+                      <Text style={styles.exerciseMeta}>
+                        {formatPerSetSummary(perSet, weightUnit, { pdf: true })}
+                      </Text>
+                    )
+                  }
+                  const tempo = formatTempo(ex.tempo_eccentric, ex.tempo_bottom_pause, ex.tempo_concentric, ex.tempo_top_pause)
+                  return (
+                    <Text style={styles.exerciseMeta}>
+                      {`${ex.sets} sets × ${ex.reps} ${ex.measurement_type === 'seconds' ? 'sec' : 'reps'}`}
+                      {ex.weight ? ` @ ${weightDisplay(ex.weight, weightUnit)}` : ' — Bodyweight'}
+                      {ex.bilateral ? ' — Both sides' : ''}
+                      {tempo ? ` — Tempo: ${tempo.compact}` : ''}
+                    </Text>
+                  )
+                })()}
                 {ex.therapist_notes ? (
                   <View style={styles.notesBox}>
                     <Text style={styles.notesText}>{ex.therapist_notes}</Text>

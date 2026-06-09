@@ -130,4 +130,56 @@ describe('AllSessionsPDF', () => {
     expect(blob).toBeInstanceOf(Blob)
     expect(blob.size).toBeGreaterThan(0)
   })
+
+  test('renders exercise with per-set rows without crashing', async () => {
+    const props = {
+      ...BASE_PROPS,
+      prescriptions: [
+        {
+          name: 'Pyramid Session',
+          frequencyLabel: 'Daily',
+          exercises: [
+            {
+              name: 'Romanian Deadlift',
+              sets: 3, reps: null, weight: null,
+              therapist_notes: null, measurement_type: 'reps', bilateral: false,
+              tempo_eccentric: null, tempo_bottom_pause: null, tempo_concentric: null, tempo_top_pause: null,
+              prescription_exercise_sets: [
+                { set_number: 1, reps: 10, weight: 40 },
+                { set_number: 2, reps: 8,  weight: 55 },
+                { set_number: 3, reps: 6,  weight: 70 },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const blob = await pdf(<AllSessionsPDF {...props} />).toBlob()
+    expect(blob).toBeInstanceOf(Blob)
+    expect(blob.size).toBeGreaterThan(0)
+  })
+
+  test('renders exercise with empty prescription_exercise_sets without crashing', async () => {
+    const props = {
+      ...BASE_PROPS,
+      prescriptions: [
+        {
+          name: 'Normal Session',
+          frequencyLabel: 'Daily',
+          exercises: [
+            {
+              name: 'Squat',
+              sets: 3, reps: 10, weight: 80,
+              therapist_notes: null, measurement_type: 'reps', bilateral: false,
+              tempo_eccentric: null, tempo_bottom_pause: null, tempo_concentric: null, tempo_top_pause: null,
+              prescription_exercise_sets: [],
+            },
+          ],
+        },
+      ],
+    }
+    const blob = await pdf(<AllSessionsPDF {...props} />).toBlob()
+    expect(blob).toBeInstanceOf(Blob)
+    expect(blob.size).toBeGreaterThan(0)
+  })
 })
