@@ -49,7 +49,7 @@ export default function SessionEdit() {
       supabase.from('prescriptions').select('id, name, frequency_days, start_date, duration_weeks').eq('id', sessionId).single(),
       supabase
         .from('prescription_exercises')
-        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(id, name, category, video_url)')
+        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
         .eq('prescription_id', sessionId),
     ])
 
@@ -99,7 +99,7 @@ export default function SessionEdit() {
       : `/therapist/prescribe/${clientId}`)
   }
 
-  async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral, tempoEccentric, tempoBottomPause, tempoConcentric, tempoTopPause }) {
+  async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral, tempoEccentric, tempoBottomPause, tempoConcentric, tempoTopPause, perSetSets }) {
     const { data, error: insertError } = await supabase
       .from('prescription_exercises')
       .insert({
@@ -116,10 +116,29 @@ export default function SessionEdit() {
         tempo_concentric:   tempoConcentric   ?? null,
         tempo_top_pause:    tempoTopPause     ?? null,
       })
-      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(id, name, category, video_url)')
+      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
       .single()
     if (insertError) throw new Error(insertError.message)
-    setExercises(prev => [...prev, data])
+
+    if (perSetSets?.length > 0) {
+      const { error: setsError } = await supabase.from('prescription_exercise_sets').insert(
+        perSetSets.map(s => ({
+          prescription_exercise_id: data.id,
+          set_number: s.set_number,
+          reps: s.reps,
+          weight: s.weight ?? null,
+        }))
+      )
+      if (setsError) throw new Error(setsError.message)
+      const { data: fresh } = await supabase
+        .from('prescription_exercises')
+        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+        .eq('id', data.id)
+        .single()
+      setExercises(prev => [...prev, fresh])
+    } else {
+      setExercises(prev => [...prev, data])
+    }
   }
 
   async function removeExercise(peId) {
@@ -130,22 +149,36 @@ export default function SessionEdit() {
   function startEdit(pe) {
     setEditingId(pe.id)
     setSaveEditError(null)
+    const perSetRows = pe.prescription_exercise_sets ?? []
     setEditValues({
       sets: String(pe.sets),
-      reps: String(pe.reps),
-      weight: pe.weight ? String(fromCanonical(pe.weight, weightUnit)) : '',
+      reps: String(pe.reps ?? ''),
+      weight: pe.weight ? String(parseFloat(fromCanonical(pe.weight, weightUnit).toFixed(1))) : '',
       notes: pe.therapist_notes ?? '',
       tempoEnabled: pe.tempo_eccentric != null && pe.tempo_bottom_pause != null && pe.tempo_concentric != null && pe.tempo_top_pause != null,
       tempoDown: pe.tempo_eccentric != null ? String(pe.tempo_eccentric) : '',
       tempoHold: pe.tempo_bottom_pause != null ? String(pe.tempo_bottom_pause) : '',
       tempoUp: pe.tempo_concentric != null ? String(pe.tempo_concentric) : '',
       tempoTop: pe.tempo_top_pause != null ? String(pe.tempo_top_pause) : '',
+      perSetEnabled: perSetRows.length > 0,
+      perSetRows: perSetRows
+        .sort((a, b) => a.set_number - b.set_number)
+        .map(s => ({
+          reps: String(s.reps),
+          weight: s.weight != null ? String(parseFloat(fromCanonical(s.weight, weightUnit).toFixed(1))) : '',
+        })),
     })
   }
 
   async function saveEdit(peId) {
     setSaveEditError(null)
     const v = editValues
+
+    if (v.perSetEnabled) {
+      if (!v.perSetRows?.length) { setSaveEditError('At least one set is required.'); return }
+      const invalid = v.perSetRows.some(r => !r.reps || isNaN(parseInt(r.reps)) || parseInt(r.reps) < 1)
+      if (invalid) { setSaveEditError('Per-set: each set must have reps ≥ 1.'); return }
+    }
 
     if (v.tempoEnabled) {
       const e = parseInt(v.tempoDown), b = parseInt(v.tempoHold)
@@ -154,20 +187,20 @@ export default function SessionEdit() {
         !isNaN(e) && !isNaN(b) && !isNaN(c) && !isNaN(t) &&
         e >= 1 && e <= 9 && c >= 1 && c <= 9 &&
         b >= 0 && b <= 9 && t >= 0 && t <= 9
-      if (!valid) {
-        setSaveEditError('Tempo: down and up must be 1–9; hold and top must be 0–9.')
-        return
-      }
+      if (!valid) { setSaveEditError('Tempo: down and up must be 1–9; hold and top must be 0–9.'); return }
     }
 
     setSavingEdit(true)
+    const setsCount = v.perSetEnabled ? v.perSetRows.length : (parseInt(v.sets) || 1)
     const weightVal = v.weight.trim() ? toCanonical(parseFloat(v.weight), weightUnit) : null
-    const { data, error: updateError } = await supabase
+
+    // Update parent first — if this fails, child rows are untouched (no orphan state)
+    const { error: updateError } = await supabase
       .from('prescription_exercises')
       .update({
-        sets: parseInt(v.sets) || 1,
-        reps: parseInt(v.reps) || 1,
-        weight: weightVal,
+        sets: setsCount,
+        reps: v.perSetEnabled ? null : (parseInt(v.reps) || 1),
+        weight: v.perSetEnabled ? null : weightVal,
         therapist_notes: v.notes.trim() || null,
         tempo_eccentric:    v.tempoEnabled ? parseInt(v.tempoDown) : null,
         tempo_bottom_pause: v.tempoEnabled ? parseInt(v.tempoHold) : null,
@@ -175,15 +208,36 @@ export default function SessionEdit() {
         tempo_top_pause:    v.tempoEnabled ? parseInt(v.tempoTop)   : null,
       })
       .eq('id', peId)
-      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(id, name, category, video_url)')
-      .single()
-    setSavingEdit(false)
-    if (updateError) {
-      setSaveEditError(updateError.message || 'Failed to save.')
-    } else {
-      setExercises(prev => prev.map(e => e.id === peId ? data : e))
-      setEditingId(null)
+    if (updateError) { setSavingEdit(false); setSaveEditError(updateError.message || 'Failed to save.'); return }
+
+    // Delete+reinsert child rows after parent is confirmed saved
+    const { error: deleteError } = await supabase
+      .from('prescription_exercise_sets')
+      .delete()
+      .eq('prescription_exercise_id', peId)
+    if (deleteError) { setSavingEdit(false); setSaveEditError(deleteError.message); return }
+
+    if (v.perSetEnabled) {
+      const rows = v.perSetRows.map((r, i) => ({
+        prescription_exercise_id: peId,
+        set_number: i + 1,
+        reps: parseInt(r.reps),
+        weight: r.weight !== '' && r.weight != null ? toCanonical(parseFloat(r.weight), weightUnit) : null,
+      }))
+      const { error: insertError } = await supabase.from('prescription_exercise_sets').insert(rows)
+      if (insertError) { setSavingEdit(false); setSaveEditError(insertError.message); return }
     }
+
+    // Re-fetch to get clean canonical data with child rows (avoids manual unit conversion of local state)
+    const { data: fresh } = await supabase
+      .from('prescription_exercises')
+      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+      .eq('id', peId)
+      .single()
+
+    setSavingEdit(false)
+    setExercises(prev => prev.map(e => e.id === peId ? fresh : e))
+    setEditingId(null)
   }
 
   if (loading) {
@@ -370,36 +424,38 @@ export default function SessionEdit() {
                 <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', marginBottom: '6px' }}>{pe.exercises.name}</div>
                 {editingId === pe.id ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
-                        Sets
-                        <input
-                          type="number" min="1"
-                          value={editValues.sets}
-                          onChange={e => setEditValues(v => ({ ...v, sets: e.target.value }))}
-                          style={{ width: '60px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
-                        />
-                      </label>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
-                        {pe.measurement_type === 'seconds' ? 'Seconds' : 'Reps'}
-                        <input
-                          type="number" min="1"
-                          value={editValues.reps}
-                          onChange={e => setEditValues(v => ({ ...v, reps: e.target.value }))}
-                          style={{ width: '70px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
-                        />
-                      </label>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
-                        Weight ({weightUnit})
-                        <input
-                          type="number" min="0" step="0.5"
-                          value={editValues.weight}
-                          onChange={e => setEditValues(v => ({ ...v, weight: e.target.value }))}
-                          placeholder="—"
-                          style={{ width: '80px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
-                        />
-                      </label>
-                    </div>
+                    {!editValues.perSetEnabled && (
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
+                          Sets
+                          <input
+                            type="number" min="1"
+                            value={editValues.sets}
+                            onChange={e => setEditValues(v => ({ ...v, sets: e.target.value }))}
+                            style={{ width: '60px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
+                          />
+                        </label>
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
+                          {pe.measurement_type === 'seconds' ? 'Seconds' : 'Reps'}
+                          <input
+                            type="number" min="1"
+                            value={editValues.reps}
+                            onChange={e => setEditValues(v => ({ ...v, reps: e.target.value }))}
+                            style={{ width: '70px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
+                          />
+                        </label>
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
+                          Weight ({weightUnit})
+                          <input
+                            type="number" min="0" step="0.5"
+                            value={editValues.weight}
+                            onChange={e => setEditValues(v => ({ ...v, weight: e.target.value }))}
+                            placeholder="—"
+                            style={{ width: '80px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
+                          />
+                        </label>
+                      </div>
+                    )}
                     <input
                       type="text"
                       value={editValues.notes}
@@ -407,6 +463,75 @@ export default function SessionEdit() {
                       placeholder="Therapist notes (optional)"
                       style={{ padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '12px', outline: 'none' }}
                     />
+                    {/* Per-set edit */}
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editValues.perSetEnabled ? '6px' : 0 }}>
+                        <span style={{ fontSize: '11px', color: 'var(--color-muted)', fontWeight: 500 }}>
+                          Per-set weights & reps <span style={{ fontWeight: 400, color: 'var(--color-subtle)' }}>(optional)</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!editValues.perSetEnabled) {
+                              const n = Math.max(1, parseInt(editValues.sets) || 1)
+                              setEditValues(v => ({
+                                ...v,
+                                perSetEnabled: true,
+                                perSetRows: Array.from({ length: n }, () => ({ reps: v.reps, weight: v.weight })),
+                              }))
+                            } else {
+                              setEditValues(v => ({ ...v, perSetEnabled: false }))
+                            }
+                          }}
+                          style={{
+                            width: '28px', height: '16px', borderRadius: '8px', border: 'none',
+                            cursor: 'pointer', padding: 0, position: 'relative', transition: 'background 0.15s',
+                            background: editValues.perSetEnabled ? '#29B5CC' : 'var(--color-border)',
+                          }}
+                        >
+                          <span style={{
+                            display: 'block', width: '12px', height: '12px', borderRadius: '50%', background: '#fff',
+                            position: 'absolute', top: '2px', transition: 'left 0.15s',
+                            left: editValues.perSetEnabled ? '14px' : '2px',
+                          }} />
+                        </button>
+                      </div>
+                      {editValues.perSetEnabled && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 1fr 20px', gap: '4px', alignItems: 'center' }}>
+                            <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', textAlign: 'center' }}>Set</span>
+                            <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', textAlign: 'center' }}>Reps</span>
+                            <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', textAlign: 'center' }}>Wt ({weightUnit})</span>
+                            <span />
+                          </div>
+                          {(editValues.perSetRows ?? []).map((row, i) => (
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '24px 1fr 1fr 20px', gap: '4px', alignItems: 'center' }}>
+                              <span style={{ fontSize: '11px', fontWeight: 700, color: '#29B5CC', textAlign: 'center', fontFamily: 'monospace' }}>{i + 1}</span>
+                              <input
+                                type="number" min="1" value={row.reps}
+                                onChange={e => setEditValues(v => ({ ...v, perSetRows: v.perSetRows.map((r, j) => j === i ? { ...r, reps: e.target.value } : r) }))}
+                                style={{ width: '100%', padding: '4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '5px', color: 'var(--color-text)', fontSize: '13px', fontFamily: 'monospace', fontWeight: 600, outline: 'none', textAlign: 'center', colorScheme: 'dark', boxSizing: 'border-box' }}
+                              />
+                              <input
+                                type="number" min="0" step="0.5" value={row.weight} placeholder="BW"
+                                onChange={e => setEditValues(v => ({ ...v, perSetRows: v.perSetRows.map((r, j) => j === i ? { ...r, weight: e.target.value } : r) }))}
+                                style={{ width: '100%', padding: '4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '5px', color: 'var(--color-text)', fontSize: '13px', fontFamily: 'monospace', fontWeight: 600, outline: 'none', textAlign: 'center', colorScheme: 'dark', boxSizing: 'border-box' }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setEditValues(v => ({ ...v, perSetRows: v.perSetRows.length > 1 ? v.perSetRows.filter((_, j) => j !== i) : v.perSetRows }))}
+                                style={{ fontSize: '12px', color: (editValues.perSetRows?.length ?? 0) > 1 ? 'var(--color-muted)' : 'var(--color-border)', background: 'none', border: 'none', cursor: (editValues.perSetRows?.length ?? 0) > 1 ? 'pointer' : 'default', padding: 0, textAlign: 'center' }}
+                              >✕</button>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setEditValues(v => ({ ...v, perSetRows: [...(v.perSetRows ?? []), { reps: '', weight: '' }] }))}
+                            style={{ fontSize: '11px', padding: '4px', background: 'rgba(41,181,204,0.08)', border: '1px dashed rgba(41,181,204,0.3)', color: '#29B5CC', borderRadius: '5px', cursor: 'pointer' }}
+                          >+ Add set</button>
+                        </div>
+                      )}
+                    </div>
                     {/* Tempo edit */}
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editValues.tempoEnabled ? '6px' : 0 }}>
@@ -483,11 +608,29 @@ export default function SessionEdit() {
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
                     <div>
-                      <div style={{ fontSize: '12px', color: 'var(--color-subtle)' }}>
-                        {pe.sets} sets × {pe.reps} {pe.measurement_type === 'seconds' ? 'sec' : 'reps'}
-                        {pe.weight ? ` · ${formatWeight(pe.weight, weightUnit)}` : ''}
-                        {pe.bilateral ? ' · Both sides' : ''}
-                      </div>
+                      {pe.prescription_exercise_sets?.length > 0 ? (
+                        <div style={{ marginTop: '2px' }}>
+                          <div style={{ fontSize: '11px', color: '#29B5CC', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                            Per-set · {pe.prescription_exercise_sets.length} sets
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 1fr', gap: '2px 8px' }}>
+                            {pe.prescription_exercise_sets
+                              .slice().sort((a, b) => a.set_number - b.set_number)
+                              .flatMap((s, i) => [
+                                <span key={`${i}-n`} style={{ fontFamily: 'monospace', fontWeight: 700, color: '#29B5CC', fontSize: '11px' }}>{s.set_number}</span>,
+                                <span key={`${i}-r`} style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{s.reps} {pe.measurement_type === 'seconds' ? 'sec' : 'reps'}</span>,
+                                <span key={`${i}-w`} style={{ fontSize: '12px', color: 'var(--color-subtle)' }}>{s.weight != null ? formatWeight(s.weight, weightUnit) : 'Bodyweight'}</span>,
+                              ])
+                            }
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '12px', color: 'var(--color-subtle)' }}>
+                          {pe.sets} sets × {pe.reps} {pe.measurement_type === 'seconds' ? 'sec' : 'reps'}
+                          {pe.weight ? ` · ${formatWeight(pe.weight, weightUnit)}` : ''}
+                          {pe.bilateral ? ' · Both sides' : ''}
+                        </div>
+                      )}
                       {(() => {
                         const t = formatTempo(pe.tempo_eccentric, pe.tempo_bottom_pause, pe.tempo_concentric, pe.tempo_top_pause)
                         return t ? (
