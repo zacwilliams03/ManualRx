@@ -202,12 +202,40 @@ export default function ProgramEdit() {
           if (pErr) continue
           const { data: exercises } = await supabase
             .from('prescription_exercises')
-            .select('exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral')
+            .select('exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(set_number, reps, weight)')
             .eq('prescription_id', src.id)
-          if (exercises?.length > 0) {
-            await supabase.from('prescription_exercises').insert(
-              exercises.map(ex => ({ ...ex, prescription_id: newPrescription.id }))
-            )
+          for (const ex of exercises ?? []) {
+            const { data: newEx, error: exErr } = await supabase
+              .from('prescription_exercises')
+              .insert({
+                prescription_id: newPrescription.id,
+                exercise_id: ex.exercise_id,
+                sets: ex.sets,
+                reps: ex.reps,
+                weight: ex.weight,
+                therapist_notes: ex.therapist_notes,
+                measurement_type: ex.measurement_type ?? 'reps',
+                bilateral: ex.bilateral ?? false,
+                tempo_eccentric:    ex.tempo_eccentric    ?? null,
+                tempo_bottom_pause: ex.tempo_bottom_pause ?? null,
+                tempo_concentric:   ex.tempo_concentric   ?? null,
+                tempo_top_pause:    ex.tempo_top_pause    ?? null,
+              })
+              .select('id')
+              .single()
+            if (exErr) continue  // silent skip — intentional; matches existing handleRepeatWeek error handling
+            const sets = ex.prescription_exercise_sets ?? []
+            if (sets.length > 0) {
+              // per-set insert failure is also silently swallowed — intentional, consistent with the rest of the loop
+              await supabase.from('prescription_exercise_sets').insert(
+                sets.map(s => ({
+                  prescription_exercise_id: newEx.id,
+                  set_number: s.set_number,
+                  reps: s.reps,
+                  weight: s.weight ?? null,
+                }))
+              )
+            }
           }
         }
       }
