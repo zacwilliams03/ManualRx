@@ -621,6 +621,7 @@ Props unchanged: `{ clinicName, clientName, programName, startDate, weeks, weigh
 ```jsx
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
 import { formatPdfDate } from '../../utils/pdfUtils'
+import { frequencyLabel } from '../../utils/frequencyUtils'
 import { ExerciseTablePDF } from './ExerciseTablePDF'
 
 const NAVY = '#1E2D3D'
@@ -689,12 +690,7 @@ const styles = StyleSheet.create({
   footerText: { fontSize: 7, color: GREY },
 })
 
-function freqLabel(days) {
-  if (!days) return ''
-  if (days === 1) return 'Daily'
-  if (days === 7) return 'Weekly'
-  return `Every ${days} days`
-}
+// frequencyLabel imported from frequencyUtils — handles null → 'No repeat', 1 → 'Daily', 7 → 'Weekly'
 
 export function ProgramPDF({ clinicName, clientName, programName, startDate, weeks, weightUnit }) {
   const today = formatPdfDate(new Date())
@@ -739,7 +735,7 @@ export function ProgramPDF({ clinicName, clientName, programName, startDate, wee
                 <View style={styles.sessionHeader}>
                   <Text style={styles.sessionName}>{session.name}</Text>
                   {session.frequencyDays
-                    ? <Text style={styles.sessionFreq}>{freqLabel(session.frequencyDays)}</Text>
+                    ? <Text style={styles.sessionFreq}>{frequencyLabel(session.frequencyDays)}</Text>
                     : null
                   }
                 </View>
@@ -962,6 +958,9 @@ import { AllSessionsPDF } from '../../components/therapist/AllSessionsPDF'
 Inside `ClientDashboard`, after the existing `const clinicName = useClinicName()` line, add:
 
 ```js
+// useWeightUnit() for a client reads clients.weight_unit — the client's own display preference.
+// Prescription weights are stored in canonical kg; formatWeight converts on render.
+// This is the same approach SessionWizard uses for the same client-facing exercise display.
 const weightUnit = useWeightUnit()
 const [downloadingId, setDownloadingId] = useState(null)
 const [downloadError, setDownloadError] = useState(null)
@@ -1001,7 +1000,7 @@ async function downloadSession(session) {
     const blob = await pdf(
       <PrescriptionPDF
         clinicName={clinicName ?? ''}
-        clientName={profile.name ?? ''}
+        clientName={profile.name ?? profile.email ?? ''}
         prescriptionName={session.name}
         frequencyLabel={frequencyLabel(session.frequency_days)}
         exercises={mapped}
@@ -1034,39 +1033,48 @@ async function downloadAllSessions() {
   setDownloadError(null)
   try {
     const toDownload = sessions.filter(isActive)
-    const prescriptions = await Promise.all(
-      toDownload.map(async session => {
-        const { data: exercises, error } = await supabase
-          .from('prescription_exercises')
-          .select('sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(set_number, reps, weight), exercises(name)')
-          .eq('prescription_id', session.id)
-          .order('id', { ascending: true })
-        if (error) throw new Error(error.message)
-        return {
-          name: session.name,
-          frequencyLabel: frequencyLabel(session.frequency_days),
-          exercises: (exercises ?? []).map(pe => ({
-            name: pe.exercises?.name ?? '',
-            sets: pe.sets,
-            reps: pe.reps,
-            weight: pe.weight,
-            therapist_notes: pe.therapist_notes,
-            measurement_type: pe.measurement_type ?? 'reps',
-            bilateral: pe.bilateral ?? false,
-            tempo_eccentric: pe.tempo_eccentric ?? null,
-            tempo_bottom_pause: pe.tempo_bottom_pause ?? null,
-            tempo_concentric: pe.tempo_concentric ?? null,
-            tempo_top_pause: pe.tempo_top_pause ?? null,
-            prescription_exercise_sets: pe.prescription_exercise_sets ?? [],
-          })),
-        }
-      })
-    )
+    const activeIds = toDownload.map(s => s.id)
+
+    // Single batched query — one round trip regardless of session count
+    const { data: allExercises, error } = await supabase
+      .from('prescription_exercises')
+      .select('prescription_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(set_number, reps, weight), exercises(name)')
+      .in('prescription_id', activeIds)
+      .order('prescription_id', { ascending: true })
+      .order('id', { ascending: true })
+    if (error) throw new Error(error.message)
+
+    // Group exercises by prescription_id
+    const byId = {}
+    for (const pe of allExercises ?? []) {
+      ;(byId[pe.prescription_id] ??= []).push(pe)
+    }
+
+    const mapEx = pe => ({
+      name: pe.exercises?.name ?? '',
+      sets: pe.sets,
+      reps: pe.reps,
+      weight: pe.weight,
+      therapist_notes: pe.therapist_notes,
+      measurement_type: pe.measurement_type ?? 'reps',
+      bilateral: pe.bilateral ?? false,
+      tempo_eccentric: pe.tempo_eccentric ?? null,
+      tempo_bottom_pause: pe.tempo_bottom_pause ?? null,
+      tempo_concentric: pe.tempo_concentric ?? null,
+      tempo_top_pause: pe.tempo_top_pause ?? null,
+      prescription_exercise_sets: pe.prescription_exercise_sets ?? [],
+    })
+
+    const prescriptions = toDownload.map(session => ({
+      name: session.name,
+      frequencyLabel: frequencyLabel(session.frequency_days),
+      exercises: (byId[session.id] ?? []).map(mapEx),
+    }))
 
     const blob = await pdf(
       <AllSessionsPDF
         clinicName={clinicName ?? ''}
-        clientName={profile.name ?? ''}
+        clientName={profile.name ?? profile.email ?? ''}
         prescriptions={prescriptions}
         weightUnit={weightUnit}
       />
@@ -1075,7 +1083,7 @@ async function downloadAllSessions() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${(profile.name ?? 'sessions').toLowerCase().replace(/\s+/g, '-')}-all-sessions.pdf`
+    a.download = `${(profile.name ?? profile.email ?? 'sessions').toLowerCase().replace(/\s+/g, '-')}-all-sessions.pdf`
     a.click()
     URL.revokeObjectURL(url)
   } catch {
@@ -1089,7 +1097,13 @@ async function downloadAllSessions() {
 
 - [ ] **Step 5: Add "Download All" button and error message**
 
-Find the block that renders the `{!loading && !error && activeSessions.length === 0 && ...}` empty state. Just after it and before the `<div style={{ display: 'flex', flexDirection: 'column', ...}}>` sessions list, add:
+Find this exact line in Dashboard.jsx (the opening of the session cards flex column):
+
+```jsx
+<div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '512px' }}>
+```
+
+Insert the Download All block **immediately before** that `<div>` — it sits outside the gap-10px cards column so it has its own spacing:
 
 ```jsx
 {activeSessions.length > 0 && (
@@ -1107,8 +1121,8 @@ Find the block that renders the `{!loading && !error && activeSessions.length ==
       }}
     >
       {downloadingId === 'all' ? (
-        <svg style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+        <svg style={{ width: '14px', height: '14px', animation: 'spin 0.8s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <path d="M12 2a10 10 0 1 0 10 10" />
         </svg>
       ) : (
         <svg style={{ width: '14px', height: '14px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1150,8 +1164,8 @@ Find the `<Link to={`/client/sessions/${s.id}`} ...>Start</Link>` button inside 
     }}
   >
     {downloadingId === s.id ? (
-      <svg style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+      <svg style={{ width: '16px', height: '16px', animation: 'spin 0.8s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <path d="M12 2a10 10 0 1 0 10 10" />
       </svg>
     ) : (
       <svg style={{ width: '16px', height: '16px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
