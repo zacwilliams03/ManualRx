@@ -1,14 +1,13 @@
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
-import { weightDisplay, formatPdfDate } from '../../utils/pdfUtils'
-import { formatTempo } from '../../utils/formatTempo'
-import { formatPerSetSummary } from '../../utils/formatPerSetSummary'
+import { formatPdfDate } from '../../utils/pdfUtils'
+import { frequencyLabel } from '../../utils/frequencyUtils'
+import { ExerciseTablePDF } from './ExerciseTablePDF'
 
 const NAVY = '#1E2D3D'
 const TEAL = '#29B5CC'
-const TEAL_LIGHT = '#E1F5FA'
+const TEAL_LIGHT = '#E8F9FC'
+const TEAL_BORDER = '#A8E6F0'
 const GREY = '#6B7280'
-const BORDER = '#D4E8E8'
-const WEEK_BG = '#F0FAFB'
 
 const styles = StyleSheet.create({
   page: {
@@ -20,229 +19,121 @@ const styles = StyleSheet.create({
     paddingHorizontal: 48,
   },
   header: {
-    marginBottom: 20,
-    borderBottomWidth: 2,
-    borderBottomColor: TEAL,
-    paddingBottom: 12,
-  },
-  subtitle: {
-    fontSize: 9,
-    color: GREY,
-    letterSpacing: 1.5,
-    marginTop: 2,
-  },
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  logoBar: {
-    width: 3,
-    height: 20,
-    backgroundColor: TEAL,
-    borderRadius: 2,
-    marginRight: 8,
-  },
-  logoManual: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 16,
-    color: NAVY,
-  },
-  logoRx: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 16,
-    color: TEAL,
-  },
-  metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
-    fontSize: 10,
-    color: GREY,
+    alignItems: 'flex-end',
+    borderBottomWidth: 2.5,
+    borderBottomColor: TEAL,
+    paddingBottom: 10,
+    marginBottom: 12,
   },
-  programTitle: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 15,
-    color: NAVY,
-    marginBottom: 16,
+  logoManual: { fontFamily: 'Helvetica-Bold', fontSize: 18, color: NAVY },
+  logoRx: { fontFamily: 'Helvetica-Bold', fontSize: 18, color: TEAL },
+  subtitle: { fontSize: 8, color: GREY, letterSpacing: 2, marginTop: 3 },
+  headerRight: { textAlign: 'right' },
+  headerClinic: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: NAVY },
+  headerDate: { fontSize: 8, color: GREY, marginTop: 1 },
+  programMeta: { marginBottom: 16 },
+  programTitle: { fontFamily: 'Helvetica-Bold', fontSize: 15, color: NAVY, marginBottom: 3 },
+  programSubtitle: { fontSize: 8, color: GREY },
+  weekBlock: { marginBottom: 18 },
+  weekHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  weekBadge: {
+    backgroundColor: TEAL, borderRadius: 4,
+    paddingVertical: 4, paddingHorizontal: 10,
+    marginRight: 8,
   },
-  weekBlock: {
-    marginBottom: 18,
-  },
-  weekHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: WEEK_BG,
-    borderLeftWidth: 3,
-    borderLeftColor: TEAL,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    marginBottom: 10,
-    borderRadius: 2,
-  },
-  weekLabel: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 11,
-    color: TEAL,
-  },
+  weekBadgeText: { color: '#FFFFFF', fontSize: 8, fontFamily: 'Helvetica-Bold' },
+  weekRule: { flex: 1, height: 1, backgroundColor: TEAL_BORDER },
   sessionBlock: {
     marginBottom: 10,
     paddingLeft: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: TEAL,
   },
   sessionHeader: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginBottom: 5,
+    marginBottom: 6,
   },
-  sessionName: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 12,
-    color: NAVY,
-    marginRight: 6,
-  },
-  sessionFreq: {
-    fontSize: 9,
-    color: TEAL,
-  },
-  exerciseBlock: {
-    marginBottom: 8,
-    paddingLeft: 8,
-  },
-  exerciseTitle: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 11,
-    color: NAVY,
-    marginBottom: 2,
-  },
-  exerciseMeta: {
-    fontSize: 10,
-    color: GREY,
-    marginBottom: 3,
-  },
-  notesBox: {
-    backgroundColor: TEAL_LIGHT,
-    borderRadius: 4,
-    borderLeftWidth: 2,
-    borderLeftColor: TEAL,
-    padding: 5,
-    marginTop: 3,
-  },
-  notesText: {
-    fontSize: 9,
-    color: NAVY,
-  },
-  sessionDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-    marginBottom: 10,
-    marginTop: 4,
+  sessionName: { fontFamily: 'Helvetica-Bold', fontSize: 10, color: NAVY, marginRight: 6 },
+  sessionFreq: { fontSize: 7.5, color: TEAL },
+  tempoNote: {
+    fontSize: 8, color: GREY, marginTop: 16,
+    borderTopWidth: 1, borderTopColor: TEAL_BORDER, paddingTop: 8,
   },
   footer: {
-    position: 'absolute',
-    bottom: 24,
-    left: 48,
-    right: 48,
-    textAlign: 'center',
-    fontSize: 8,
-    color: GREY,
+    position: 'absolute', bottom: 24, left: 48, right: 48,
+    flexDirection: 'row', justifyContent: 'space-between',
   },
-  tempoNote: {
-    fontSize: 8,
-    color: GREY,
-    marginTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-    paddingTop: 8,
-  },
+  footerText: { fontSize: 7, color: GREY },
 })
 
-function freqLabel(days) {
-  if (!days) return ''
-  if (days === 1) return 'Daily'
-  if (days === 7) return 'Weekly'
-  return `Every ${days} days`
-}
+// frequencyLabel imported from frequencyUtils — handles null → 'No repeat', 1 → 'Daily', 7 → 'Weekly'
 
 export function ProgramPDF({ clinicName, clientName, programName, startDate, weeks, weightUnit }) {
   const today = formatPdfDate(new Date())
-  const hasTempoEx = weeks.some(w => w.sessions.some(s => s.exercises.some(e => formatTempo(e.tempo_eccentric, e.tempo_bottom_pause, e.tempo_concentric, e.tempo_top_pause) != null)))
+  const hasTempoEx = weeks.some(w =>
+    w.sessions.some(s => s.exercises.some(e => e.tempo_eccentric != null))
+  )
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <View style={styles.logoRow}>
-            <View style={styles.logoBar} />
-            <Text style={styles.logoManual}>
-              Manual<Text style={styles.logoRx}>Rx</Text>
-            </Text>
+          <View>
+            <Text style={styles.logoManual}>Manual<Text style={styles.logoRx}>Rx</Text></Text>
+            <Text style={styles.subtitle}>EXERCISE PROGRAM</Text>
           </View>
-          <Text style={styles.subtitle}>EXERCISE PROGRAM — {clinicName}</Text>
+          <View style={styles.headerRight}>
+            <Text style={styles.headerClinic}>{clinicName}</Text>
+            <Text style={styles.headerDate}>{today}</Text>
+          </View>
         </View>
 
-        <View style={styles.metaRow}>
-          <Text>Client: {clientName}</Text>
-          <Text>Date: {today}</Text>
+        <View style={styles.programMeta}>
+          <Text style={styles.programTitle}>{programName}</Text>
+          <Text style={styles.programSubtitle}>
+            {`Client: ${clientName}`}
+            {startDate ? ` · Start: ${formatPdfDate(new Date(startDate))}` : ''}
+            {weeks.length > 0 ? ` · Duration: ${weeks.length} week${weeks.length !== 1 ? 's' : ''}` : ''}
+          </Text>
         </View>
-
-        <Text style={styles.programTitle}>{programName}</Text>
 
         {weeks.map((week, wi) => (
           <View key={wi} style={styles.weekBlock}>
-            <View style={styles.weekHeader}>
-              <Text style={styles.weekLabel}>Week {week.weekNumber}</Text>
+            <View style={styles.weekHeaderRow}>
+              <View style={styles.weekBadge}>
+                <Text style={styles.weekBadgeText}>WEEK {week.weekNumber}</Text>
+              </View>
+              <View style={styles.weekRule} />
             </View>
 
             {week.sessions.map((session, si) => (
               <View key={si} style={styles.sessionBlock}>
                 <View style={styles.sessionHeader}>
                   <Text style={styles.sessionName}>{session.name}</Text>
-                  {session.frequencyDays ? (
-                    <Text style={styles.sessionFreq}>{freqLabel(session.frequencyDays)}</Text>
-                  ) : null}
+                  {session.frequencyDays
+                    ? <Text style={styles.sessionFreq}>{frequencyLabel(session.frequencyDays)}</Text>
+                    : null
+                  }
                 </View>
-
-                {session.exercises.map((ex, ei) => (
-                  <View key={ei} style={styles.exerciseBlock}>
-                    <Text style={styles.exerciseTitle}>{ei + 1}. {ex.name}</Text>
-                    {(() => {
-                      const perSet = ex.prescription_exercise_sets ?? []
-                      if (perSet.length > 0) {
-                        return (
-                          <Text style={styles.exerciseMeta}>
-                            {formatPerSetSummary(perSet, weightUnit, { pdf: true })}
-                          </Text>
-                        )
-                      }
-                      const tempo = formatTempo(ex.tempo_eccentric, ex.tempo_bottom_pause, ex.tempo_concentric, ex.tempo_top_pause)
-                      return (
-                        <Text style={styles.exerciseMeta}>
-                          {`${ex.sets} sets × ${ex.reps} ${ex.measurement_type === 'seconds' ? 'sec' : 'reps'}`}
-                          {ex.weight ? ` @ ${weightDisplay(ex.weight, weightUnit)}` : ' — Bodyweight'}
-                          {ex.bilateral ? ' — Both sides' : ''}
-                          {tempo ? ` — Tempo: ${tempo.compact}` : ''}
-                        </Text>
-                      )
-                    })()}
-                    {ex.therapist_notes ? (
-                      <View style={styles.notesBox}>
-                        <Text style={styles.notesText}>{ex.therapist_notes}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                ))}
-
-                {si < week.sessions.length - 1 && <View style={styles.sessionDivider} />}
+                <ExerciseTablePDF exercises={session.exercises} weightUnit={weightUnit} />
               </View>
             ))}
           </View>
         ))}
 
         {hasTempoEx && (
-          <Text style={styles.tempoNote}>* Tempo (seconds): Eccentric — Bottom Pause — Concentric — Top Pause</Text>
+          <Text style={styles.tempoNote}>
+            * Tempo (seconds): Eccentric — Bottom Pause — Concentric — Top Pause
+          </Text>
         )}
 
-        <Text style={styles.footer}>Generated by ManualRx</Text>
+        <View style={styles.footer} fixed>
+          <Text style={styles.footerText}>Generated by ManualRx</Text>
+          <Text style={styles.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
+        </View>
       </Page>
     </Document>
   )
