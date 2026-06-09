@@ -1,6 +1,7 @@
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
 import { formatPdfDate } from '../../utils/pdfUtils'
 import { frequencyLabel } from '../../utils/frequencyUtils'
+import { formatTempo } from '../../utils/formatTempo'
 import { ExerciseTablePDF } from './ExerciseTablePDF'
 
 const NAVY = '#1E2D3D'
@@ -74,7 +75,11 @@ const styles = StyleSheet.create({
 export function ProgramPDF({ clinicName, clientName, programName, startDate, weeks, weightUnit }) {
   const today = formatPdfDate(new Date())
   const hasTempoEx = weeks.some(w =>
-    w.sessions.some(s => s.exercises.some(e => e.tempo_eccentric != null))
+    w.sessions.some(s =>
+      s.exercises.some(e =>
+        formatTempo(e.tempo_eccentric, e.tempo_bottom_pause, e.tempo_concentric, e.tempo_top_pause) != null
+      )
+    )
   )
 
   return (

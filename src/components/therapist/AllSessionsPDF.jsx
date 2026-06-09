@@ -1,5 +1,6 @@
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
 import { formatPdfDate } from '../../utils/pdfUtils'
+import { formatTempo } from '../../utils/formatTempo'
 import { ExerciseTablePDF } from './ExerciseTablePDF'
 
 const NAVY = '#1E2D3D'
@@ -66,7 +67,9 @@ const styles = StyleSheet.create({
 export function AllSessionsPDF({ clinicName, clientName, prescriptions, weightUnit }) {
   const today = formatPdfDate(new Date())
   const hasTempoEx = prescriptions.some(p =>
-    p.exercises.some(e => e.tempo_eccentric != null)
+    p.exercises.some(e =>
+      formatTempo(e.tempo_eccentric, e.tempo_bottom_pause, e.tempo_concentric, e.tempo_top_pause) != null
+    )
   )
 
   return (

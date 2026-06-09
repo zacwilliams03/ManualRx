@@ -58,7 +58,9 @@ const styles = StyleSheet.create({
 
 export function PrescriptionPDF({ clinicName, clientName, prescriptionName, exercises, weightUnit, frequencyLabel }) {
   const today = formatPdfDate(new Date())
-  const hasTempoEx = exercises.some(e => e.tempo_eccentric != null)
+  const hasTempoEx = exercises.some(e =>
+    formatTempo(e.tempo_eccentric, e.tempo_bottom_pause, e.tempo_concentric, e.tempo_top_pause) != null
+  )
 
   return (
     <Document>
