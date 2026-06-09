@@ -37,15 +37,17 @@ const styles = StyleSheet.create({
   programMeta: { marginBottom: 18 },
   programTitle: { fontFamily: 'Helvetica-Bold', fontSize: 15, color: NAVY, marginBottom: 3 },
   programSubtitle: { fontSize: 8, color: GREY },
-  weekBlock: { marginBottom: 20 },
+  weekBlock: { marginBottom: 22 },
+  weekHeadingWrap: {
+    borderBottomWidth: 2,
+    borderBottomColor: TEAL,
+    paddingBottom: 5,
+    marginBottom: 10,
+  },
   weekHeading: {
     fontFamily: 'Helvetica-Bold',
-    fontSize: 12,
+    fontSize: 13,
     color: TEAL,
-    borderBottomWidth: 1.5,
-    borderBottomColor: TEAL,
-    paddingBottom: 4,
-    marginBottom: 10,
   },
   sessionBlock: {
     marginBottom: 12,
@@ -104,7 +106,9 @@ export function ProgramPDF({ clinicName, clientName, programName, startDate, wee
 
         {weeks.map((week, wi) => (
           <View key={wi} style={styles.weekBlock}>
-            <Text style={styles.weekHeading}>Week {week.weekNumber}</Text>
+            <View style={styles.weekHeadingWrap}>
+              <Text style={styles.weekHeading}>Week {week.weekNumber}</Text>
+            </View>
 
             {week.sessions.map((session, si) => (
               <View key={si} style={styles.sessionBlock}>
