@@ -24,6 +24,9 @@ const rowStyle = {
   borderBottom: '1px solid var(--color-border)', cursor: 'pointer', transition: 'background 0.15s',
 }
 
+let _rowId = 0
+const nextRowId = () => ++_rowId
+
 // confirmLabel: text shown on the Add button — defaults to 'Add to session'; pass 'Add to template' in TemplateEdit
 export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLabel = 'Add to session' }) {
   const isMobile = useIsMobile()
@@ -163,8 +166,8 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
         tempoConcentric:  configTempoEnabled ? parseInt(configTempoUp)   : null,
         tempoTopPause:    configTempoEnabled ? parseInt(configTempoTop)   : null,
         perSetSets: configPerSetEnabled
-          ? configPerSetRows.map((r, i) => ({
-              set_number: i + 1,
+          ? configPerSetRows.map((r, idx) => ({
+              set_number: idx + 1,
               reps: parseInt(r.reps),
               weight: r.weight !== '' && r.weight != null ? toCanonical(parseFloat(r.weight), weightUnit) : null,
             }))
@@ -386,7 +389,7 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
                       const n = Math.max(1, parseInt(configSets) || 1)
                       const defaultReps = configReps || ''
                       const defaultWeight = configWeight || ''
-                      setConfigPerSetRows(Array.from({ length: n }, () => ({ reps: defaultReps, weight: defaultWeight })))
+                      setConfigPerSetRows(Array.from({ length: n }, () => ({ reps: defaultReps, weight: defaultWeight, _id: nextRowId() })))
                     }
                     setConfigPerSetEnabled(v => !v)
                   }}
@@ -413,7 +416,7 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
                     <span />
                   </div>
                   {configPerSetRows.map((row, i) => (
-                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 24px', gap: '6px', alignItems: 'center' }}>
+                    <div key={row._id} style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 24px', gap: '6px', alignItems: 'center' }}>
                       <span style={{ fontSize: '12px', fontWeight: 600, color: '#29B5CC', textAlign: 'center', fontFamily: 'monospace' }}>{i + 1}</span>
                       <input
                         type="number" min="1" value={row.reps}
@@ -434,7 +437,7 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
                   ))}
                   <button
                     type="button"
-                    onClick={() => setConfigPerSetRows(prev => [...prev, { reps: '', weight: '' }])}
+                    onClick={() => setConfigPerSetRows(prev => [...prev, { reps: '', weight: '', _id: nextRowId() }])}
                     style={{ fontSize: '12px', padding: '6px', background: 'rgba(41,181,204,0.08)', border: '1px dashed rgba(41,181,204,0.3)', color: '#29B5CC', borderRadius: '6px', cursor: 'pointer' }}
                   >
                     + Add set
@@ -442,8 +445,8 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
                   {(() => {
                     const allValid = configPerSetRows.every(r => r.reps !== '' && !isNaN(parseInt(r.reps)))
                     if (!allValid || configPerSetRows.length === 0) return null
-                    const canonical = configPerSetRows.map((r, i) => ({
-                      set_number: i + 1,
+                    const canonical = configPerSetRows.map((r, idx) => ({
+                      set_number: idx + 1,
                       reps: parseInt(r.reps),
                       weight: r.weight !== '' && r.weight != null ? toCanonical(parseFloat(r.weight), weightUnit) : null,
                     }))
