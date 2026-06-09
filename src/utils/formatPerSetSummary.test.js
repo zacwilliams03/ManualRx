@@ -49,4 +49,9 @@ describe('formatPerSetSummary', () => {
     const sets = [{ set_number: 1, reps: 10, weight: 60 }]
     expect(formatPerSetSummary(sets, 'kg')).toBe('10×60 kg')
   })
+
+  test('compact: converts weight to lb when weightUnit is lb', () => {
+    const sets = [{ set_number: 1, reps: 10, weight: 40 }]  // 40 kg ≈ 88.2 lb
+    expect(formatPerSetSummary(sets, 'lb')).toBe('10×88.2 lb')
+  })
 })
