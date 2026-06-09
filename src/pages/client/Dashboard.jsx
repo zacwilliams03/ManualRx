@@ -4,6 +4,10 @@ import { motion } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { useClinicName } from '../../hooks/useClinicName'
+import { pdf } from '@react-pdf/renderer'
+import { useWeightUnit } from '../../hooks/useWeightUnit'
+import { PrescriptionPDF } from '../../components/therapist/PrescriptionPDF'
+import { AllSessionsPDF } from '../../components/therapist/AllSessionsPDF'
 import BottomNav from '../../components/client/BottomNav'
 import PageHero from '../../components/shared/PageHero'
 import { CARD } from '../../components/therapist/styles'
@@ -38,6 +42,12 @@ function isActive(prescription) {
 export default function ClientDashboard() {
   const { profile } = useAuth()
   const clinicName = useClinicName()
+  // useWeightUnit() for a client reads clients.weight_unit — the client's own display preference.
+  // Prescription weights are stored in canonical kg; formatWeight converts on render.
+  // This is the same approach SessionWizard uses for the same client-facing exercise display.
+  const weightUnit = useWeightUnit()
+  const [downloadingId, setDownloadingId] = useState(null)
+  const [downloadError, setDownloadError] = useState(null)
 
   const navigate = useNavigate()
   const [sessions, setSessions] = useState([])
@@ -118,10 +128,128 @@ export default function ClientDashboard() {
     }
   }
 
+  async function downloadSession(session) {
+    setDownloadingId(session.id)
+    setDownloadError(null)
+    try {
+      const { data: exercises, error } = await supabase
+        .from('prescription_exercises')
+        .select('sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(set_number, reps, weight), exercises(name)')
+        .eq('prescription_id', session.id)
+        .order('id', { ascending: true })
+      if (error) throw new Error(error.message)
+
+      const mapped = (exercises ?? []).map(pe => ({
+        name: pe.exercises?.name ?? '',
+        sets: pe.sets,
+        reps: pe.reps,
+        weight: pe.weight,
+        therapist_notes: pe.therapist_notes,
+        measurement_type: pe.measurement_type ?? 'reps',
+        bilateral: pe.bilateral ?? false,
+        tempo_eccentric: pe.tempo_eccentric ?? null,
+        tempo_bottom_pause: pe.tempo_bottom_pause ?? null,
+        tempo_concentric: pe.tempo_concentric ?? null,
+        tempo_top_pause: pe.tempo_top_pause ?? null,
+        prescription_exercise_sets: pe.prescription_exercise_sets ?? [],
+      }))
+
+      const blob = await pdf(
+        <PrescriptionPDF
+          clinicName={clinicName ?? ''}
+          clientName={profile.name ?? profile.email ?? ''}
+          prescriptionName={session.name}
+          frequencyLabel={frequencyLabel(session.frequency_days)}
+          exercises={mapped}
+          weightUnit={weightUnit}
+        />
+      ).toBlob()
+
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${session.name.toLowerCase().replace(/\s+/g, '-')}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      setDownloadError('Failed to download PDF.')
+      setTimeout(() => setDownloadError(null), 5000)
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+
+  async function downloadAllSessions() {
+    setDownloadingId('all')
+    setDownloadError(null)
+    try {
+      const toDownload = sessions.filter(isActive)
+      const activeIds = toDownload.map(s => s.id)
+
+      // Single batched query — one round trip regardless of session count
+      const { data: allExercises, error } = await supabase
+        .from('prescription_exercises')
+        .select('prescription_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(set_number, reps, weight), exercises(name)')
+        .in('prescription_id', activeIds)
+        .order('prescription_id', { ascending: true })
+        .order('id', { ascending: true })
+      if (error) throw new Error(error.message)
+
+      // Group exercises by prescription_id
+      const byId = {}
+      for (const pe of allExercises ?? []) {
+        ;(byId[pe.prescription_id] ??= []).push(pe)
+      }
+
+      const mapEx = pe => ({
+        name: pe.exercises?.name ?? '',
+        sets: pe.sets,
+        reps: pe.reps,
+        weight: pe.weight,
+        therapist_notes: pe.therapist_notes,
+        measurement_type: pe.measurement_type ?? 'reps',
+        bilateral: pe.bilateral ?? false,
+        tempo_eccentric: pe.tempo_eccentric ?? null,
+        tempo_bottom_pause: pe.tempo_bottom_pause ?? null,
+        tempo_concentric: pe.tempo_concentric ?? null,
+        tempo_top_pause: pe.tempo_top_pause ?? null,
+        prescription_exercise_sets: pe.prescription_exercise_sets ?? [],
+      })
+
+      const prescriptions = toDownload.map(session => ({
+        name: session.name,
+        frequencyLabel: frequencyLabel(session.frequency_days),
+        exercises: (byId[session.id] ?? []).map(mapEx),
+      }))
+
+      const blob = await pdf(
+        <AllSessionsPDF
+          clinicName={clinicName ?? ''}
+          clientName={profile.name ?? profile.email ?? ''}
+          prescriptions={prescriptions}
+          weightUnit={weightUnit}
+        />
+      ).toBlob()
+
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${(profile.name ?? profile.email ?? 'sessions').toLowerCase().replace(/\s+/g, '-')}-all-sessions.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      setDownloadError('Failed to download PDF.')
+      setTimeout(() => setDownloadError(null), 5000)
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+
   const activeSessions = sessions.filter(isActive)
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
+      <style>{`@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
       <PageHero
         title="My Sessions"
         subtitle={`${profile?.name ?? ''}${clinicName ? ` · ${clinicName}` : ''}`}
@@ -137,6 +265,39 @@ export default function ClientDashboard() {
         {error && <p style={{ fontSize: '13px', color: 'var(--color-danger)' }}>{error}</p>}
         {!loading && !error && activeSessions.length === 0 && (
           <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>Your therapist hasn't added any sessions yet.</p>
+        )}
+
+        {activeSessions.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px', maxWidth: '512px' }}>
+            <button
+              onClick={downloadAllSessions}
+              disabled={downloadingId !== null}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                background: 'none', border: '1px solid var(--color-border)',
+                borderRadius: '7px', padding: '8px 14px',
+                fontSize: '12px', fontWeight: 600, color: 'var(--color-muted)',
+                cursor: downloadingId !== null ? 'default' : 'pointer',
+                opacity: downloadingId === 'all' ? 0.6 : 1,
+              }}
+            >
+              {downloadingId === 'all' ? (
+                <svg style={{ width: '14px', height: '14px', animation: 'spin 0.8s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M12 2a10 10 0 1 0 10 10" />
+                </svg>
+              ) : (
+                <svg style={{ width: '14px', height: '14px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              )}
+              {downloadingId === 'all' ? 'Preparing PDF…' : 'Download all sessions'}
+            </button>
+            {downloadError && (
+              <p style={{ fontSize: '11px', color: 'var(--color-danger)', margin: 0 }}>{downloadError}</p>
+            )}
+          </div>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '512px' }}>
@@ -224,22 +385,41 @@ export default function ClientDashboard() {
                     <p style={{ marginTop: '2px', fontSize: '11px', color: 'var(--color-subtle)', margin: '2px 0 0' }}>Last completed: {lastDone}</p>
                   )}
                 </div>
-                <Link
-                  to={`/client/sessions/${s.id}`}
-                  style={{
-                    flexShrink: 0,
-                    background: '#29B5CC',
-                    color: '#000',
-                    borderRadius: '7px',
-                    padding: '7px 14px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                    display: 'inline-block',
-                  }}
-                >
-                  Start
-                </Link>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    onClick={() => downloadSession(s)}
+                    disabled={downloadingId !== null}
+                    title="Download PDF"
+                    style={{
+                      background: 'none', border: 'none', cursor: downloadingId !== null ? 'default' : 'pointer',
+                      padding: '4px', color: 'var(--color-subtle)',
+                      opacity: downloadingId === s.id ? 0.5 : 1,
+                    }}
+                  >
+                    {downloadingId === s.id ? (
+                      <svg style={{ width: '16px', height: '16px', animation: 'spin 0.8s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <path d="M12 2a10 10 0 1 0 10 10" />
+                      </svg>
+                    ) : (
+                      <svg style={{ width: '16px', height: '16px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                    )}
+                  </button>
+                  <Link
+                    to={`/client/sessions/${s.id}`}
+                    style={{
+                      background: '#29B5CC', color: '#000', borderRadius: '7px',
+                      padding: '7px 14px', fontSize: '12px', fontWeight: 600,
+                      textDecoration: 'none', display: 'inline-block',
+                    }}
+                  >
+                    Start
+                  </Link>
+                </div>
               </motion.div>
             )
           })}
