@@ -71,7 +71,7 @@ export default function SessionWizard() {
         supabase.from('prescriptions').select('id, name, therapist_id').eq('id', sessionId).single(),
         supabase
           .from('prescription_exercises')
-          .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(id, name, category, video_url)')
+          .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(set_number, reps, weight), exercises(id, name, category, video_url)')
           .eq('prescription_id', sessionId)
           .order('id', { ascending: true }),
         supabase
@@ -101,6 +101,7 @@ export default function SessionWizard() {
       setExercises(
         (exercisesRes.data ?? []).map(pe => ({
           ...pe,
+          prescription_exercise_sets: [...(pe.prescription_exercise_sets ?? [])].sort((a, b) => a.set_number - b.set_number),
           // per-set data: one entry per prescribed set
           setsData: Array(pe.sets || 1).fill(null).map(() => ({ reps: '', weight: '' })),
           currentSet: 0,
@@ -393,10 +394,36 @@ export default function SessionWizard() {
           {/* Prescribed target */}
           <div style={{ background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '10px 14px' }}>
             <p style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-subtle)', marginBottom: '4px' }}>Target</p>
-            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', margin: 0 }}>
-              {ex.sets} sets × {ex.reps} {ex.measurement_type === 'seconds' ? 'sec' : 'reps'}
-              {ex.weight ? ` @ ${formatWeight(ex.weight, weightUnit)}` : ''}
-            </p>
+            {ex.prescription_exercise_sets?.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {ex.prescription_exercise_sets.map((s, i) => {
+                  const isDone = i < ex.currentSet
+                  const isCurrent = i === ex.currentSet
+                  return (
+                    <div key={i} style={{
+                      display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 8px', borderRadius: '6px',
+                      background: isCurrent ? 'rgba(41,181,204,0.08)' : 'rgba(255,255,255,0.03)',
+                      border: isCurrent ? '1px solid rgba(41,181,204,0.25)' : '1px solid rgba(255,255,255,0.05)',
+                    }}>
+                      <span style={{ fontSize: isCurrent ? '12px' : '11px', fontWeight: 700, color: isCurrent ? '#29B5CC' : '#555', fontFamily: 'monospace', width: '16px', textAlign: 'center' }}>
+                        {s.set_number}
+                      </span>
+                      <span style={{ fontSize: isCurrent ? '13px' : '12px', fontWeight: isCurrent ? 600 : 400, color: isCurrent ? 'var(--color-text)' : '#666', flex: 1 }}>
+                        {s.reps} {ex.measurement_type === 'seconds' ? 'sec' : 'reps'}
+                        {s.weight != null ? ` @ ${formatWeight(s.weight, weightUnit)}` : ''}
+                      </span>
+                      {isDone && <span style={{ fontSize: '11px', color: '#29B5CC', fontWeight: 600 }}>✓</span>}
+                      {isCurrent && <span style={{ fontSize: '11px', color: '#29B5CC' }}>← now</span>}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', margin: 0 }}>
+                {ex.sets} sets × {ex.reps} {ex.measurement_type === 'seconds' ? 'sec' : 'reps'}
+                {ex.weight ? ` @ ${formatWeight(ex.weight, weightUnit)}` : ''}
+              </p>
+            )}
           </div>
 
           {ex.bilateral && (
