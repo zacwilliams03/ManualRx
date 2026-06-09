@@ -1,13 +1,12 @@
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
-import { weightDisplay, formatPdfDate } from '../../utils/pdfUtils'
-import { formatTempo } from '../../utils/formatTempo'
-import { formatPerSetSummary } from '../../utils/formatPerSetSummary'
+import { formatPdfDate } from '../../utils/pdfUtils'
+import { ExerciseTablePDF } from './ExerciseTablePDF'
 
 const NAVY = '#1E2D3D'
 const TEAL = '#29B5CC'
-const TEAL_LIGHT = '#E1F5FA'
+const TEAL_LIGHT = '#E8F9FC'
+const TEAL_BORDER = '#A8E6F0'
 const GREY = '#6B7280'
-const BORDER = '#D4E8E8'
 
 const styles = StyleSheet.create({
   page: {
@@ -19,178 +18,102 @@ const styles = StyleSheet.create({
     paddingHorizontal: 48,
   },
   header: {
-    marginBottom: 20,
-    borderBottomWidth: 2,
-    borderBottomColor: TEAL,
-    paddingBottom: 12,
-  },
-  subtitle: {
-    fontSize: 9,
-    color: GREY,
-    letterSpacing: 1.5,
-    marginTop: 2,
-  },
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  logoBar: {
-    width: 3,
-    height: 20,
-    backgroundColor: TEAL,
-    borderRadius: 2,
-    marginRight: 8,
-  },
-  logoManual: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 16,
-    color: NAVY,
-  },
-  logoRx: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 16,
-    color: TEAL,
-  },
-  metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
-    fontSize: 10,
-    color: GREY,
+    alignItems: 'flex-end',
+    borderBottomWidth: 2.5,
+    borderBottomColor: TEAL,
+    paddingBottom: 10,
+    marginBottom: 12,
   },
+  logoManual: { fontFamily: 'Helvetica-Bold', fontSize: 18, color: NAVY },
+  logoRx: { fontFamily: 'Helvetica-Bold', fontSize: 18, color: TEAL },
+  subtitle: { fontSize: 8, color: GREY, letterSpacing: 2, marginTop: 3 },
+  headerRight: { textAlign: 'right' },
+  headerClinic: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: NAVY },
+  headerDate: { fontSize: 8, color: GREY, marginTop: 1 },
+  metaStrip: {
+    flexDirection: 'row',
+    backgroundColor: TEAL_LIGHT,
+    borderWidth: 1,
+    borderColor: TEAL_BORDER,
+    borderRadius: 6,
+    padding: 8,
+    marginBottom: 18,
+  },
+  metaItem: { flexDirection: 'column', marginRight: 20 },
+  metaLabel: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: TEAL, marginBottom: 1 },
+  metaValue: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: NAVY },
+  sectionBlock: { marginBottom: 18 },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'baseline',
     marginBottom: 8,
   },
-  sectionName: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 13,
-    color: NAVY,
-    marginRight: 8,
-  },
-  sectionFreq: {
-    fontSize: 9,
-    color: TEAL,
-  },
-  divider: {
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-    marginBottom: 16,
-    marginTop: 8,
-  },
-  exerciseBlock: {
-    marginBottom: 14,
-  },
-  exerciseTitle: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 12,
-    color: NAVY,
-    marginBottom: 3,
-  },
-  exerciseMeta: {
-    fontSize: 10,
-    color: GREY,
-    marginBottom: 4,
-  },
-  notesBox: {
-    backgroundColor: TEAL_LIGHT,
-    borderRadius: 4,
-    borderLeftWidth: 2,
-    borderLeftColor: TEAL,
-    padding: 6,
-    marginTop: 4,
-  },
-  notesText: {
-    fontSize: 10,
-    color: NAVY,
+  sectionName: { fontFamily: 'Helvetica-Bold', fontSize: 13, color: NAVY, marginRight: 8 },
+  sectionFreq: { fontSize: 9, color: TEAL },
+  tempoNote: {
+    fontSize: 8, color: GREY, marginTop: 16,
+    borderTopWidth: 1, borderTopColor: TEAL_BORDER, paddingTop: 8,
   },
   footer: {
-    position: 'absolute',
-    bottom: 24,
-    left: 48,
-    right: 48,
-    textAlign: 'center',
-    fontSize: 8,
-    color: GREY,
+    position: 'absolute', bottom: 24, left: 48, right: 48,
+    flexDirection: 'row', justifyContent: 'space-between',
   },
-  tempoNote: {
-    fontSize: 8,
-    color: GREY,
-    marginTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-    paddingTop: 8,
-  },
+  footerText: { fontSize: 7, color: GREY },
 })
 
 export function AllSessionsPDF({ clinicName, clientName, prescriptions, weightUnit }) {
   const today = formatPdfDate(new Date())
-  const hasTempoEx = prescriptions.some(p => p.exercises.some(e => formatTempo(e.tempo_eccentric, e.tempo_bottom_pause, e.tempo_concentric, e.tempo_top_pause) != null))
+  const hasTempoEx = prescriptions.some(p =>
+    p.exercises.some(e => e.tempo_eccentric != null)
+  )
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <View style={styles.logoRow}>
-            <View style={styles.logoBar} />
-            <Text style={styles.logoManual}>
-              Manual<Text style={styles.logoRx}>Rx</Text>
-            </Text>
+          <View>
+            <Text style={styles.logoManual}>Manual<Text style={styles.logoRx}>Rx</Text></Text>
+            <Text style={styles.subtitle}>EXERCISE PROGRAM</Text>
           </View>
-          <Text style={styles.subtitle}>EXERCISE PROGRAM — {clinicName}</Text>
+          <View style={styles.headerRight}>
+            <Text style={styles.headerClinic}>{clinicName}</Text>
+            <Text style={styles.headerDate}>{today}</Text>
+          </View>
         </View>
 
-        <View style={styles.metaRow}>
-          <Text>Client: {clientName}</Text>
-          <Text>Date: {today}</Text>
+        <View style={styles.metaStrip}>
+          <View style={styles.metaItem}>
+            <Text style={styles.metaLabel}>CLIENT</Text>
+            <Text style={styles.metaValue}>{clientName}</Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Text style={styles.metaLabel}>DATE</Text>
+            <Text style={styles.metaValue}>{today}</Text>
+          </View>
         </View>
 
         {prescriptions.map((presc, pi) => (
-          <View key={pi}>
+          <View key={pi} style={styles.sectionBlock}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionName}>{presc.name}</Text>
-              <Text style={styles.sectionFreq}>{presc.frequencyLabel}</Text>
+              {presc.frequencyLabel ? <Text style={styles.sectionFreq}>{presc.frequencyLabel}</Text> : null}
             </View>
-            {presc.exercises.map((ex, ei) => (
-              <View key={ei} style={styles.exerciseBlock}>
-                <Text style={styles.exerciseTitle}>{ei + 1}. {ex.name}</Text>
-                {(() => {
-                  const perSet = ex.prescription_exercise_sets ?? []
-                  if (perSet.length > 0) {
-                    return (
-                      <Text style={styles.exerciseMeta}>
-                        {formatPerSetSummary(perSet, weightUnit, { pdf: true })}
-                      </Text>
-                    )
-                  }
-                  const tempo = formatTempo(ex.tempo_eccentric, ex.tempo_bottom_pause, ex.tempo_concentric, ex.tempo_top_pause)
-                  return (
-                    <Text style={styles.exerciseMeta}>
-                      {`${ex.sets} sets × ${ex.reps} ${ex.measurement_type === 'seconds' ? 'sec' : 'reps'}`}
-                      {ex.weight ? ` @ ${weightDisplay(ex.weight, weightUnit)}` : ' — Bodyweight'}
-                      {ex.bilateral ? ' — Both sides' : ''}
-                      {tempo ? ` — Tempo: ${tempo.compact}` : ''}
-                    </Text>
-                  )
-                })()}
-                {ex.therapist_notes ? (
-                  <View style={styles.notesBox}>
-                    <Text style={styles.notesText}>{ex.therapist_notes}</Text>
-                  </View>
-                ) : null}
-              </View>
-            ))}
-            {pi < prescriptions.length - 1 && <View style={styles.divider} />}
+            <ExerciseTablePDF exercises={presc.exercises} weightUnit={weightUnit} />
           </View>
         ))}
 
         {hasTempoEx && (
-          <Text style={styles.tempoNote}>* Tempo (seconds): Eccentric — Bottom Pause — Concentric — Top Pause</Text>
+          <Text style={styles.tempoNote}>
+            * Tempo (seconds): Eccentric — Bottom Pause — Concentric — Top Pause
+          </Text>
         )}
 
-        <Text style={styles.footer}>Generated by ManualRx</Text>
+        <View style={styles.footer} fixed>
+          <Text style={styles.footerText}>Generated by ManualRx</Text>
+          <Text style={styles.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
+        </View>
       </Page>
     </Document>
   )
