@@ -4,6 +4,7 @@ import { toCanonical } from '../../utils/weightUtils'
 import useIsMobile from '../../hooks/useIsMobile'
 import ShimmerLine from '../shared/ShimmerLine'
 import { formatTempo } from '../../utils/formatTempo'
+import { formatPerSetSummary } from '../../utils/formatPerSetSummary'
 
 const CATEGORIES = [
   'Custom', 'Cervical', 'Thoracic', 'Lumbar',
@@ -51,6 +52,8 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
   const [configTempoHold, setConfigTempoHold] = useState('')
   const [configTempoUp, setConfigTempoUp] = useState('')
   const [configTempoTop, setConfigTempoTop] = useState('')
+  const [configPerSetEnabled, setConfigPerSetEnabled] = useState(false)
+  const [configPerSetRows, setConfigPerSetRows] = useState([])
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300)
@@ -110,11 +113,25 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
     setConfigTempoHold('')
     setConfigTempoUp('')
     setConfigTempoTop('')
+    setConfigPerSetEnabled(false)
+    setConfigPerSetRows([])
     setPickerView('configure')
   }
 
   async function handleConfirmAdd() {
     setAddError(null)
+
+    if (configPerSetEnabled) {
+      if (configPerSetRows.length === 0) {
+        setAddError('Per-set: at least one set is required.')
+        return
+      }
+      const invalid = configPerSetRows.some(r => !r.reps || isNaN(parseInt(r.reps)) || parseInt(r.reps) < 1)
+      if (invalid) {
+        setAddError('Per-set: each set must have reps ≥ 1.')
+        return
+      }
+    }
 
     if (configTempoEnabled) {
       const e = parseInt(configTempoDown)
@@ -135,9 +152,9 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
     try {
       await onAdd({
         exerciseId: pickerExercise.id,
-        sets: parseInt(configSets) || null,
-        reps: parseInt(configReps) || null,
-        weight: configWeight ? toCanonical(parseFloat(configWeight), weightUnit) : null,
+        sets: configPerSetEnabled ? configPerSetRows.length : (parseInt(configSets) || null),
+        reps: configPerSetEnabled ? null : (parseInt(configReps) || null),
+        weight: configPerSetEnabled ? null : (configWeight ? toCanonical(parseFloat(configWeight), weightUnit) : null),
         notes: configNotes.trim() || null,
         measurementType: configMeasurementType,
         bilateral: configBilateral,
@@ -145,6 +162,13 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
         tempoBottomPause: configTempoEnabled ? parseInt(configTempoHold) : null,
         tempoConcentric:  configTempoEnabled ? parseInt(configTempoUp)   : null,
         tempoTopPause:    configTempoEnabled ? parseInt(configTempoTop)   : null,
+        perSetSets: configPerSetEnabled
+          ? configPerSetRows.map((r, i) => ({
+              set_number: i + 1,
+              reps: parseInt(r.reps),
+              weight: r.weight !== '' && r.weight != null ? toCanonical(parseFloat(r.weight), weightUnit) : null,
+            }))
+          : null,
       })
       setPickerView('browse')
       setPickerExercise(null)
@@ -306,35 +330,37 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>Sets</label>
-                <input
-                  type="number" min="1" value={configSets}
-                  onChange={e => setConfigSets(e.target.value)}
-                  style={inputStyle}
-                />
+            {!configPerSetEnabled && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>Sets</label>
+                  <input
+                    type="number" min="1" value={configSets}
+                    onChange={e => setConfigSets(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>
+                    {configMeasurementType === 'seconds' ? 'Seconds' : 'Reps'}
+                  </label>
+                  <input
+                    type="number" min="1" value={configReps}
+                    onChange={e => setConfigReps(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>Weight ({weightUnit})</label>
+                  <input
+                    type="number" min="0" step="0.5" value={configWeight}
+                    onChange={e => setConfigWeight(e.target.value)}
+                    placeholder="optional"
+                    style={inputStyle}
+                  />
+                </div>
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>
-                  {configMeasurementType === 'seconds' ? 'Seconds' : 'Reps'}
-                </label>
-                <input
-                  type="number" min="1" value={configReps}
-                  onChange={e => setConfigReps(e.target.value)}
-                  style={inputStyle}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '6px' }}>Weight ({weightUnit})</label>
-                <input
-                  type="number" min="0" step="0.5" value={configWeight}
-                  onChange={e => setConfigWeight(e.target.value)}
-                  placeholder="optional"
-                  style={inputStyle}
-                />
-              </div>
-            </div>
+            )}
 
             {/* Bilateral checkbox */}
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
@@ -346,6 +372,90 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
               />
               <span style={{ fontSize: '13px', color: 'var(--color-text)' }}>Complete on both sides</span>
             </label>
+
+            {/* Per-set weights & reps — optional */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: configPerSetEnabled ? '8px' : 0 }}>
+                <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)' }}>
+                  Per-set weights & reps <span style={{ fontWeight: 400, color: 'var(--color-subtle)' }}>(optional)</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!configPerSetEnabled) {
+                      const n = Math.max(1, parseInt(configSets) || 1)
+                      const defaultReps = configReps || ''
+                      const defaultWeight = configWeight || ''
+                      setConfigPerSetRows(Array.from({ length: n }, () => ({ reps: defaultReps, weight: defaultWeight })))
+                    }
+                    setConfigPerSetEnabled(v => !v)
+                  }}
+                  style={{
+                    width: '32px', height: '18px', borderRadius: '9px', border: 'none',
+                    cursor: 'pointer', padding: 0, position: 'relative', transition: 'background 0.15s',
+                    background: configPerSetEnabled ? '#29B5CC' : 'var(--color-border)',
+                  }}
+                >
+                  <span style={{
+                    display: 'block', width: '14px', height: '14px', borderRadius: '50%', background: '#fff',
+                    position: 'absolute', top: '2px', transition: 'left 0.15s',
+                    left: configPerSetEnabled ? '16px' : '2px',
+                  }} />
+                </button>
+              </div>
+              {configPerSetEnabled && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {/* Header */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 24px', gap: '6px', alignItems: 'center', padding: '0 2px' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--color-subtle)', textTransform: 'uppercase', textAlign: 'center' }}>Set</span>
+                    <span style={{ fontSize: '10px', color: 'var(--color-subtle)', textTransform: 'uppercase', textAlign: 'center' }}>Reps</span>
+                    <span style={{ fontSize: '10px', color: 'var(--color-subtle)', textTransform: 'uppercase', textAlign: 'center' }}>Wt ({weightUnit})</span>
+                    <span />
+                  </div>
+                  {configPerSetRows.map((row, i) => (
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 24px', gap: '6px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#29B5CC', textAlign: 'center', fontFamily: 'monospace' }}>{i + 1}</span>
+                      <input
+                        type="number" min="1" value={row.reps}
+                        onChange={e => setConfigPerSetRows(prev => prev.map((r, j) => j === i ? { ...r, reps: e.target.value } : r))}
+                        style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '14px', padding: '6px 4px', colorScheme: 'dark' }}
+                      />
+                      <input
+                        type="number" min="0" step="0.5" value={row.weight} placeholder="BW"
+                        onChange={e => setConfigPerSetRows(prev => prev.map((r, j) => j === i ? { ...r, weight: e.target.value } : r))}
+                        style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, fontSize: '14px', padding: '6px 4px', colorScheme: 'dark' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setConfigPerSetRows(prev => prev.length > 1 ? prev.filter((_, j) => j !== i) : prev)}
+                        style={{ fontSize: '14px', color: configPerSetRows.length > 1 ? 'var(--color-muted)' : 'var(--color-border)', background: 'none', border: 'none', cursor: configPerSetRows.length > 1 ? 'pointer' : 'default', textAlign: 'center', padding: 0 }}
+                      >✕</button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setConfigPerSetRows(prev => [...prev, { reps: '', weight: '' }])}
+                    style={{ fontSize: '12px', padding: '6px', background: 'rgba(41,181,204,0.08)', border: '1px dashed rgba(41,181,204,0.3)', color: '#29B5CC', borderRadius: '6px', cursor: 'pointer' }}
+                  >
+                    + Add set
+                  </button>
+                  {(() => {
+                    const allValid = configPerSetRows.every(r => r.reps !== '' && !isNaN(parseInt(r.reps)))
+                    if (!allValid || configPerSetRows.length === 0) return null
+                    const canonical = configPerSetRows.map((r, i) => ({
+                      set_number: i + 1,
+                      reps: parseInt(r.reps),
+                      weight: r.weight !== '' && r.weight != null ? toCanonical(parseFloat(r.weight), weightUnit) : null,
+                    }))
+                    return (
+                      <p style={{ margin: 0, fontSize: '11px', color: '#29B5CC', fontStyle: 'italic', background: 'rgba(41,181,204,0.06)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '6px', padding: '6px 10px' }}>
+                        {configPerSetRows.length} sets — {formatPerSetSummary(canonical, weightUnit)}
+                      </p>
+                    )
+                  })()}
+                </div>
+              )}
+            </div>
 
             {/* Tempo — optional */}
             <div>
@@ -425,12 +535,12 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
             {addError && <p style={{ fontSize: '13px', color: 'var(--color-danger)', margin: 0 }}>{addError}</p>}
             <button
               onClick={handleConfirmAdd}
-              disabled={adding || disabled || !configSets || !configReps}
+              disabled={adding || disabled || (!configPerSetEnabled && (!configSets || !configReps))}
               style={{
                 width: '100%', padding: '10px', background: '#29B5CC', color: '#000',
                 border: 'none', borderRadius: '7px', fontSize: '13px', fontWeight: 600,
-                cursor: adding || disabled || !configSets || !configReps ? 'not-allowed' : 'pointer',
-                opacity: adding || disabled || !configSets || !configReps ? 0.5 : 1,
+                cursor: adding || disabled || (!configPerSetEnabled && (!configSets || !configReps)) ? 'not-allowed' : 'pointer',
+                opacity: adding || disabled || (!configPerSetEnabled && (!configSets || !configReps)) ? 0.5 : 1,
                 transition: 'opacity 0.15s',
               }}
             >
