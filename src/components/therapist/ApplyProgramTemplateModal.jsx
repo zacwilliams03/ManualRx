@@ -78,23 +78,42 @@ export default function ApplyProgramTemplateModal({ therapistId, clientId, onClo
           // Copy exercises from session template
           const { data: templateExercises, error: teErr } = await supabase
             .from('template_exercises')
-            .select('exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral')
+            .select('exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(set_number, reps, weight)')
             .eq('template_id', ts.template_id)
           if (teErr) throw new Error(teErr.message)
 
-          if (templateExercises.length > 0) {
-            const exerciseRows = templateExercises.map(te => ({
-              prescription_id: prescription.id,
-              exercise_id: te.exercise_id,
-              sets: te.sets,
-              reps: te.reps,
-              weight: te.weight,
-              therapist_notes: te.therapist_notes,
-              measurement_type: te.measurement_type ?? 'reps',
-              bilateral: te.bilateral ?? false,
-            }))
-            const { error: exErr } = await supabase.from('prescription_exercises').insert(exerciseRows)
+          for (const te of templateExercises) {
+            const { data: pe, error: exErr } = await supabase
+              .from('prescription_exercises')
+              .insert({
+                prescription_id: prescription.id,
+                exercise_id: te.exercise_id,
+                sets: te.sets,
+                reps: te.reps,
+                weight: te.weight,
+                therapist_notes: te.therapist_notes,
+                measurement_type: te.measurement_type ?? 'reps',
+                bilateral: te.bilateral ?? false,
+                tempo_eccentric:    te.tempo_eccentric    ?? null,
+                tempo_bottom_pause: te.tempo_bottom_pause ?? null,
+                tempo_concentric:   te.tempo_concentric   ?? null,
+                tempo_top_pause:    te.tempo_top_pause    ?? null,
+              })
+              .select('id')
+              .single()
             if (exErr) throw new Error(exErr.message)
+            const sets = te.template_exercise_sets ?? []
+            if (sets.length > 0) {
+              const { error: setsErr } = await supabase.from('prescription_exercise_sets').insert(
+                sets.map(s => ({
+                  prescription_exercise_id: pe.id,
+                  set_number: s.set_number,
+                  reps: s.reps,
+                  weight: s.weight ?? null,
+                }))
+              )
+              if (setsErr) throw new Error(setsErr.message)
+            }
           }
         }
       }
