@@ -671,7 +671,11 @@ export default function SessionWizard() {
                   <p style={{ marginTop: '2px', fontSize: '11px', color: 'var(--color-success)', margin: '2px 0 0' }}>Video attached</p>
                 )}
                 <button
-                  onClick={() => setStep(i)}
+                  onClick={() => {
+                    updateEx(i, 'allSetsDone', false)
+                    updateEx(i, 'currentSet', 0)
+                    setStep(i)
+                  }}
                   style={{ marginTop: '2px', fontSize: '11px', color: '#29B5CC', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                 >
                   Edit
