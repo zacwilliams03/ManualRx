@@ -37,7 +37,7 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
       .from('templates')
       .select(`
         id, name, category, duration_weeks,
-        template_exercises(id, exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(name))
+        template_exercises(id, exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(id, set_number, reps, weight), exercises(name))
       `)
       .eq('therapist_id', therapistId)
       .order('created_at', { ascending: false })
@@ -69,6 +69,7 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
       tempoBottomPause: te.tempo_bottom_pause ?? null,
       tempoConcentric:  te.tempo_concentric   ?? null,
       tempoTopPause:    te.tempo_top_pause    ?? null,
+      hasPerSetRows: (te.template_exercise_sets ?? []).length > 0,
     }))
     setCustomExercises(initial)
     setStep('customise')
@@ -117,23 +118,38 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
     setApplyError(null)
     try {
       const prescription = await createPrescription(t)
-      const exerciseRows = (t.template_exercises ?? []).map(te => ({
-        prescription_id: prescription.id,
-        exercise_id: te.exercise_id,
-        sets: te.sets,
-        reps: te.reps,
-        weight: te.weight,
-        therapist_notes: te.therapist_notes,
-        measurement_type: te.measurement_type ?? 'reps',
-        bilateral: te.bilateral ?? false,
-        tempo_eccentric:    te.tempo_eccentric    ?? null,
-        tempo_bottom_pause: te.tempo_bottom_pause ?? null,
-        tempo_concentric:   te.tempo_concentric   ?? null,
-        tempo_top_pause:    te.tempo_top_pause    ?? null,
-      }))
-      if (exerciseRows.length > 0) {
-        const { error } = await supabase.from('prescription_exercises').insert(exerciseRows)
-        if (error) throw new Error(error.message)
+      for (const te of t.template_exercises ?? []) {
+        const { data: pe, error: exErr } = await supabase
+          .from('prescription_exercises')
+          .insert({
+            prescription_id: prescription.id,
+            exercise_id: te.exercise_id,
+            sets: te.sets,
+            reps: te.reps,
+            weight: te.weight,
+            therapist_notes: te.therapist_notes,
+            measurement_type: te.measurement_type ?? 'reps',
+            bilateral: te.bilateral ?? false,
+            tempo_eccentric:    te.tempo_eccentric    ?? null,
+            tempo_bottom_pause: te.tempo_bottom_pause ?? null,
+            tempo_concentric:   te.tempo_concentric   ?? null,
+            tempo_top_pause:    te.tempo_top_pause    ?? null,
+          })
+          .select('id')
+          .single()
+        if (exErr) throw new Error(exErr.message)
+        const sets = te.template_exercise_sets ?? []
+        if (sets.length > 0) {
+          const { error: setsErr } = await supabase.from('prescription_exercise_sets').insert(
+            sets.map(s => ({
+              prescription_exercise_id: pe.id,
+              set_number: s.set_number,
+              reps: s.reps,
+              weight: s.weight ?? null,
+            }))
+          )
+          if (setsErr) throw new Error(setsErr.message)
+        }
       }
       onApplied()
     } catch (e) {
@@ -333,6 +349,11 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
               {customExercises.map((ex, i) => (
                 <div key={ex.id} className="px-5 py-3 space-y-2">
                   <p className="text-sm font-medium text-dark-text">{ex.name}</p>
+                  {ex.hasPerSetRows && (
+                    <p style={{ margin: '0 0 4px', fontSize: '11px', color: 'var(--color-muted)', fontStyle: 'italic' }}>
+                      Per-set configuration will be cleared — edit the session after applying if needed.
+                    </p>
+                  )}
                   <div className="grid grid-cols-3 gap-2">
                     <div>
                       <label className="block text-xs text-dark-muted">Sets</label>
