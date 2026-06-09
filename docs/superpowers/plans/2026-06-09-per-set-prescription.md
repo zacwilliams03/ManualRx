@@ -396,12 +396,12 @@ In the configure step JSX, the bilateral checkbox is currently followed by the t
 
 - [ ] **Step 6: Hide the Sets/Reps/Weight grid when per-set is ON**
 
-Find the `<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>` that wraps the Sets, Reps/Secs, and Weight inputs. Wrap the entire div in a conditional:
+Find the `<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>` that wraps the three labelled inputs for Sets, Reps/Seconds, and Weight. This is the only `gridTemplateColumns: '1fr 1fr 1fr'` div in the configure step — it contains `<label>` elements with `configSets`, `configReps`, and `configWeight`. Wrap the entire div (from its opening `<div` to its closing `</div>`) in a conditional:
 
 ```jsx
 {!configPerSetEnabled && (
   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-    {/* ... existing Sets / Reps / Weight inputs unchanged ... */}
+    {/* ... existing Sets, Reps/Seconds, Weight label+input blocks unchanged ... */}
   </div>
 )}
 ```
@@ -546,8 +546,26 @@ async function saveEdit(peId) {
   }
 
   setSavingEdit(true)
+  const setsCount = v.perSetEnabled ? v.perSetRows.length : (parseInt(v.sets) || 1)
+  const weightVal = v.weight.trim() ? toCanonical(parseFloat(v.weight), weightUnit) : null
 
-  // Delete all existing child rows (whether turning off or replacing)
+  // Update parent first — if this fails, child rows are untouched (no orphan state)
+  const { error: updateError } = await supabase
+    .from('prescription_exercises')
+    .update({
+      sets: setsCount,
+      reps: v.perSetEnabled ? null : (parseInt(v.reps) || 1),
+      weight: v.perSetEnabled ? null : weightVal,
+      therapist_notes: v.notes.trim() || null,
+      tempo_eccentric:    v.tempoEnabled ? parseInt(v.tempoDown) : null,
+      tempo_bottom_pause: v.tempoEnabled ? parseInt(v.tempoHold) : null,
+      tempo_concentric:   v.tempoEnabled ? parseInt(v.tempoUp)   : null,
+      tempo_top_pause:    v.tempoEnabled ? parseInt(v.tempoTop)   : null,
+    })
+    .eq('id', peId)
+  if (updateError) { setSavingEdit(false); setSaveEditError(updateError.message || 'Failed to save.'); return }
+
+  // Delete+reinsert child rows after parent is confirmed saved
   const { error: deleteError } = await supabase
     .from('prescription_exercise_sets')
     .delete()
@@ -565,38 +583,16 @@ async function saveEdit(peId) {
     if (insertError) { setSavingEdit(false); setSaveEditError(insertError.message); return }
   }
 
-  const setsCount = v.perSetEnabled ? v.perSetRows.length : (parseInt(v.sets) || 1)
-  const weightVal = v.weight.trim() ? toCanonical(parseFloat(v.weight), weightUnit) : null
-
-  const { data, error: updateError } = await supabase
+  // Re-fetch to get clean canonical data with child rows (avoids manual unit conversion of local state)
+  const { data: fresh } = await supabase
     .from('prescription_exercises')
-    .update({
-      sets: setsCount,
-      reps: v.perSetEnabled ? null : (parseInt(v.reps) || 1),
-      weight: v.perSetEnabled ? null : weightVal,
-      therapist_notes: v.notes.trim() || null,
-      tempo_eccentric:    v.tempoEnabled ? parseInt(v.tempoDown) : null,
-      tempo_bottom_pause: v.tempoEnabled ? parseInt(v.tempoHold) : null,
-      tempo_concentric:   v.tempoEnabled ? parseInt(v.tempoUp)   : null,
-      tempo_top_pause:    v.tempoEnabled ? parseInt(v.tempoTop)   : null,
-    })
+    .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
     .eq('id', peId)
-    .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, exercises(id, name, category, video_url)')
     .single()
+
   setSavingEdit(false)
-  if (updateError) {
-    setSaveEditError(updateError.message || 'Failed to save.')
-  } else {
-    const updatedSets = v.perSetEnabled
-      ? v.perSetRows.map((r, i) => ({
-          set_number: i + 1,
-          reps: parseInt(r.reps),
-          weight: r.weight !== '' && r.weight != null ? toCanonical(parseFloat(r.weight), weightUnit) : null,
-        }))
-      : []
-    setExercises(prev => prev.map(e => e.id === peId ? { ...data, prescription_exercise_sets: updatedSets } : e))
-    setEditingId(null)
-  }
+  setExercises(prev => prev.map(e => e.id === peId ? fresh : e))
+  setEditingId(null)
 }
 ```
 
@@ -947,7 +943,11 @@ async function applyAsIs(tmpl) {
 }
 ```
 
-- [ ] **Step 5: Run existing tests**
+- [ ] **Step 5: Confirm `applyCustomised` is intentionally unchanged**
+
+`applyCustomised` still uses the bulk insert and does **not** insert per-set child rows. This is intentional: the customise flow presents flat Sets/Reps/Weight fields, so per-set rows are dropped when the user applies customised. The UI note added in Step 3 informs the user of this. Do NOT add per-exercise looping to `applyCustomised`.
+
+- [ ] **Step 6: Run existing tests**
 
 ```bash
 npm test
@@ -955,7 +955,7 @@ npm test
 
 Expected: all passing.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/components/therapist/ApplyTemplateModal.jsx
@@ -1103,9 +1103,10 @@ for (const ex of exercises ?? []) {
     })
     .select('id')
     .single()
-  if (exErr) continue
+  if (exErr) continue  // silent skip — intentional; matches existing handleRepeatWeek error handling
   const sets = ex.prescription_exercise_sets ?? []
   if (sets.length > 0) {
+    // per-set insert failure is also silently swallowed — intentional, consistent with the rest of the loop
     await supabase.from('prescription_exercise_sets').insert(
       sets.map(s => ({
         prescription_exercise_id: newEx.id,
@@ -1244,6 +1245,8 @@ In the push object: add `prescription_exercise_sets: row.prescription_exercise_s
 - [ ] **Step 6: Update `emailPDF` select and map**
 
 Same as Step 3 but in `emailPDF`. The select and the `byId[...]` push both need the addition.
+
+**Before editing:** read the actual `emailPDF` function in `Prescribe.jsx` and verify the current select string matches the anchor below. Prior plans updated `emailPDF` for `measurement_type`/`bilateral`/tempo — the current select may already include those fields. Match your edit to the actual current select string, not a prior-plan version.
 
 In the select: add `prescription_exercise_sets(set_number, reps, weight)`.
 In the push object: add `prescription_exercise_sets: row.prescription_exercise_sets ?? [],`.
@@ -1456,13 +1459,13 @@ test('renders exercise with empty prescription_exercise_sets without crashing', 
 })
 ```
 
-- [ ] **Step 2: Run to verify the new tests pass (they should — AllSessionsPDF doesn't reference per-set yet so it falls through gracefully)**
+- [ ] **Step 2: Run to verify the new tests pass**
 
 ```bash
 npm test AllSessionsPDF
 ```
 
-Expected: existing tests pass; the 2 new tests also pass (PDF renders because `prescription_exercise_sets` is ignored). Note: this is checking that the prop doesn't crash the component before we add the per-set rendering.
+Expected: all tests pass. These are **smoke tests** (crash-only guards), not strict TDD — the PDF component can't assert on rendered text content, so both tests pass even before the per-set rendering is added in Steps 3–5. Their purpose is to prevent regressions (ensure a per-set exercise object doesn't crash the component), not to assert per-set text appears in the output.
 
 ### 11b — Update PDF components
 
