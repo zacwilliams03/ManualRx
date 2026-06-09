@@ -47,6 +47,17 @@ export default function ExerciseUpload() {
     let publicUrl = null
 
     if (videoFile) {
+      const allowedMimeTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v']
+      if (!allowedMimeTypes.includes(videoFile.type)) {
+        setError('Invalid file type. Please upload an MP4, WebM, or MOV video.')
+        setUploading(false)
+        return
+      }
+      if (videoFile.size > 200 * 1024 * 1024) {
+        setError('Video must be under 200 MB.')
+        setUploading(false)
+        return
+      }
       const ext = videoFile.name.split('.').pop()
       const filename = `${Date.now()}.${ext}`
       const path = `therapist-videos/${profile.id}/${filename}`

@@ -46,7 +46,7 @@ export default function SessionEdit() {
   async function fetchData() {
     setLoading(true)
     const [sessionRes, exercisesRes] = await Promise.all([
-      supabase.from('prescriptions').select('id, name, frequency_days, start_date, duration_weeks').eq('id', sessionId).single(),
+      supabase.from('prescriptions').select('id, name, frequency_days, start_date, duration_weeks').eq('id', sessionId).eq('therapist_id', profile.id).single(),
       supabase
         .from('prescription_exercises')
         .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')

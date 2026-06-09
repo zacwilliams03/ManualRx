@@ -146,6 +146,7 @@ export default function Clients() {
       .from('clients')
       .update({ is_active: !client.is_active })
       .eq('id', client.id)
+      .eq('therapist_id', profile.id)
     if (!error) {
       setClients(prev => prev.map(c =>
         c.id === client.id ? { ...c, is_active: !c.is_active } : c
@@ -157,7 +158,7 @@ export default function Clients() {
     if (!window.confirm(
       `Delete ${client.name}? This will permanently delete all their prescriptions and session history and cannot be undone.`
     )) return
-    const { error } = await supabase.from('clients').delete().eq('id', client.id)
+    const { error } = await supabase.from('clients').delete().eq('id', client.id).eq('therapist_id', profile.id)
     if (!error) {
       setClients(prev => prev.filter(c => c.id !== client.id))
     }

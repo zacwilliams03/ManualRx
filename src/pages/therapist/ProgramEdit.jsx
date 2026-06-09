@@ -57,7 +57,7 @@ export default function ProgramEdit() {
   async function fetchEntity() {
     if (mode === 'program') {
       const [progRes, sessRes, weekCheckinRes] = await Promise.all([
-        supabase.from('programs').select('id, name, duration_weeks, start_date, default_checkin_form_id').eq('id', entityId).single(),
+        supabase.from('programs').select('id, name, duration_weeks, start_date, default_checkin_form_id').eq('id', entityId).eq('therapist_id', profile.id).single(),
         supabase.from('prescriptions').select('id, name, frequency_days, week_number, source_template_id').eq('program_id', entityId).order('week_number', { ascending: true }),
         supabase.from('program_week_checkins').select('week_number, checkin_form_id, check_in_forms(name)').eq('program_id', entityId),
       ])
@@ -75,7 +75,7 @@ export default function ProgramEdit() {
       setWeekCheckins(wc)
     } else {
       const [tmplRes, sessRes, weekCheckinRes] = await Promise.all([
-        supabase.from('program_templates').select('id, name, duration_weeks, default_checkin_form_id').eq('id', entityId).single(),
+        supabase.from('program_templates').select('id, name, duration_weeks, default_checkin_form_id').eq('id', entityId).eq('therapist_id', profile.id).single(),
         supabase.from('program_template_sessions').select('id, week_number, session_name, template_id').eq('program_template_id', entityId).order('week_number', { ascending: true }),
         supabase.from('program_template_week_checkins').select('week_number, checkin_form_id, check_in_forms(name)').eq('program_template_id', entityId),
       ])
@@ -96,14 +96,14 @@ export default function ProgramEdit() {
   async function saveName() {
     if (!name.trim()) return
     const table = mode === 'program' ? 'programs' : 'program_templates'
-    await supabase.from(table).update({ name: name.trim() }).eq('id', entityId)
+    await supabase.from(table).update({ name: name.trim() }).eq('id', entityId).eq('therapist_id', profile.id)
   }
 
   async function handleStartDateChange(e) {
     const date = e.target.value
     setStartDate(date)
     setSaving(true)
-    await supabase.from('programs').update({ start_date: date || null }).eq('id', entityId)
+    await supabase.from('programs').update({ start_date: date || null }).eq('id', entityId).eq('therapist_id', profile.id)
 
     if (date) {
       const prescriptionIds = sessions.map(s => s.id)

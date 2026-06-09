@@ -1,8 +1,17 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('SITE_URL') ?? '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
 }
 
 Deno.serve(async (req) => {
@@ -42,11 +51,40 @@ Deno.serve(async (req) => {
       )
     }
 
-    const firstName = clientName.split(' ')[0]
-    const therapistFirstName = therapistName.split(' ')[0]
+    // Verify the caller is a therapist
+    const { data: callerProfile, error: profileError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || callerProfile?.role !== 'therapist') {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Verify the invite code belongs to this therapist
+    const { data: invite, error: inviteError } = await supabase
+      .from('client_invites')
+      .select('therapist_id')
+      .eq('code', code)
+      .is('consumed_at', null)
+      .single()
+
+    if (inviteError || invite?.therapist_id !== user.id) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const firstName = escapeHtml(clientName.split(' ')[0])
+    const therapistFirstName = escapeHtml(therapistName.split(' ')[0])
     const inviteUrl = `${Deno.env.get('SITE_URL')}/join/${code}`
-    const senderLine = clinicName?.trim()
-      ? `${therapistFirstName} from ${clinicName}`
+    const safeSenderLine = clinicName?.trim()
+      ? `${therapistFirstName} from ${escapeHtml(clinicName.trim())}`
       : therapistFirstName
 
     const html = `<!DOCTYPE html>
@@ -65,7 +103,7 @@ Deno.serve(async (req) => {
           <tr>
             <td style="padding:0 40px 32px;">
               <p style="margin:0 0 16px;font-size:16px;color:#f0f0f0;">Hi ${firstName},</p>
-              <p style="margin:0 0 28px;font-size:16px;color:#f0f0f0;line-height:1.6;">${senderLine} has invited you to ManualRx, where you can view and complete your personalised exercise program.</p>
+              <p style="margin:0 0 28px;font-size:16px;color:#f0f0f0;line-height:1.6;">${safeSenderLine} has invited you to ManualRx, where you can view and complete your personalised exercise program.</p>
               <table cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="border-radius:6px;background-color:#29B5CC;">

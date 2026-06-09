@@ -278,7 +278,7 @@ export default function Prescribe() {
     setError(null)
 
     const [clientRes, sessionsRes, therapistRes, programsRes] = await Promise.all([
-      supabase.from('clients').select('id, name, email').eq('id', clientId).single(),
+      supabase.from('clients').select('id, name, email').eq('id', clientId).eq('therapist_id', profile.id).single(),
       supabase
         .from('prescriptions')
         .select('id, name, frequency_days, start_date, duration_weeks, created_at, program_id, week_number, prescription_exercises(count), session_logs(count)')
@@ -334,16 +334,16 @@ export default function Prescribe() {
 
   async function deleteSession(id, name) {
     if (!window.confirm(`Delete "${name}"? This will also remove all completed session history for this prescription.`)) return
-    const { error } = await supabase.from('prescriptions').delete().eq('id', id)
+    const { error } = await supabase.from('prescriptions').delete().eq('id', id).eq('therapist_id', profile.id)
     if (error) { alert('Failed to delete session.'); return }
     setSessions(prev => prev.filter(s => s.id !== id))
   }
 
   async function deleteProgram(id, name) {
     if (!window.confirm(`Delete program "${name}"? This will also delete all sessions and their completed history.`)) return
-    const { error: sessError } = await supabase.from('prescriptions').delete().eq('program_id', id)
+    const { error: sessError } = await supabase.from('prescriptions').delete().eq('program_id', id).eq('therapist_id', profile.id)
     if (sessError) { alert('Failed to delete program sessions.'); return }
-    const { error: progError } = await supabase.from('programs').delete().eq('id', id)
+    const { error: progError } = await supabase.from('programs').delete().eq('id', id).eq('therapist_id', profile.id)
     if (progError) { alert('Failed to delete program.'); return }
     setPrograms(prev => prev.filter(p => p.id !== id))
     setSessions(prev => prev.filter(s => s.program_id !== id))

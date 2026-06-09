@@ -42,6 +42,7 @@ export default function TherapistThread() {
       .from('clients')
       .select('name')
       .eq('id', clientId)
+      .eq('therapist_id', profile.id)
       .single()
     setClientName(clientRow?.name ?? 'Client')
 

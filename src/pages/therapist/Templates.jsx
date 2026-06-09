@@ -75,7 +75,7 @@ export default function Templates() {
 
   async function deleteTemplate(id, name) {
     if (!window.confirm(`Delete template "${name}"? This will not affect any sessions already applied from it.`)) return
-    const { error: deleteError } = await supabase.from('templates').delete().eq('id', id)
+    const { error: deleteError } = await supabase.from('templates').delete().eq('id', id).eq('therapist_id', profile.id)
     if (deleteError) { alert('Failed to delete template.'); return }
     setTemplates(prev => prev.filter(t => t.id !== id))
   }
@@ -104,7 +104,7 @@ export default function Templates() {
 
   async function deleteProgramTemplate(id, name) {
     if (!window.confirm(`Delete program template "${name}"?`)) return
-    await supabase.from('program_templates').delete().eq('id', id)
+    await supabase.from('program_templates').delete().eq('id', id).eq('therapist_id', profile.id)
     setProgramTemplates(prev => prev.filter(t => t.id !== id))
   }
 

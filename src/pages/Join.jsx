@@ -81,8 +81,8 @@ export default function Join() {
       setFormError('Passwords do not match.')
       return
     }
-    if (password.length < 6) {
-      setFormError('Password must be at least 6 characters.')
+    if (password.length < 8) {
+      setFormError('Password must be at least 8 characters.')
       return
     }
 
@@ -191,10 +191,10 @@ export default function Join() {
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              minLength={6}
+              minLength={8}
               className="mt-1 w-full rounded border border-dark-border bg-dark-elevated px-3 py-2 text-sm text-dark-text focus:border-dark-accent focus:outline-none"
             />
-            <p className="mt-1 text-xs text-dark-muted">Minimum 6 characters</p>
+            <p className="mt-1 text-xs text-dark-muted">Minimum 8 characters</p>
           </div>
 
           <div>

@@ -83,7 +83,7 @@ export default function ExerciseDetail() {
   async function handleDelete() {
     if (!window.confirm(`Delete "${exercise.name}"? This cannot be undone.`)) return
     setDeleting(true)
-    const { error } = await supabase.from('exercises').delete().eq('id', exercise.id)
+    const { error } = await supabase.from('exercises').delete().eq('id', exercise.id).eq('created_by', profile.id).eq('is_custom', true)
     if (error) {
       alert('Failed to delete exercise.')
       setDeleting(false)

@@ -1,8 +1,17 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('SITE_URL') ?? '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
 }
 
 Deno.serve(async (req) => {
@@ -42,9 +51,27 @@ Deno.serve(async (req) => {
       )
     }
 
-    const senderLine = clinicName?.trim()
-      ? `${therapistFirstName} from ${clinicName}`
-      : therapistFirstName
+    // Verify the caller is a therapist
+    const { data: callerProfile, error: profileError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || callerProfile?.role !== 'therapist') {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const safeClientFirstName = escapeHtml(clientName.split(' ')[0])
+    const safeTherapistFirstName = escapeHtml(therapistFirstName)
+    const safeClinicName = clinicName?.trim() ? escapeHtml(clinicName.trim()) : null
+    const safeSenderLine = safeClinicName
+      ? `${safeTherapistFirstName} from ${safeClinicName}`
+      : safeTherapistFirstName
+    const safeContact = safeClinicName ?? safeTherapistFirstName
 
     const html = `<!DOCTYPE html>
 <html>
@@ -61,9 +88,9 @@ Deno.serve(async (req) => {
           </tr>
           <tr>
             <td style="padding:0 40px 32px;">
-              <p style="margin:0 0 16px;font-size:16px;color:#f0f0f0;">Hi ${clientName.split(' ')[0]},</p>
-              <p style="margin:0 0 16px;font-size:16px;color:#f0f0f0;line-height:1.6;">${senderLine} has sent you your exercise program. See the attached PDF.</p>
-              <p style="margin:0;font-size:16px;color:#f0f0f0;line-height:1.6;">Please contact ${clinicName || therapistFirstName} if you have any questions.</p>
+              <p style="margin:0 0 16px;font-size:16px;color:#f0f0f0;">Hi ${safeClientFirstName},</p>
+              <p style="margin:0 0 16px;font-size:16px;color:#f0f0f0;line-height:1.6;">${safeSenderLine} has sent you your exercise program. See the attached PDF.</p>
+              <p style="margin:0;font-size:16px;color:#f0f0f0;line-height:1.6;">Please contact ${safeContact} if you have any questions.</p>
             </td>
           </tr>
           <tr>
@@ -87,7 +114,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: 'ManualRx <invites@manualrx.com>',
         to: [to],
-        subject: `${therapistFirstName} has sent you your exercise program`,
+        subject: `${safeTherapistFirstName} has sent you your exercise program`,
         html,
         attachments: [{ filename: attachmentFilename, content: pdfBase64 }],
       }),

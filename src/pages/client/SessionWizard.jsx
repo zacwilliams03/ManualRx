@@ -163,9 +163,11 @@ export default function SessionWizard() {
     setError(null)
 
     // Upload any staged feedback videos
+    const allowedVideoMimes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v']
     const videoUrls = {}
     for (const ex of exercises) {
       if (ex.videoFile) {
+        if (!allowedVideoMimes.includes(ex.videoFile.type) || ex.videoFile.size > 100 * 1024 * 1024) continue
         const ext = ex.videoFile.name.split('.').pop()
         const path = `${profile.id}/${Date.now()}_${ex.id}.${ext}`
         const { data: up, error: upErr } = await supabase.storage
