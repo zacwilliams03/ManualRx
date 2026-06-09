@@ -57,6 +57,12 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     marginBottom: 6,
   },
+  weekTag: {
+    fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#FFFFFF',
+    backgroundColor: TEAL, borderRadius: 3,
+    paddingVertical: 1, paddingHorizontal: 5,
+    marginRight: 7,
+  },
   sessionName: { fontFamily: 'Helvetica-Bold', fontSize: 10, color: NAVY, marginRight: 6 },
   sessionFreq: { fontSize: 7.5, color: TEAL },
   tempoNote: {
@@ -117,6 +123,7 @@ export function ProgramPDF({ clinicName, clientName, programName, startDate, wee
             {week.sessions.map((session, si) => (
               <View key={si} style={styles.sessionBlock}>
                 <View style={styles.sessionHeader}>
+                  <Text style={styles.weekTag}>Wk {week.weekNumber}</Text>
                   <Text style={styles.sessionName}>{session.name}</Text>
                   {session.frequencyDays
                     ? <Text style={styles.sessionFreq}>{frequencyLabel(session.frequencyDays)}</Text>
