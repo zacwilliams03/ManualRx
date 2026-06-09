@@ -34,38 +34,30 @@ const styles = StyleSheet.create({
   headerRight: { textAlign: 'right' },
   headerClinic: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: NAVY },
   headerDate: { fontSize: 8, color: GREY, marginTop: 1 },
-  programMeta: { marginBottom: 16 },
+  programMeta: { marginBottom: 18 },
   programTitle: { fontFamily: 'Helvetica-Bold', fontSize: 15, color: NAVY, marginBottom: 3 },
   programSubtitle: { fontSize: 8, color: GREY },
-  weekBlock: { marginBottom: 18 },
-  weekHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  weekBadge: {
-    backgroundColor: TEAL, borderRadius: 4,
-    paddingVertical: 4, paddingHorizontal: 10,
-    marginRight: 8,
-  },
-  weekBadgeText: { color: '#FFFFFF', fontSize: 8, fontFamily: 'Helvetica-Bold' },
-  weekRule: { flex: 1, height: 1, backgroundColor: TEAL_BORDER },
-  sessionBlock: {
+  weekBlock: { marginBottom: 20 },
+  weekHeading: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 12,
+    color: TEAL,
+    borderBottomWidth: 1.5,
+    borderBottomColor: TEAL,
+    paddingBottom: 4,
     marginBottom: 10,
-    paddingLeft: 10,
-    borderLeftWidth: 3,
-    borderLeftColor: TEAL,
+  },
+  sessionBlock: {
+    marginBottom: 12,
+    paddingLeft: 12,
   },
   sessionHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
+    alignItems: 'baseline',
+    marginBottom: 5,
   },
-  weekTagWrap: {
-    backgroundColor: TEAL, borderRadius: 3,
-    paddingVertical: 2, paddingHorizontal: 5,
-    marginRight: 7,
-    alignSelf: 'center',
-  },
-  weekTagText: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#FFFFFF' },
   sessionName: { fontFamily: 'Helvetica-Bold', fontSize: 10, color: NAVY, marginRight: 6 },
-  sessionFreq: { fontSize: 7.5, color: TEAL },
+  sessionFreq: { fontSize: 7.5, color: GREY },
   tempoNote: {
     fontSize: 8, color: GREY, marginTop: 16,
     borderTopWidth: 1, borderTopColor: TEAL_BORDER, paddingTop: 8,
@@ -76,8 +68,6 @@ const styles = StyleSheet.create({
   },
   footerText: { fontSize: 7, color: GREY },
 })
-
-// frequencyLabel imported from frequencyUtils — handles null → 'No repeat', 1 → 'Daily', 7 → 'Weekly'
 
 export function ProgramPDF({ clinicName, clientName, programName, startDate, weeks, weightUnit }) {
   const today = formatPdfDate(new Date())
@@ -114,17 +104,11 @@ export function ProgramPDF({ clinicName, clientName, programName, startDate, wee
 
         {weeks.map((week, wi) => (
           <View key={wi} style={styles.weekBlock}>
-            <View style={styles.weekHeaderRow}>
-              <View style={styles.weekBadge}>
-                <Text style={styles.weekBadgeText}>WEEK {week.weekNumber}</Text>
-              </View>
-              <View style={styles.weekRule} />
-            </View>
+            <Text style={styles.weekHeading}>Week {week.weekNumber}</Text>
 
             {week.sessions.map((session, si) => (
               <View key={si} style={styles.sessionBlock}>
                 <View style={styles.sessionHeader}>
-                  <View style={styles.weekTagWrap}><Text style={styles.weekTagText}>Wk {week.weekNumber}</Text></View>
                   <Text style={styles.sessionName}>{session.name}</Text>
                   {session.frequencyDays
                     ? <Text style={styles.sessionFreq}>{frequencyLabel(session.frequencyDays)}</Text>
