@@ -434,7 +434,7 @@ export default function SessionEdit() {
                           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                             <input type="number" min={1} max={9} value={editValues.tempoDown ?? ''} onChange={e => setEditValues(v => ({ ...v, tempoDown: e.target.value }))}
                               style={{ width: '100%', padding: '5px 4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', textAlign: 'center', colorScheme: 'dark' }} />
-                            <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>Ecc.</span>
+                            <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>Eccentric</span>
                           </div>
                           <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '14px' }}>—</span>
                           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
@@ -446,7 +446,7 @@ export default function SessionEdit() {
                           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                             <input type="number" min={1} max={9} value={editValues.tempoUp ?? ''} onChange={e => setEditValues(v => ({ ...v, tempoUp: e.target.value }))}
                               style={{ width: '100%', padding: '5px 4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', textAlign: 'center', colorScheme: 'dark' }} />
-                            <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>Con.</span>
+                            <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>Concentric</span>
                           </div>
                           <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '14px' }}>—</span>
                           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
