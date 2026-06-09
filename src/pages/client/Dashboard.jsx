@@ -13,14 +13,7 @@ import PageHero from '../../components/shared/PageHero'
 import { CARD } from '../../components/therapist/styles'
 import ShimmerLine from '../../components/shared/ShimmerLine'
 import { getCurrentPeriodStartDate, isFormActive } from '../../utils/checkInUtils'
-
-// frequencyLabel is defined locally — do not import from utils (that file may not exist)
-function frequencyLabel(days) {
-  if (!days) return 'As needed'
-  if (days === 1) return 'Daily'
-  if (days === 7) return 'Weekly'
-  return `Every ${days} days`
-}
+import { frequencyLabel } from '../../utils/frequencyUtils'
 
 function isRecentlyCompleted(session) {
   const logs = (session.session_logs ?? []).filter(l => l.completed_at)
