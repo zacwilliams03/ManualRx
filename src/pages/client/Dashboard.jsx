@@ -15,6 +15,24 @@ import ShimmerLine from '../../components/shared/ShimmerLine'
 import { getCurrentPeriodStartDate, isFormActive } from '../../utils/checkInUtils'
 import { frequencyLabel } from '../../utils/frequencyUtils'
 
+function currentProgramWeek(startDate) {
+  if (!startDate) return null
+  const start = new Date(startDate)
+  start.setHours(0, 0, 0, 0)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const days = Math.floor((today - start) / (1000 * 60 * 60 * 24))
+  if (days < 0) return null
+  return Math.floor(days / 7) + 1
+}
+
+function isAvailableNow(session) {
+  if (!session.week_number || !session.start_date) return true
+  const week = currentProgramWeek(session.start_date)
+  if (week === null) return false
+  return session.week_number <= week
+}
+
 function isRecentlyCompleted(session) {
   const logs = (session.session_logs ?? []).filter(l => l.completed_at)
   if (logs.length === 0) return false
@@ -41,6 +59,7 @@ export default function ClientDashboard() {
   const weightUnit = useWeightUnit()
   const [downloadingId, setDownloadingId] = useState(null)
   const [downloadError, setDownloadError] = useState(null)
+  const [showAll, setShowAll] = useState(false)
 
   const navigate = useNavigate()
   const [sessions, setSessions] = useState([])
@@ -240,6 +259,9 @@ export default function ClientDashboard() {
   }
 
   const activeSessions = sessions.filter(isActive)
+  const currentSessions = activeSessions.filter(isAvailableNow)
+  const futureSessions = activeSessions.filter(s => !isAvailableNow(s))
+  const visibleSessions = showAll ? activeSessions : currentSessions
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
@@ -260,34 +282,62 @@ export default function ClientDashboard() {
         {!loading && !error && activeSessions.length === 0 && (
           <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>Your therapist hasn't added any sessions yet.</p>
         )}
+        {!loading && !error && activeSessions.length > 0 && currentSessions.length === 0 && !showAll && (
+          <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>No sessions due yet this week.</p>
+        )}
 
         {activeSessions.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px', maxWidth: '512px' }}>
-            <button
-              onClick={downloadAllSessions}
-              disabled={downloadingId !== null}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                background: 'none', border: '1px solid var(--color-border)',
-                borderRadius: '7px', padding: '8px 14px',
-                fontSize: '12px', fontWeight: 600, color: 'var(--color-muted)',
-                cursor: downloadingId !== null ? 'default' : 'pointer',
-                opacity: downloadingId === 'all' ? 0.6 : 1,
-              }}
-            >
-              {downloadingId === 'all' ? (
-                <svg style={{ width: '14px', height: '14px', animation: 'spin 0.8s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <path d="M12 2a10 10 0 1 0 10 10" />
-                </svg>
-              ) : (
-                <svg style={{ width: '14px', height: '14px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                onClick={downloadAllSessions}
+                disabled={downloadingId !== null}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  background: 'none', border: '1px solid var(--color-border)',
+                  borderRadius: '7px', padding: '8px 14px',
+                  fontSize: '12px', fontWeight: 600, color: 'var(--color-muted)',
+                  cursor: downloadingId !== null ? 'default' : 'pointer',
+                  opacity: downloadingId === 'all' ? 0.6 : 1,
+                  fontFamily: 'inherit',
+                }}
+              >
+                {downloadingId === 'all' ? (
+                  <svg style={{ width: '14px', height: '14px', animation: 'spin 0.8s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M12 2a10 10 0 1 0 10 10" />
+                  </svg>
+                ) : (
+                  <svg style={{ width: '14px', height: '14px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                )}
+                {downloadingId === 'all' ? 'Preparing PDF…' : 'Download all sessions'}
+              </button>
+              {futureSessions.length > 0 && (
+                <button
+                  onClick={() => setShowAll(v => !v)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    background: showAll ? 'rgba(41,181,204,0.1)' : 'none',
+                    border: showAll ? '1px solid rgba(41,181,204,0.3)' : '1px solid var(--color-border)',
+                    borderRadius: '7px', padding: '8px 14px',
+                    fontSize: '12px', fontWeight: 600,
+                    color: showAll ? '#29B5CC' : 'var(--color-muted)',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  <svg style={{ width: '14px', height: '14px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                  {showAll ? 'This week only' : `View full program · ${futureSessions.length} upcoming`}
+                </button>
               )}
-              {downloadingId === 'all' ? 'Preparing PDF…' : 'Download all sessions'}
-            </button>
+            </div>
             {downloadError && (
               <p style={{ fontSize: '11px', color: 'var(--color-danger)', margin: 0 }}>{downloadError}</p>
             )}
@@ -335,7 +385,7 @@ export default function ClientDashboard() {
             </motion.div>
           ))}
 
-          {activeSessions.map((s, i) => {
+          {visibleSessions.map((s, i) => {
             const completions = s.session_logs ?? []
             const lastDone =
               completions.length > 0
@@ -343,6 +393,7 @@ export default function ClientDashboard() {
                     Math.max(...completions.map(l => new Date(l.completed_at).getTime()))
                   ).toLocaleDateString()
                 : null
+            const isFuture = showAll && !isAvailableNow(s)
 
             return (
               <motion.div
@@ -350,23 +401,29 @@ export default function ClientDashboard() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(i * 0.05, 0.3), duration: 0.25 }}
-                style={{ ...CARD, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}
+                style={{ ...CARD, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', opacity: isFuture ? 0.6 : 1 }}
               >
                 <ShimmerLine />
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)', margin: 0 }}>{s.name}</p>
-                    {isRecentlyCompleted(s) && (
+                    {isFuture && s.week_number && (
                       <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        background: 'rgba(41,181,204,0.10)',
-                        border: '1px solid rgba(41,181,204,0.2)',
-                        borderRadius: '9999px',
-                        padding: '2px 8px',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        color: '#29B5CC',
+                        display: 'inline-flex', alignItems: 'center',
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid var(--color-border)',
+                        borderRadius: '9999px', padding: '2px 8px',
+                        fontSize: '10px', fontWeight: 600, color: 'var(--color-subtle)',
+                        textTransform: 'uppercase', letterSpacing: '0.04em',
+                      }}>
+                        Week {s.week_number}
+                      </span>
+                    )}
+                    {!isFuture && isRecentlyCompleted(s) && (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center',
+                        background: 'rgba(41,181,204,0.10)', border: '1px solid rgba(41,181,204,0.2)',
+                        borderRadius: '9999px', padding: '2px 8px',
+                        fontSize: '11px', fontWeight: 600, color: '#29B5CC',
                       }}>
                         Completed
                       </span>
@@ -375,7 +432,7 @@ export default function ClientDashboard() {
                   <p style={{ marginTop: '4px', fontSize: '11px', color: 'var(--color-muted)', margin: '4px 0 0' }}>
                     {s.prescription_exercises[0]?.count ?? 0} exercises · {frequencyLabel(s.frequency_days)}
                   </p>
-                  {lastDone && (
+                  {lastDone && !isFuture && (
                     <p style={{ marginTop: '2px', fontSize: '11px', color: 'var(--color-subtle)', margin: '2px 0 0' }}>Last completed: {lastDone}</p>
                   )}
                 </div>
@@ -403,16 +460,20 @@ export default function ClientDashboard() {
                       </svg>
                     )}
                   </button>
-                  <Link
-                    to={`/client/sessions/${s.id}`}
-                    style={{
-                      background: '#29B5CC', color: '#000', borderRadius: '7px',
-                      padding: '7px 14px', fontSize: '12px', fontWeight: 600,
-                      textDecoration: 'none', display: 'inline-block',
-                    }}
-                  >
-                    Start
-                  </Link>
+                  {isFuture ? (
+                    <span style={{ fontSize: '11px', color: 'var(--color-subtle)', padding: '7px 2px' }}>Upcoming</span>
+                  ) : (
+                    <Link
+                      to={`/client/sessions/${s.id}`}
+                      style={{
+                        background: '#29B5CC', color: '#000', borderRadius: '7px',
+                        padding: '7px 14px', fontSize: '12px', fontWeight: 600,
+                        textDecoration: 'none', display: 'inline-block',
+                      }}
+                    >
+                      Start
+                    </Link>
+                  )}
                 </div>
               </motion.div>
             )
