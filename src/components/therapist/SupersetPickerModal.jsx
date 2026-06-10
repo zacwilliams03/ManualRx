@@ -107,11 +107,12 @@ export default function SupersetPickerModal({
     const removedMembers = editMembers.filter(em => !selectedIds.includes(em.exercises?.id))
     if (removedMembers.length > 0) {
       const removedPeIds = removedMembers.map(em => em.id)
-      const { data: logs } = await supabase
+      const { data: logs, error: logsErr } = await supabase
         .from('exercise_logs')
         .select('id')
         .in('prescription_exercise_id', removedPeIds)
         .limit(1)
+      if (logsErr) throw new Error('Could not verify session history. Please try again.')
       if (logs?.length > 0) {
         throw new Error('One or more exercises have logged sessions and cannot be removed from this superset.')
       }
@@ -122,6 +123,17 @@ export default function SupersetPickerModal({
       if (delErr) throw new Error(delErr.message)
     }
 
+    // Reindex surviving members to close position gaps
+    const survivingMembers = editMembers.filter(em => !removedMembers.some(r => r.id === em.id))
+    for (let i = 0; i < survivingMembers.length; i++) {
+      if (survivingMembers[i].position_in_group !== i) {
+        await supabase
+          .from('prescription_exercises')
+          .update({ position_in_group: i })
+          .eq('id', survivingMembers[i].id)
+      }
+    }
+
     const newExercises = selected.filter(e => !existingExerciseIds.includes(e.id))
     let inserted = []
     if (newExercises.length > 0) {
@@ -129,7 +141,7 @@ export default function SupersetPickerModal({
         prescription_id: prescriptionId,
         exercise_id: ex.id,
         group_id: editGroup.id,
-        position_in_group: editMembers.length + i,
+        position_in_group: survivingMembers.length + i,
         sets: setCount,
         reps: ex.default_reps ?? 10,
         weight: null,
@@ -142,7 +154,7 @@ export default function SupersetPickerModal({
         .insert(newRows)
         .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
       if (peErr) throw new Error(peErr.message)
-      inserted = data
+      inserted = data ?? []
     }
 
     const { error: upErr } = await supabase
