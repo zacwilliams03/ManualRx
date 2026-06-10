@@ -503,17 +503,17 @@ function DashboardHeader({ firstName, greeting, alertCount, activeClientCount })
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: '5px',
             background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.22)',
-            color: '#f87171', borderRadius: '999px', padding: '2px 10px 2px 8px',
+            color: 'var(--color-danger)', borderRadius: '999px', padding: '2px 10px 2px 8px',
             fontSize: '13px', fontWeight: 600,
           }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f87171', flexShrink: 0 }} />
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-danger)', flexShrink: 0 }} />
             {alertCount} {alertCount === 1 ? 'client needs' : 'clients need'} attention
           </span>
         ) : (
-          <span style={{ color: '#29B5CC', fontSize: '13px' }}>All clients on track</span>
+          <span style={{ color: 'var(--color-accent)', fontSize: '13px' }}>All clients on track</span>
         )}
         <span style={{ color: 'var(--color-subtle)' }}>·</span>
-        <span style={{ color: '#29B5CC', fontSize: '13px' }}>
+        <span style={{ color: 'var(--color-accent)', fontSize: '13px' }}>
           {activeClientCount} active {activeClientCount === 1 ? 'client' : 'clients'}
         </span>
       </div>
