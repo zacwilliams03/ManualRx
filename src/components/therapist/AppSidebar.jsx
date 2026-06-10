@@ -70,10 +70,13 @@ function NavItem({ to, icon: Icon, label, activePrefixes, exact, onClose, badge 
         ].join(' ')}
         style={{
           minHeight: '40px',
-          paddingLeft: '10px',
+          paddingLeft: active ? '22px' : '10px',
           paddingRight: '12px',
+          marginLeft: active ? '-8px' : '0',
+          marginRight: active ? '-8px' : '0',
           background: active ? 'rgba(41,181,204,0.08)' : 'transparent',
           borderLeft: active ? '2px solid #29B5CC' : '2px solid transparent',
+          borderRadius: active ? '0 8px 8px 0' : '8px',
           color: active ? '#29B5CC' : 'var(--color-muted)',
         }}
         onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--color-elevated)' }}
