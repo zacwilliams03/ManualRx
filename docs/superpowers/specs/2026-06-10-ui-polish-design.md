@@ -9,22 +9,36 @@
 
 ## 1. Global Token Changes
 
-These changes flow through every screen in both apps via the existing CSS custom-property system and shared component styles.
+**Important:** The `CARD` constant in `src/components/therapist/styles.js` already has `borderRadius: '14px'`, `padding: '22px 24px'`, `backdropFilter: 'blur(12px)'`, `position: 'relative'`, and `overflow: 'hidden'`. These are **not** changes — they are already the correct state. The table below lists only what actually needs to change.
+
+### 1.1 `src/components/therapist/styles.js` — `SECTION_LABEL`
 
 | Property | Current | Proposed |
 |---|---|---|
-| Card border-radius | `8px` | `12px` (cards), `14px` (prominent/hero cards) |
-| Card padding | Mixed (12–16px) | `22px 24px` for therapist app cards; `18px 18px 16px` for client mobile session cards (slightly tighter on small screens) |
-| Card backdrop-filter | Absent on most cards | `blur(12px)` + `-webkit-backdrop-filter: blur(12px)` |
-| Card hover border | None | `rgba(41,181,204,0.18)` with `transition: border-color 0.2s` |
-| Section label size | `9–10px` | `11px`, `font-weight: 700`, `letter-spacing: 0.09em` |
-| Muted text (`--color-muted`) dark mode only | `#888888` | `#999999` (slightly more legible, still clearly secondary — light mode value `#475569` unchanged) |
-| Category/status pills | Square `border-radius: 4–5px` | Pill `border-radius: 999px` |
-| Interactive row hover | Instant | `transition: background 0.15s ease` |
-| Alert row border-radius | `8px` | `10px` |
-| Badge border-radius (RPE, Pain) | `4px` | `5px` |
+| `fontWeight` | `600` | `700` |
+| `letterSpacing` | `'0.08em'` | `'0.09em'` |
 
-The `CARD` style constant in `src/components/therapist/styles.js` should be updated to reflect the new defaults so all consumers pick them up automatically.
+`CARD` itself needs no changes.
+
+### 1.2 `src/index.css` — CSS custom properties
+
+| Property | Current | Proposed |
+|---|---|---|
+| `--color-muted` (`:root` / dark mode only) | `#888888` | `#999999` |
+
+Definition is in `src/index.css` at the `:root` block (line 12). The `[data-theme="light"]` value `#475569` is unchanged. This affects all components using `var(--color-muted)` globally — that is intentional; the shift is subtle (contrast remains acceptable) and consistent.
+
+### 1.3 Per-component changes (no shared constant to update)
+
+These are applied individually at each call site as described in §§2–3:
+
+| Change | Where |
+|---|---|
+| Card hover border `rgba(41,181,204,0.18)` + `transition: border-color 0.2s` | Per card component via `onMouseEnter`/`onMouseLeave` |
+| Category/status pill `border-radius: 999px` | Week badges in client Dashboard; category pills in Exercise Library |
+| Interactive row `transition: background 0.15s ease` | `ClientAdherenceRow`, activity feed rows |
+| Alert row `border-radius: 10px` | `AlertRow` in therapist Dashboard |
+| RPE/Pain badge `border-radius: 5px` | `ActivityFeedCard` badge spans |
 
 ---
 
@@ -92,7 +106,14 @@ The `CARD` style constant in `src/components/therapist/styles.js` should be upda
 The client dashboard currently passes `title="My Sessions"` and `subtitle="{name} · {clinic}"`. Change to:
 
 - **Title:** `"Hi, {firstName}"` — derive `firstName` from `profile.name.split(' ')[0]` (same pattern used in the therapist dashboard).
-- **Subtitle:** `"{clinicName} · Week {N} of {M}"` — compute using the existing `currentProgramWeek(startDate)` helper already in the client Dashboard, applied to the prescription with the earliest non-null `start_date` among `activeSessions`. `M` = that prescription's `duration_weeks`. If no active prescription has both `start_date` and `duration_weeks` set, fall back to just `"{clinicName}"`.
+- **Subtitle:** `"{clinicName} · Week {N} of {M}"` — compute using the existing `currentProgramWeek(startDate)` helper already in the client Dashboard. Selection expression:
+  ```js
+  const datedSessions = activeSessions.filter(s => s.start_date && s.duration_weeks)
+  const anchor = datedSessions.sort((a, b) => new Date(a.start_date) - new Date(b.start_date))[0]
+  const weekN = anchor ? currentProgramWeek(anchor.start_date) : null
+  const weekM = anchor?.duration_weeks ?? null
+  ```
+  Note: `activeSessions` is `sessions.filter(isActive)` and `isActive` returns `true` when dates are `null`, so the additional `filter` is required. If `anchor` is undefined (no dated sessions), fall back to just `"{clinicName}"`.
 - The `PageHero` component itself does not need to change — only the props passed from `ClientDashboard`.
 
 ### 3.2 Session Cards
@@ -108,11 +129,15 @@ The client dashboard currently passes `title="My Sessions"` and `subtitle="{name
 - Recently-completed variant (session done within `frequency_days`): stronger shimmer `rgba(41,181,204,0.35)` and border `rgba(41,181,204,0.20)`.
 
 #### 3.2.2 Dot progress row
-Add a dot progress row between the session meta line and the CTA footer. Reuse the existing `generateSlots` function from the therapist dashboard — move it from `src/pages/therapist/Dashboard.jsx` to a new file `src/utils/adherenceUtils.js` and import it in both `Dashboard.jsx` files.
+Add a dot progress row between the session meta line and the CTA footer.
 
-- Show up to 12 dots (same cap as therapist adherence view).
+**Extraction:** Move `generateSlots` from `src/pages/therapist/Dashboard.jsx` to a new `src/utils/adherenceUtils.js` and export it. Add `import { generateSlots } from '../../utils/adherenceUtils'` to **both** `src/pages/therapist/Dashboard.jsx` (replacing the existing local definition — it is called by both `AdherenceCard` and `computeAlerts`) and `src/pages/client/Dashboard.jsx`.
+
+**In the client card:** call `generateSlots(session, session.session_logs ?? [])`, then `.slice(0, 12)` the result to cap at 12 dots. The therapist view has no numeric slice — it relies on flex-wrap within a fixed-width container. The client card uses an explicit cap.
+
+- Compute `done = slots.filter(s => s.status === 'done').length` and `total = slots.filter(s => s.status !== 'pending').length` for the label.
 - Append a `"{done} of {total} sessions"` text label in `font-size: 10px; color: #444` immediately after the dots.
-- Dots: `width: 8px; height: 8px; border-radius: 50%` — slightly larger than therapist view (8px vs 7px) for mobile legibility.
+- Dots: `width: 8px; height: 8px; border-radius: 50%`.
 
 #### 3.2.3 Week badge
 - Currently: `border-radius: 4px` square.
@@ -143,23 +168,36 @@ When `isFuture` is true (session not yet available):
 
 **File:** `src/components/client/BottomNav.jsx`.
 
-Add a teal pill indicator behind the active tab icon:
+Add a teal pill indicator behind the active tab icon. The current `Link` has no `position` set — the nearest positioned ancestor is the fixed `<nav>`, so an absolute-positioned pill placed anywhere inside the Link without a positioned parent would escape to the nav level.
+
+**Required structure:**
 
 ```jsx
-// Inside each tab Link, before the Icon:
-{active && (
-  <span style={{
-    position: 'absolute',
-    top: '6px',
-    width: '36px',
-    height: '28px',
-    borderRadius: '10px',
-    background: 'rgba(41,181,204,0.10)',
-  }} />
-)}
+<Link
+  style={{ minHeight: '56px', position: 'relative' }}  // add position: relative
+  ...
+>
+  {active && (
+    <span style={{           // direct child of Link — positioned relative to Link
+      position: 'absolute',
+      top: '6px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      width: '36px',
+      height: '28px',
+      borderRadius: '10px',
+      background: 'rgba(41,181,204,0.10)',
+    }} />
+  )}
+  <div style={{ position: 'relative', zIndex: 1 }}>  {/* already exists */}
+    <Icon ... />
+    {badge}
+  </div>
+  <span className="..." style={{ position: 'relative', zIndex: 1 }}>{label}</span>
+</Link>
 ```
 
-Add `position: 'relative'` explicitly to the `Link` element. The icon wrapper `div` (which already exists around the icon for the badge) gets `position: 'relative'; zIndex: 1` so it sits above the pill. The label `span` also needs `position: 'relative'; zIndex: 1`.
+The pill is a **direct child of the Link** (not inside the icon wrapper div). The Link gets `position: 'relative'` added to its existing `style` prop. The existing icon wrapper `<div>` already has `position: 'relative'` — add `zIndex: 1`. The label `<span>` gets `style={{ position: 'relative', zIndex: 1 }}` added alongside its existing `className`.
 
 No changes to tab labels, icons, badge logic, or routing.
 
@@ -170,8 +208,9 @@ No changes to tab labels, icons, badge logic, or routing.
 | File | Change type |
 |---|---|
 | `src/utils/adherenceUtils.js` | New file — extract `generateSlots` from therapist Dashboard |
-| `src/components/therapist/styles.js` | Update `CARD` constant (radius, padding, blur, hover) |
-| `src/pages/therapist/Dashboard.jsx` | Import `generateSlots` from utils; header pill; adherence row width; alert row polish; activity feed avatar size; badge radius |
+| `src/components/therapist/styles.js` | Update `SECTION_LABEL`: fontWeight 600→700, letterSpacing 0.08em→0.09em. `CARD` unchanged. |
+| `src/index.css` | `--color-muted` dark mode: `#888888` → `#999999` |
+| `src/pages/therapist/Dashboard.jsx` | Remove local `generateSlots`, import from utils; header pill; adherence row width; alert row polish; activity feed avatar size; badge radius |
 | `src/components/therapist/AppSidebar.jsx` | Active nav item rounded right edge |
 | `src/pages/client/Dashboard.jsx` | Personalised hero props; import `generateSlots` from utils; session card shell; dot row; CTA footer; done/locked states |
 | `src/components/client/BottomNav.jsx` | Active tab pill indicator |
