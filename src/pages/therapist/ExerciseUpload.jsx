@@ -8,8 +8,30 @@ import PageHero from '../../components/shared/PageHero'
 import { CARD } from '../../components/therapist/styles'
 import ShimmerLine from '../../components/shared/ShimmerLine'
 import useIsMobile from '../../hooks/useIsMobile'
+import VideoPlayer from '../../components/VideoPlayer'
 
-const CATEGORIES = ['Cervical', 'Thoracic', 'Lumbar', 'Shoulder', 'Elbow', 'Hand / Wrist', 'Hip', 'Knee', 'Ankle / Foot', 'General']
+const CATEGORIES = ['Cervical', 'Thoracic', 'Lumbar', 'Shoulder', 'Elbow', 'Wrist', 'Hip', 'Knee', 'Ankle', 'Core', 'General']
+
+function extractYouTubeId(url) {
+  try {
+    if (url.includes('watch?v=')) {
+      return new URL(url).searchParams.get('v') || null
+    }
+    if (url.includes('youtu.be/')) {
+      return url.split('youtu.be/')[1]?.split('?')[0] || null
+    }
+    if (url.includes('youtube.com/shorts/')) {
+      return url.split('youtube.com/shorts/')[1]?.split('?')[0] || null
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+function isValidYouTubeUrl(url) {
+  return Boolean(extractYouTubeId(url))
+}
 
 export default function ExerciseUpload() {
   const { profile } = useAuth()
@@ -24,6 +46,8 @@ export default function ExerciseUpload() {
   const [isTimed, setIsTimed] = useState(false)
   const [isBilateral, setIsBilateral] = useState(false)
   const [videoFile, setVideoFile] = useState(null)
+  const [videoTab, setVideoTab] = useState('file')
+  const [youtubeUrl, setYoutubeUrl] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState(null)
