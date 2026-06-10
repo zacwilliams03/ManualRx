@@ -62,6 +62,7 @@ export default function ExerciseUpload() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError(null)
+    setUploadProgress(0)
 
     if (!name.trim()) { setError('Name is required.'); return }
     if (categories.length === 0) { setError('Select at least one category.'); return }
@@ -71,12 +72,12 @@ export default function ExerciseUpload() {
     let publicUrl = null
 
     if (videoTab === 'youtube') {
-      if (youtubeUrl && !isValidYouTubeUrl(youtubeUrl)) {
-        setError('Please enter a valid YouTube URL.')
-        setUploading(false)
-        return
-      }
-      if (youtubeUrl && isValidYouTubeUrl(youtubeUrl)) {
+      if (youtubeUrl) {
+        if (!isValidYouTubeUrl(youtubeUrl)) {
+          setError('Please enter a valid YouTube URL.')
+          setUploading(false)
+          return
+        }
         publicUrl = youtubeUrl
       }
     } else if (videoFile) {
