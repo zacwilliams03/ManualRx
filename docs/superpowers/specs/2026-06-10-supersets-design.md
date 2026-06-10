@@ -230,6 +230,7 @@ The existing flat `exercises` state array is replaced by `sessionItems`. Referen
 - `'intro'` — unchanged
 - `{ itemIndex: number }` — current session item (standalone exercise or superset round)
 - `{ itemIndex: number, restAfterRound: number }` — rest screen between superset rounds
+- `{ itemIndex: number, postSuperset: true }` — pain/notes/video capture screen after final superset round
 - `'summary'` — unchanged (renamed from `'done'` — verify current value in the file; it may be `'done'` not `'summary'`, preserve whatever the file uses)
 
 ### 3.4 Superset round screen
@@ -256,13 +257,30 @@ When `step.itemIndex` resolves to a `type: 'superset'` item, render the round sc
 On "Complete round":
 - The reps/weight inputs for this round write into `exercise.setsData[currentRound]` for each member exercise
 - If `currentRound + 1 < group.set_count`: set step to `{ itemIndex, restAfterRound: currentRound }` and increment `currentRound` on the item
-- If `currentRound + 1 === group.set_count`: advance to next `sessionItems` item
+- If `currentRound + 1 === group.set_count`: set step to `{ itemIndex, postSuperset: true }` (see §3.4.1)
 
 **Rest screen** (`step.restAfterRound !== undefined`):
 - Header: "Superset A — Round N complete"
-- Body: lists each exercise with logged reps/weight from that round (confirmation summary)
+- Body: lists each exercise with logged reps/weight from that round as raw user-entered values (no unit conversion)
 - Footer: "Start Round N+1 →" — clears `restAfterRound` and returns to the round screen at the new `currentRound`
-- No rest screen shown when `set_count === 1` (single round goes straight to next item)
+- No rest screen shown when `set_count === 1` (single round goes straight to §3.4.1)
+
+### 3.4.1 Post-superset screen (`step.postSuperset === true`)
+
+Shown after the final round of every superset, before advancing to the next session item.
+
+**Header:** "⚡ Superset A — how did it feel?"
+
+**Body:** one card per exercise (same order as the round screen), each showing:
+- Exercise name
+- Pain rating 0–10 (`ScaleSelector` component — same as standalone exercises)
+- If pain ≥ 7: high-pain acknowledgement checkbox with warning text (same gate logic as standalone — "Done" button disabled until checked)
+- Notes textarea (optional)
+- Video upload (optional)
+
+The high-pain gate is a single shared acknowledgement for the whole screen: if _any_ exercise has pain ≥ 7, the user must tick "I understand" once before advancing. The existing `painAcknowledged` state (reset on step change via the existing `useEffect`) handles this.
+
+**Footer:** "Done →" button — disabled when any exercise has pain ≥ 7 and `!painAcknowledged`. On click: advance to next `sessionItems` item (or `'done'` if last item).
 
 ### 3.5 Progress bar
 

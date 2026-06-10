@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Allow therapists to group exercises into supersets within a session, and have clients complete them round-by-round (all exercises in the group on one screen per round) in the session wizard.
+**Goal:** Allow therapists to group exercises into supersets within a session, and have clients complete them round-by-round (all exercises in the group on one screen per round) in the session wizard, including a post-superset pain/notes/video capture screen after the final round.
 
-**Architecture:** New `prescription_exercise_groups` table + two nullable columns on `prescription_exercises` hold the grouping. A shared pure utility (`supersetUtils.js`) normalises raw DB rows into a typed `sessionItems` array consumed identically by the therapist builder and client wizard. Therapist creates supersets via a dedicated modal; client steps through a combined round screen (all exercises visible) with a rest screen between rounds.
+**Architecture:** New `prescription_exercise_groups` table + two nullable columns on `prescription_exercises` hold the grouping. A shared pure utility (`supersetUtils.js`) normalises raw DB rows into a typed `sessionItems` array consumed identically by the therapist builder and client wizard. Therapist creates supersets via a dedicated modal; client steps through a combined round screen (all exercises visible), rest screens between rounds, and a post-superset pain/notes/video screen after the final round. Supersets are **flat-only in v1** — no per-round differentiated targets (same as per-set prescription being unavailable inside supersets).
 
 **Tech Stack:** React 18, Vite, Supabase (postgres + RLS), inline styles (existing pattern), Vitest for tests, Framer Motion (already in use).
 
@@ -21,7 +21,7 @@
 | `src/utils/supersetUtils.test.js` | **Create** | Unit tests for `buildSessionItems` |
 | `src/components/therapist/SupersetPickerModal.jsx` | **Create** | Superset creation / edit modal |
 | `src/pages/therapist/SessionEdit.jsx` | **Modify** | Fetch groups, build items, render superset blocks, wire modal |
-| `src/pages/client/SessionWizard.jsx` | **Modify** | sessionItems model, superset round screen, rest screen, completion |
+| `src/pages/client/SessionWizard.jsx` | **Modify** | sessionItems model, superset round screen, rest screen, post-superset screen, completion |
 
 ---
 
@@ -32,7 +32,13 @@
 - [ ] **Step 1: Create the migration file**
 
 ```sql
--- ── New table: prescription_exercise_groups ─────────────────────────────────
+-- ── Ensure prescription_exercises has created_at (idempotent) ────────────────
+-- Supabase adds this automatically for dashboard-created tables, but we guard
+-- here so the backfill ORDER BY created_at never fails.
+ALTER TABLE prescription_exercises
+  ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+
+-- ── New table: prescription_exercise_groups ──────────────────────────────────
 CREATE TABLE prescription_exercise_groups (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   prescription_id uuid NOT NULL REFERENCES prescriptions(id) ON DELETE CASCADE,
@@ -49,11 +55,6 @@ ALTER TABLE prescription_exercises
   ADD COLUMN order_index       int;
 
 -- ── Backfill order_index for existing rows ───────────────────────────────────
--- Uses created_at for deterministic ordering.
--- VERIFY FIRST: confirm prescription_exercises has a created_at column via
--- the Supabase Table Editor or \d prescription_exercises in psql.
--- If not present (uncommon for Supabase-dashboard tables), add it:
---   ALTER TABLE prescription_exercises ADD COLUMN created_at timestamptz DEFAULT now();
 WITH ranked AS (
   SELECT id,
          ROW_NUMBER() OVER (PARTITION BY prescription_id ORDER BY created_at ASC, id ASC) AS rn
@@ -80,7 +81,7 @@ CREATE POLICY "groups_therapist_all" ON prescription_exercise_groups
     )
   );
 
--- Matches the shape of prescription_exercises_client_read exactly.
+-- Shape matches prescription_exercises_client_read exactly.
 CREATE POLICY "groups_client_read" ON prescription_exercise_groups
   FOR SELECT TO authenticated
   USING (
@@ -98,7 +99,7 @@ CREATE POLICY "groups_client_read" ON prescription_exercise_groups
 npx supabase db push --linked
 ```
 
-Expected: migration runs without errors. Confirm in the Supabase Table Editor that `prescription_exercise_groups` exists and `prescription_exercises` has the three new columns.
+Expected: migration runs without errors. Confirm in the Supabase Table Editor that `prescription_exercise_groups` exists and `prescription_exercises` has the three new columns (`group_id`, `position_in_group`, `order_index`).
 
 - [ ] **Step 3: Commit**
 
@@ -128,8 +129,7 @@ git commit -m "feat: add prescription_exercise_groups table and alter prescripti
  *
  * Standalone exercises (group_id === null) use their own order_index.
  * Superset groups use the group row's order_index; member exercises are sorted
- * by position_in_group.
- * Tiebreaker: createdAt ASC (robust to null order_index on legacy rows).
+ * by position_in_group. Tiebreaker: createdAt ASC.
  */
 export function buildSessionItems(groups, prescriptionExercises) {
   const items = []
@@ -286,7 +286,7 @@ export default function SupersetPickerModal({
   prescriptionId,
   existingGroupCount,   // number of groups already on this prescription (for auto-label)
   currentMaxOrderIndex, // used for new group order_index
-  onAdd,                // onAdd(group, memberPeRows) — called after DB insert
+  onAdd,                // onAdd(group, memberPeRows, removedPeIds?) — called after DB write
   onClose,
   editGroup = null,     // group row to edit (null = create mode)
   editMembers = [],     // existing prescription_exercises rows for this group (edit mode)
@@ -294,7 +294,6 @@ export default function SupersetPickerModal({
   const { profile } = useAuth()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
-  // In edit mode, pre-populate selected with the exercise definitions from editMembers
   const [selected, setSelected] = useState(() =>
     editMembers.map(em => em.exercises).filter(Boolean)
   )
@@ -303,7 +302,6 @@ export default function SupersetPickerModal({
   const [error, setError] = useState(null)
   const debounceRef = useRef(null)
 
-  // Search exercises available to this therapist
   useEffect(() => {
     const q = query.trim()
     if (!q) { setResults([]); return }
@@ -386,7 +384,6 @@ export default function SupersetPickerModal({
     const existingExerciseIds = editMembers.map(em => em.exercises?.id).filter(Boolean)
     const selectedIds = selected.map(e => e.id)
 
-    // Determine removed members (by exercise id)
     const removedMembers = editMembers.filter(em => !selectedIds.includes(em.exercises?.id))
     if (removedMembers.length > 0) {
       const removedPeIds = removedMembers.map(em => em.id)
@@ -398,7 +395,6 @@ export default function SupersetPickerModal({
       if (logs?.length > 0) {
         throw new Error('One or more exercises have logged sessions and cannot be removed from this superset.')
       }
-      // Safe to delete
       const { error: delErr } = await supabase
         .from('prescription_exercises')
         .delete()
@@ -406,7 +402,6 @@ export default function SupersetPickerModal({
       if (delErr) throw new Error(delErr.message)
     }
 
-    // Insert new members
     const newExercises = selected.filter(e => !existingExerciseIds.includes(e.id))
     let inserted = []
     if (newExercises.length > 0) {
@@ -430,7 +425,6 @@ export default function SupersetPickerModal({
       inserted = data
     }
 
-    // Update group set_count + propagate to member exercises
     const { error: upErr } = await supabase
       .from('prescription_exercise_groups')
       .update({ set_count: setCount })
@@ -464,7 +458,6 @@ export default function SupersetPickerModal({
           </div>
         </div>
 
-        {/* Search */}
         <input
           type="text"
           value={query}
@@ -474,7 +467,6 @@ export default function SupersetPickerModal({
           style={{ width: '100%', padding: '9px 12px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '8px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
         />
 
-        {/* Search results */}
         {results.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '160px', overflowY: 'auto' }}>
             {results.map(ex => (
@@ -494,7 +486,6 @@ export default function SupersetPickerModal({
           </div>
         )}
 
-        {/* Selected list */}
         {selected.length > 0 && (
           <div>
             <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--color-subtle)', marginBottom: '6px' }}>
@@ -512,7 +503,6 @@ export default function SupersetPickerModal({
           </div>
         )}
 
-        {/* Set count stepper */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '10px 12px' }}>
           <div style={{ flex: 1, fontSize: '13px', color: 'var(--color-text)' }}>Sets (applied to all)</div>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -524,7 +514,6 @@ export default function SupersetPickerModal({
 
         {error && <p style={{ fontSize: '12px', color: 'var(--color-danger)', margin: 0 }}>{error}</p>}
 
-        {/* Actions */}
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={onClose} style={{ flex: 1, padding: '10px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '8px', color: 'var(--color-muted)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
           <button
@@ -558,9 +547,9 @@ git commit -m "feat: add SupersetPickerModal component"
 
 **File:** `src/pages/therapist/SessionEdit.jsx`
 
-This task updates the data layer — fetching groups, building items, and adding the `items` state. The render loop is updated in Task 5. Tests run after Task 5.
+This task updates the data layer and mutation handlers. The render loop is updated in Task 5.
 
-- [ ] **Step 1: Add imports at the top of SessionEdit.jsx**
+- [ ] **Step 1: Add imports**
 
 Add to the existing import block:
 
@@ -575,18 +564,17 @@ Inside `SessionEdit`, after the existing state declarations, add:
 
 ```js
 const [groups, setGroups] = useState([])
-const [items, setItems] = useState([])          // unified sorted items
+const [items, setItems] = useState([])
 const [showSupersetModal, setShowSupersetModal] = useState(false)
-const [editingSuperset, setEditingSuperset] = useState(null) // { group, members } | null
+const [editingSuperset, setEditingSuperset] = useState(null)
 ```
 
 - [ ] **Step 3: Update `fetchData` to also fetch groups**
 
-In the `fetchData` async function, change the parallel fetch from:
-
+Replace:
 ```js
 const [sessionRes, exercisesRes] = await Promise.all([
-  supabase.from('prescriptions').select(...).eq('id', sessionId).eq('therapist_id', profile.id).single(),
+  supabase.from('prescriptions').select('id, name, frequency_days, start_date, duration_weeks').eq('id', sessionId).eq('therapist_id', profile.id).single(),
   supabase
     .from('prescription_exercises')
     .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
@@ -595,8 +583,7 @@ const [sessionRes, exercisesRes] = await Promise.all([
 ])
 ```
 
-to:
-
+With:
 ```js
 const [sessionRes, exercisesRes, groupsRes] = await Promise.all([
   supabase.from('prescriptions').select('id, name, frequency_days, start_date, duration_weeks').eq('id', sessionId).eq('therapist_id', profile.id).single(),
@@ -614,13 +601,13 @@ const [sessionRes, exercisesRes, groupsRes] = await Promise.all([
 
 - [ ] **Step 4: Build items after fetch**
 
-In `fetchData`, replace:
+Replace:
 ```js
 } else {
   setExercises(exercisesRes.data ?? [])
 }
 ```
-with:
+With:
 ```js
 } else {
   const fetchedExercises = exercisesRes.data ?? []
@@ -631,33 +618,7 @@ with:
 }
 ```
 
-- [ ] **Step 5: Update `handleAddExercise` to set order_index**
-
-`handleAddExercise` currently inserts without `order_index`. Add it so standalone exercises are ordered. Replace the insert call's object:
-
-```js
-const { data, error: insertError } = await supabase
-  .from('prescription_exercises')
-  .insert({
-    prescription_id: sessionId,
-    exercise_id: exerciseId,
-    sets,
-    reps,
-    weight,
-    therapist_notes: notes,
-    measurement_type: measurementType ?? 'reps',
-    bilateral: bilateral ?? false,
-    tempo_eccentric:    tempoEccentric    ?? null,
-    tempo_bottom_pause: tempoBottomPause  ?? null,
-    tempo_concentric:   tempoConcentric   ?? null,
-    tempo_top_pause:    tempoTopPause     ?? null,
-    order_index: computeNextOrderIndex(groups, exercises),
-  })
-  .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
-  .single()
-```
-
-Add the helper function before the component function (i.e. in module scope):
+- [ ] **Step 5: Add `computeNextOrderIndex` helper in module scope (before the component)**
 
 ```js
 function computeNextOrderIndex(groups, exercises) {
@@ -669,7 +630,16 @@ function computeNextOrderIndex(groups, exercises) {
 }
 ```
 
-After inserting (whether perSetSets or not), rebuild items:
+- [ ] **Step 6: Update `handleAddExercise` — add `order_index` to insert, update select, rebuild items**
+
+In the insert call, add `order_index: computeNextOrderIndex(groups, exercises)` to the insert object.
+
+Change the `.select(...)` string on the insert to:
+```
+'id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)'
+```
+
+Change every `setExercises(prev => [...prev, fresh])` and `setExercises(prev => [...prev, data])` in `handleAddExercise` to rebuild items:
 
 ```js
 setExercises(prev => {
@@ -679,19 +649,16 @@ setExercises(prev => {
 })
 ```
 
-Change existing lines like `setExercises(prev => [...prev, fresh])` and `setExercises(prev => [...prev, data])` to the pattern above that also calls `setItems`.
+- [ ] **Step 7: Update `removeExercise` to rebuild items**
 
-- [ ] **Step 6: Update `removeExercise` to rebuild items**
-
-Find `removeExercise`:
+Replace:
 ```js
 async function removeExercise(peId) {
   await supabase.from('prescription_exercises').delete().eq('id', peId)
   setExercises(prev => prev.filter(pe => pe.id !== peId))
 }
 ```
-
-Replace with:
+With:
 ```js
 async function removeExercise(peId) {
   await supabase.from('prescription_exercises').delete().eq('id', peId)
@@ -703,13 +670,29 @@ async function removeExercise(peId) {
 }
 ```
 
-- [ ] **Step 7: Update `saveEdit` to rebuild items after edit**
+- [ ] **Step 8: Guard `saveEdit` — skip writing `sets` for grouped exercises**
 
-In the final `setExercises` call inside `saveEdit` (after fresh re-fetch), change:
+In `startEdit(pe)`, add `groupId: pe.group_id ?? null` to the `setEditValues({...})` call.
+
+In `saveEdit`, the `sets: setsCount` line inside the `.update({...})` call currently always writes sets. Wrap it conditionally:
+
 ```js
-setExercises(prev => prev.map(e => e.id === peId ? fresh : e))
+const { error: updateError } = await supabase
+  .from('prescription_exercises')
+  .update({
+    ...(v.groupId == null ? { sets: setsCount } : {}),
+    reps: v.perSetEnabled ? null : (parseInt(v.reps) || 1),
+    weight: v.perSetEnabled ? null : weightVal,
+    therapist_notes: v.notes.trim() || null,
+    tempo_eccentric:    v.tempoEnabled ? parseInt(v.tempoDown) : null,
+    tempo_bottom_pause: v.tempoEnabled ? parseInt(v.tempoHold) : null,
+    tempo_concentric:   v.tempoEnabled ? parseInt(v.tempoUp)   : null,
+    tempo_top_pause:    v.tempoEnabled ? parseInt(v.tempoTop)   : null,
+  })
+  .eq('id', peId)
 ```
-to:
+
+Also update the final `setExercises` in `saveEdit` to rebuild items:
 ```js
 setExercises(prev => {
   const next = prev.map(e => e.id === peId ? fresh : e)
@@ -718,11 +701,16 @@ setExercises(prev => {
 })
 ```
 
-- [ ] **Step 8: Commit**
+Also update the select string in the fresh re-fetch inside `saveEdit` to include the new columns:
+```
+'id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)'
+```
+
+- [ ] **Step 9: Commit**
 
 ```
 git add src/pages/therapist/SessionEdit.jsx
-git commit -m "feat: SessionEdit — fetch groups, build items, add computeNextOrderIndex"
+git commit -m "feat: SessionEdit — fetch groups, build items, computeNextOrderIndex, guard saveEdit sets"
 ```
 
 ---
@@ -731,28 +719,9 @@ git commit -m "feat: SessionEdit — fetch groups, build items, add computeNextO
 
 **File:** `src/pages/therapist/SessionEdit.jsx`
 
-This task replaces the exercise list render with an items-based render that displays superset blocks.
-
 - [ ] **Step 1: Replace the exercise list render**
 
-Find the `motion.div` card that renders the exercise list (starts around line 412). Replace the entire inner content that maps `exercises` — specifically this block:
-
-```jsx
-{exercises.length === 0 ? (
-  <p style={{ padding: '16px 20px', fontSize: '13px', color: 'var(--color-muted)' }}>No exercises added yet.</p>
-) : (
-  exercises.map((pe, i) => (
-    <div
-      key={pe.id}
-      style={{ padding: '12px 20px', borderBottom: i < exercises.length - 1 ? '1px solid var(--color-elevated)' : 'none' }}
-    >
-      ... (exercise row content)
-    </div>
-  ))
-)}
-```
-
-Replace with:
+Find the `motion.div` exercise list card. It currently contains a ternary rendering `exercises.length === 0` then mapping `exercises`. Replace the exercises-length check and the `exercises.map(...)` block with:
 
 ```jsx
 {items.length === 0 ? (
@@ -767,14 +736,13 @@ Replace with:
 ```
 
 Also update the header count label from `exercises.length` to `items.length`:
-
 ```jsx
 <span style={SECTION_LABEL}>Exercises {items.length > 0 ? `(${items.length})` : ''}</span>
 ```
 
-- [ ] **Step 2: Extract existing exercise row to `renderExerciseRow`**
+- [ ] **Step 2: Extract exercise row to `renderExerciseRow`**
 
-The existing `exercises.map(...)` body is the exercise row. Extract it into a named function inside the component. Place it after the state declarations, before the `return`:
+Move the entire existing `exercises.map(...)` body (the per-exercise `<div>` and all its contents) into a named function inside the component, placed before the `return`:
 
 ```jsx
 function renderExerciseRow(pe, hasBorder) {
@@ -785,11 +753,20 @@ function renderExerciseRow(pe, hasBorder) {
     >
       <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', marginBottom: '6px' }}>{pe.exercises.name}</div>
       {editingId === pe.id ? (
-        // ... paste the entire existing editingId === pe.id block here exactly as-is ...
-        // (the block from "display: flex, flexDirection: column, gap: 8px" through to
-        //  the Cancel/Save buttons and the closing div)
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* Read-only notice for grouped exercises */}
+          {pe.group_id != null && (
+            <div style={{ fontSize: '11px', color: 'var(--color-subtle)', background: 'rgba(41,181,204,0.06)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '6px', padding: '6px 10px' }}>
+              Set count is controlled by the superset ({pe.sets} sets). Edit the superset header to change it.
+            </div>
+          )}
+          {/* existing sets/reps/weight/notes fields — paste exactly as-is */}
+          {/* existing per-set toggle — wrap in: {pe.group_id == null && ( ... )} */}
+          {/* existing tempo section — paste as-is */}
+          {/* existing Cancel/Save buttons — paste as-is */}
+        </div>
       ) : (
-        // ... paste the entire existing else block here exactly as-is ...
+        // existing else block — paste exactly as-is
       )}
       {pe.exercises.video_url && <VideoPlayer url={pe.exercises.video_url} className="w-full rounded mt-2" />}
     </div>
@@ -797,24 +774,9 @@ function renderExerciseRow(pe, hasBorder) {
 }
 ```
 
-For superset member exercises, the per-set toggle and sets field should be read-only (set count is controlled by the group). Add this at the top of the edit panel inside `renderExerciseRow`:
-
-```jsx
-// At the start of the editingId === pe.id block, before the sets/reps/weight fields:
-{pe.group_id != null && (
-  <div style={{ fontSize: '11px', color: 'var(--color-subtle)', background: 'rgba(41,181,204,0.06)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '6px', padding: '6px 10px' }}>
-    Set count is controlled by the superset ({pe.sets} sets). Edit the superset to change it.
-  </div>
-)}
-```
-
-And hide the per-set toggle for grouped exercises by wrapping the entire per-set section in:
-
-```jsx
-{pe.group_id == null && (
-  // ... existing per-set toggle block ...
-)}
-```
+The content inside the editingId branch and the else branch is identical to what was previously in the map — copy it verbatim. The only additions are:
+1. The read-only notice `{pe.group_id != null && (...)}` at the top of the edit branch
+2. The per-set toggle wrapped in `{pe.group_id == null && (...)}`
 
 - [ ] **Step 3: Add `renderSupersetBlock` function**
 
@@ -828,7 +790,6 @@ function renderSupersetBlock(item, hasBorder) {
       key={group.id}
       style={{ borderBottom: hasBorder ? '1px solid var(--color-elevated)' : 'none' }}
     >
-      {/* Superset header */}
       <div style={{ padding: '8px 14px', background: 'rgba(41,181,204,0.06)', borderBottom: '1px solid rgba(41,181,204,0.12)', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{ fontSize: '10px', fontWeight: 700, color: '#29B5CC', letterSpacing: '0.08em', textTransform: 'uppercase', flex: 1 }}>
           ⚡ {group.label} · {group.set_count} sets
@@ -846,8 +807,6 @@ function renderSupersetBlock(item, hasBorder) {
           Ungroup
         </button>
       </div>
-
-      {/* Member exercises */}
       {members.map((pe, mi) => (
         <div
           key={pe.id}
@@ -859,8 +818,6 @@ function renderSupersetBlock(item, hasBorder) {
           </div>
         </div>
       ))}
-
-      {/* Add to superset inline */}
       <div style={{ padding: '8px 14px' }}>
         <span
           onClick={() => setEditingSuperset({ group, members })}
@@ -874,11 +831,12 @@ function renderSupersetBlock(item, hasBorder) {
 }
 ```
 
+Note: "+ Add exercise to superset" opens the edit modal rather than an inline search. This is a deliberate simplification from the spec.
+
 - [ ] **Step 4: Add `handleUngroup` function**
 
 ```jsx
 async function handleUngroup(group, members) {
-  // Check for any logs on member exercises
   const memberIds = members.map(m => m.id)
   const { data: logs } = await supabase
     .from('exercise_logs')
@@ -889,16 +847,13 @@ async function handleUngroup(group, members) {
     alert('This superset has logged sessions. Ungroup is not available.')
     return
   }
-  // Update members: clear group_id, assign sequential order_index
   for (let i = 0; i < members.length; i++) {
     await supabase
       .from('prescription_exercises')
       .update({ group_id: null, position_in_group: null, order_index: group.order_index + i })
       .eq('id', members[i].id)
   }
-  // Delete the group row
   await supabase.from('prescription_exercise_groups').delete().eq('id', group.id)
-  // Update local state
   const updatedExercises = exercises.map(pe => {
     if (pe.group_id === group.id) {
       const idx = members.findIndex(m => m.id === pe.id)
@@ -915,10 +870,9 @@ async function handleUngroup(group, members) {
 
 - [ ] **Step 5: Add "Add superset" button and wire up modal**
 
-In the return JSX, find the `{/* ExercisePicker — unchanged */}` line at the bottom. Add the modal and button immediately before it:
+Immediately before `{/* ExercisePicker — unchanged */}` in the return JSX, add:
 
 ```jsx
-{/* Superset modal */}
 {(showSupersetModal || editingSuperset) && (
   <SupersetPickerModal
     prescriptionId={sessionId}
@@ -928,7 +882,6 @@ In the return JSX, find the `{/* ExercisePicker — unchanged */}` line at the b
     editMembers={editingSuperset?.members ?? []}
     onAdd={(updatedGroup, newPeRows, removedPeIds = []) => {
       if (editingSuperset) {
-        // Edit mode: update groups state, remove deleted members, add new ones
         const updatedGroups = groups.map(g => g.id === updatedGroup.id ? updatedGroup : g)
         const updatedExercises = [
           ...exercises.filter(pe => !removedPeIds.includes(pe.id)).map(pe =>
@@ -941,7 +894,6 @@ In the return JSX, find the `{/* ExercisePicker — unchanged */}` line at the b
         setItems(buildSessionItems(updatedGroups, updatedExercises))
         setEditingSuperset(null)
       } else {
-        // Create mode
         const updatedGroups = [...groups, updatedGroup]
         const updatedExercises = [...exercises, ...newPeRows]
         setGroups(updatedGroups)
@@ -954,7 +906,6 @@ In the return JSX, find the `{/* ExercisePicker — unchanged */}` line at the b
   />
 )}
 
-{/* Add superset button — sits above ExercisePicker */}
 <button
   onClick={() => setShowSupersetModal(true)}
   style={{ width: '100%', padding: '10px', background: 'rgba(41,181,204,0.08)', border: '1px solid rgba(41,181,204,0.25)', borderRadius: '8px', color: '#29B5CC', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
@@ -969,13 +920,12 @@ In the return JSX, find the `{/* ExercisePicker — unchanged */}` line at the b
 npm run dev
 ```
 
-Navigate to a session in the therapist builder (`/therapist/prescribe/:clientId/sessions/:sessionId`). Verify:
+Navigate to any session in the therapist builder. Verify:
 - Existing standalone exercises render as before
-- "⚡ Add superset" button appears above ExercisePicker
-- Clicking it opens the modal; searching, selecting 2+ exercises, and clicking "Add to session" creates a teal-bordered superset block
-- Each member exercise's edit panel shows a read-only set count notice
-- Edit/Ungroup controls appear on the superset header
-- Ungroup converts the block back to standalone exercises
+- "⚡ Add superset" button appears
+- Clicking it opens the modal; selecting 2+ exercises and confirming creates a teal superset block
+- Superset member edit panel shows the set-count notice and hides the per-set toggle
+- Edit / Ungroup buttons work on the superset header
 
 - [ ] **Step 7: Commit**
 
@@ -990,27 +940,26 @@ git commit -m "feat: SessionEdit — render superset blocks, add superset button
 
 **File:** `src/pages/client/SessionWizard.jsx`
 
-This task updates the data layer and step state shape in the wizard, keeping standalone exercise behaviour identical to today.
+This task updates the data layer and step state shape. Standalone exercise behaviour is identical to today.
 
 - [ ] **Step 1: Add import**
-
-Add to existing imports:
 
 ```js
 import { buildSessionItems } from '../../utils/supersetUtils'
 ```
 
-- [ ] **Step 2: Add `sessionItems` state and `groups` state**
+- [ ] **Step 2: Add state variables**
 
-After existing state declarations:
+After existing state declarations, add:
 
 ```js
 const [sessionItems, setSessionItems] = useState([])
+const [openVideoId, setOpenVideoId] = useState(null)  // for superset round screen video toggles
 ```
 
-- [ ] **Step 3: Update the exercise fetch to include new columns and fetch groups**
+- [ ] **Step 3: Update exercise fetch to include new columns and add groups fetch**
 
-In `fetchData`, change the parallel `Promise.all` from two fetches to three:
+Replace the existing `Promise.all` (which has 3 fetches: session, exercises, client) with 4:
 
 ```js
 const [sessionRes, exercisesRes, clientRes, groupsRes] = await Promise.all([
@@ -1034,17 +983,16 @@ const [sessionRes, exercisesRes, clientRes, groupsRes] = await Promise.all([
 ])
 ```
 
-Update the error checks to include `groupsRes` (treat group fetch errors as non-fatal — just log and continue with empty groups).
+`groupsRes` errors are non-fatal — treat a failed groups fetch the same as empty groups (just log it, don't set the error state).
 
 - [ ] **Step 4: Build sessionItems after fetch**
 
-After `setExercises(...)`, add:
+Replace the existing `setExercises(...)` call with:
 
 ```js
-const fetchedGroups = groupsRes?.data ?? []
 const fetchedExercises = exercisesRes.data ?? []
+const fetchedGroups = groupsRes?.data ?? []
 
-// Initialise per-exercise client-side state
 const exercisesWithState = fetchedExercises.map(pe => ({
   ...pe,
   prescription_exercise_sets: [...(pe.prescription_exercise_sets ?? [])].sort((a, b) => a.set_number - b.set_number),
@@ -1058,26 +1006,19 @@ const exercisesWithState = fetchedExercises.map(pe => ({
 
 setExercises(exercisesWithState)
 
-// Build sessionItems: supersets carry per-exercise state inside their exercises array
 const rawItems = buildSessionItems(fetchedGroups, exercisesWithState)
-const itemsWithState = rawItems.map(item => {
-  if (item.type === 'superset') {
-    return { ...item, currentRound: 0 }
-  }
-  return item
-})
-setSessionItems(itemsWithState)
+setSessionItems(rawItems.map(item =>
+  item.type === 'superset' ? { ...item, currentRound: 0 } : item
+))
 ```
 
-Remove the existing `setExercises(...)` call (now replaced by the one above).
+- [ ] **Step 5: Update "Start session" button**
 
-- [ ] **Step 5: Update step state shape**
-
-Change the "Start session" button's `onClick` from:
+Change:
 ```js
 onClick={() => setStep(0)}
 ```
-to:
+To:
 ```js
 onClick={() => setStep({ itemIndex: 0 })}
 ```
@@ -1090,15 +1031,14 @@ if (typeof step === 'number') {
   const ex = exercises[step]
   const isLast = step === exercises.length - 1
 ```
-to:
+To:
 ```js
-if (step && typeof step === 'object' && step.restAfterRound === undefined) {
+if (step && typeof step === 'object' && step.restAfterRound === undefined && step.postSuperset === undefined) {
   const item = sessionItems[step.itemIndex]
   if (!item) return null
 
-  // Superset round screen is handled in the next block
   if (item.type === 'superset') {
-    // (rendered in Task 7 — leave this as a placeholder for now)
+    // rendered in Task 7
     return <div>Superset screen — Task 7</div>
   }
 
@@ -1106,18 +1046,16 @@ if (step && typeof step === 'object' && step.restAfterRound === undefined) {
   const isLast = step.itemIndex === sessionItems.length - 1
 ```
 
-- [ ] **Step 7: Update all references to `exercises[step]` and `step` as a number**
+- [ ] **Step 7: Update step references in the standalone exercise block**
 
 Within the standalone exercise step block, change:
-- `exercises[step]` → `item.ex` (already done above via `ex`)
-- `isLast = step === exercises.length - 1` → `step.itemIndex === sessionItems.length - 1`
 - `setStep(step === 0 ? 'intro' : step - 1)` → `setStep(step.itemIndex === 0 ? 'intro' : { itemIndex: step.itemIndex - 1 })`
-- `setStep(step + 1)` or next-exercise advance → `setStep(isLast ? 'summary' : { itemIndex: step.itemIndex + 1 })`
-- `updateEx(step, ...)` calls pass `step` as an index into `exercises` — these still work because `exercises` array is unchanged; no changes needed to `updateEx` / `updateSetField` / `completeSet`
+- Advance to next: `setStep(isLast ? 'done' : { itemIndex: step.itemIndex + 1 })` (use whatever the existing advance-to-next currently says — `'done'` or `'summary'`)
+- `updateEx(step, ...)` still passes the exercises-array index. Since `exercises` array still exists and `step.itemIndex` maps to the same position as `exercises.indexOf(ex)` for standalone items... verify: the exercises array is now ordered by insertion order (not sorted), while `sessionItems` is sorted by `order_index`. These can diverge. Fix: change `updateEx(step, ...)` calls to use the exercises array index found by ID: `exercises.findIndex(e => e.id === ex.id)` instead of `step.itemIndex`. Or simpler: keep `updateEx` working by passing the exercise id and update the signature. See note below.
 
-- [ ] **Step 8: Update progress bar**
+**Important note on `updateEx`:** The existing `updateEx(index, field, value)` uses `exercises[index]`. After this change, `step.itemIndex` is a `sessionItems` index, not an `exercises` index. For standalone exercises, find the exercises-array index: `const exIdx = exercises.findIndex(e => e.id === ex.id)` and use `exIdx` for all `updateEx(...)`, `updateSetField(...)`, and `completeSet(...)` calls within the standalone block.
 
-Change the progress bar to use `sessionItems`:
+- [ ] **Step 8: Update progress bar to use sessionItems**
 
 ```jsx
 {sessionItems.map((_, i) => (
@@ -1141,23 +1079,20 @@ Change the label:
 </span>
 ```
 
-- [ ] **Step 9: Update the 'done' / completion screen**
+- [ ] **Step 9: Update the 'done' screen count**
 
-The `'done'` step uses `exercises.length` in the count text. Change to:
+Change `exercises.length` in the completion screen text to:
 ```jsx
 {sessionItems.length} item{sessionItems.length !== 1 ? 's' : ''} completed and logged.
 ```
 
-- [ ] **Step 10: Run dev server on a session with no supersets**
+- [ ] **Step 10: Run dev server — confirm no regression on sessions without supersets**
 
 ```
 npm run dev
 ```
 
-Log in as a client. Open any existing session (no supersets). Verify:
-- Intro screen shows correctly
-- All exercises step through exactly as before (no regression)
-- Progress bar and counts are correct
+Log in as a client. Open any existing session (no supersets). Verify standalone exercises step through exactly as before, progress bar and counts are correct.
 
 - [ ] **Step 11: Commit**
 
@@ -1168,27 +1103,15 @@ git commit -m "feat: SessionWizard — sessionItems model, update step shape for
 
 ---
 
-## Task 7 — SessionWizard: superset round screen + rest screen + completion
+## Task 7 — SessionWizard: superset round screen, rest screen, post-superset screen, completion
 
 **File:** `src/pages/client/SessionWizard.jsx`
 
-- [ ] **Step 1: Add helper for superset per-exercise state updates**
+- [ ] **Step 1: Add superset state helpers**
 
 After the existing `updateEx`, `updateSetField`, `completeSet` helpers, add:
 
 ```js
-function updateSupersetExField(itemIndex, exIndex, field, value) {
-  setSessionItems(prev => {
-    const next = [...prev]
-    const item = { ...next[itemIndex] }
-    const exArr = [...item.exercises]
-    exArr[exIndex] = { ...exArr[exIndex], [field]: value }
-    item.exercises = exArr
-    next[itemIndex] = item
-    return next
-  })
-}
-
 function updateSupersetSetField(itemIndex, exIndex, round, field, value) {
   setSessionItems(prev => {
     const next = [...prev]
@@ -1197,6 +1120,18 @@ function updateSupersetSetField(itemIndex, exIndex, round, field, value) {
     const setsData = [...exArr[exIndex].setsData]
     setsData[round] = { ...setsData[round], [field]: value }
     exArr[exIndex] = { ...exArr[exIndex], setsData }
+    item.exercises = exArr
+    next[itemIndex] = item
+    return next
+  })
+}
+
+function updateSupersetExField(itemIndex, exIndex, field, value) {
+  setSessionItems(prev => {
+    const next = [...prev]
+    const item = { ...next[itemIndex] }
+    const exArr = [...item.exercises]
+    exArr[exIndex] = { ...exArr[exIndex], [field]: value }
     item.exercises = exArr
     next[itemIndex] = item
     return next
@@ -1212,11 +1147,169 @@ function advanceSupersetRound(itemIndex) {
 }
 ```
 
-- [ ] **Step 2: Replace the superset placeholder with the round screen**
+- [ ] **Step 2: Add rest screen (between rounds)**
 
-Replace the `return <div>Superset screen — Task 7</div>` placeholder from Task 6 Step 6 with the full superset round screen.
+Place this check before the existing `if (step && typeof step === 'object' && ...)` standalone block:
 
-Find the condition `if (item.type === 'superset')` and replace its body:
+```jsx
+if (step && typeof step === 'object' && step.restAfterRound !== undefined) {
+  const item = sessionItems[step.itemIndex]
+  const { group, exercises: superExs } = item
+  const completedRound = step.restAfterRound
+  const nextRound = item.currentRound  // already incremented by advanceSupersetRound
+
+  return (
+    <div style={{ minHeight: '100dvh', background: 'var(--color-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div style={{ ...CARD, maxWidth: '400px', width: '100%', position: 'relative' }}>
+        <ShimmerLine />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(41,181,204,0.10)', border: '1px solid rgba(41,181,204,0.22)', color: '#29B5CC', borderRadius: '999px', padding: '3px 10px', fontSize: '11px', fontWeight: 700 }}>
+            ⚡ {group.label} — Round {completedRound + 1} complete
+          </span>
+        </div>
+        <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '4px' }}>Rest</div>
+        <div style={{ fontSize: '13px', color: 'var(--color-muted)', marginBottom: '16px' }}>Round {nextRound + 1} of {group.set_count} starts next</div>
+        <div style={{ background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '10px', overflow: 'hidden', marginBottom: '16px' }}>
+          {superExs.map((pe, i) => {
+            const logged = pe.setsData[completedRound] ?? {}
+            return (
+              <div
+                key={pe.id}
+                style={{ padding: '9px 12px', borderBottom: i < superExs.length - 1 ? '1px solid var(--color-elevated)' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}
+              >
+                <span style={{ color: 'var(--color-text)' }}>{pe.exercises?.name}</span>
+                <span style={{ color: '#29B5CC', fontWeight: 600 }}>
+                  {logged.reps || pe.reps} {pe.measurement_type === 'seconds' ? 'sec' : 'reps'}
+                  {logged.weight ? ` · ${logged.weight} ${weightUnit}` : ''} ✓
+                </span>
+              </div>
+            )
+          })}
+        </div>
+        <button
+          onClick={() => setStep({ itemIndex: step.itemIndex })}
+          style={{ width: '100%', padding: '13px', background: '#29B5CC', color: '#000', fontWeight: 700, fontSize: '14px', border: 'none', borderRadius: '10px', cursor: 'pointer', fontFamily: 'inherit' }}
+        >
+          Start Round {nextRound + 1} →
+        </button>
+      </div>
+    </div>
+  )
+}
+```
+
+Note: the rest screen summary uses raw logged values (`logged.weight ... weightUnit`) — no unit conversion, consistent with the in-progress standalone exercise recap.
+
+- [ ] **Step 3: Add post-superset pain/notes/video screen**
+
+After the rest-screen block, add:
+
+```jsx
+if (step && typeof step === 'object' && step.postSuperset === true) {
+  const item = sessionItems[step.itemIndex]
+  const { group, exercises: superExs } = item
+  const isLastItem = step.itemIndex === sessionItems.length - 1
+  const hasHighPain = superExs.some(pe => pe.painRating >= 7)
+
+  return (
+    <div style={{ minHeight: '100dvh', background: 'var(--color-bg)' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--color-surface)', backdropFilter: 'blur(8px)', borderBottom: '1px solid var(--color-border)', padding: isMobile ? '12px 14px' : '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div />
+        <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>⚡ {group.label}</span>
+        <div style={{ flexShrink: 0, overflow: 'hidden' }}>
+          {clinicBrand?.logo_url
+            ? <img src={clinicBrand.logo_url} alt="" style={{ maxHeight: '24px', maxWidth: '80px', objectFit: 'contain' }} />
+            : clinicBrand?.clinic_name
+              ? <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>{clinicBrand.clinic_name}</span>
+              : null}
+        </div>
+      </div>
+
+      <div style={{ maxWidth: '512px', margin: '0 auto', padding: '16px', paddingBottom: 'max(2rem,env(safe-area-inset-bottom))' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '4px' }}>How did it feel?</h2>
+        <p style={{ fontSize: '13px', color: 'var(--color-muted)', marginBottom: '20px' }}>Rate each exercise below</p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+          {superExs.map((pe, exIdx) => (
+            <div key={pe.id} style={{ ...CARD, padding: 0, overflow: 'hidden', position: 'relative' }}>
+              <ShimmerLine />
+              <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text)' }}>{pe.exercises?.name}</div>
+
+                <ScaleSelector
+                  label="Pain (0 = none, 10 = severe)"
+                  value={pe.painRating}
+                  onChange={v => updateSupersetExField(step.itemIndex, exIdx, 'painRating', v)}
+                />
+
+                <textarea
+                  value={pe.clientNotes}
+                  onChange={e => updateSupersetExField(step.itemIndex, exIdx, 'clientNotes', e.target.value)}
+                  placeholder="Notes (optional)"
+                  rows={2}
+                  style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '8px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                />
+
+                {/* Video upload */}
+                <div>
+                  {pe.videoFile ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px' }}>
+                      <span style={{ fontSize: '13px', color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{pe.videoFile.name}</span>
+                      <button onClick={() => updateSupersetExField(step.itemIndex, exIdx, 'videoFile', null)} style={{ fontSize: '12px', color: 'var(--color-danger)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>Remove</button>
+                    </div>
+                  ) : (
+                    <label style={{ display: 'block', cursor: 'pointer' }}>
+                      <div style={{ padding: '8px 12px', background: 'var(--color-elevated)', border: '1px dashed var(--color-border)', borderRadius: '7px', fontSize: '12px', color: 'var(--color-muted)', textAlign: 'center' }}>
+                        Upload feedback video (optional)
+                      </div>
+                      <input
+                        type="file"
+                        accept="video/*"
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          const file = e.target.files?.[0]
+                          if (file) updateSupersetExField(step.itemIndex, exIdx, 'videoFile', file)
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {hasHighPain && (
+          <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px' }}>
+            <p style={{ fontSize: '13px', color: '#f87171', fontWeight: 600, margin: '0 0 8px' }}>High pain reported — please acknowledge before continuing.</p>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={painAcknowledged}
+                onChange={e => setPainAcknowledged(e.target.checked)}
+                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '13px', color: 'var(--color-text)' }}>I understand — this will be flagged to my therapist.</span>
+            </label>
+          </div>
+        )}
+
+        <button
+          onClick={() => setStep(isLastItem ? 'done' : { itemIndex: step.itemIndex + 1 })}
+          disabled={hasHighPain && !painAcknowledged}
+          style={{ width: '100%', padding: '13px', background: '#29B5CC', color: '#000', fontWeight: 700, fontSize: '14px', border: 'none', borderRadius: '10px', fontFamily: 'inherit', cursor: hasHighPain && !painAcknowledged ? 'default' : 'pointer', opacity: hasHighPain && !painAcknowledged ? 0.4 : 1 }}
+        >
+          {isLastItem ? 'Done → finish session' : 'Done → next exercise'}
+        </button>
+      </div>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 4: Replace the superset placeholder with the round screen**
+
+Replace `return <div>Superset screen — Task 7</div>` (from Task 6 Step 6) with the full round screen:
 
 ```jsx
 if (item.type === 'superset') {
@@ -1226,18 +1319,15 @@ if (item.type === 'superset') {
 
   function handleCompleteRound() {
     if (!isLastRound) {
-      // Go to rest screen
-      setStep({ itemIndex: step.itemIndex, restAfterRound: currentRound })
       advanceSupersetRound(step.itemIndex)
+      setStep({ itemIndex: step.itemIndex, restAfterRound: currentRound })
     } else {
-      // Last round: advance to next session item
-      setStep(isLastItem ? 'summary' : { itemIndex: step.itemIndex + 1 })
+      setStep({ itemIndex: step.itemIndex, postSuperset: true })
     }
   }
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--color-bg)' }}>
-      {/* Sticky progress header */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--color-surface)', backdropFilter: 'blur(8px)', borderBottom: '1px solid var(--color-border)', padding: isMobile ? '12px 14px' : '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <button
           onClick={() => setStep(step.itemIndex === 0 ? 'intro' : { itemIndex: step.itemIndex - 1 })}
@@ -1265,7 +1355,6 @@ if (item.type === 'superset') {
       </div>
 
       <div style={{ maxWidth: '512px', margin: '0 auto', padding: '16px', paddingBottom: 'max(2rem,env(safe-area-inset-bottom))' }}>
-        {/* Superset badge + round */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(41,181,204,0.10)', border: '1px solid rgba(41,181,204,0.22)', color: '#29B5CC', borderRadius: '999px', padding: '3px 10px', fontSize: '11px', fontWeight: 700 }}>
             ⚡ {group.label}
@@ -1273,16 +1362,13 @@ if (item.type === 'superset') {
           <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>Round {currentRound + 1} of {group.set_count}</span>
         </div>
 
-        {/* Exercise cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-          {superExs.map((exItem, exIdx) => {
-            const pe = exItem
+          {superExs.map((pe, exIdx) => {
             const roundData = pe.setsData[currentRound] ?? { reps: '', weight: '' }
-            const [videoOpen, setVideoOpen] = useState(false)
+            const videoOpen = openVideoId === pe.id
             return (
               <div key={pe.id} style={{ ...CARD, padding: 0, overflow: 'hidden', position: 'relative' }}>
                 <ShimmerLine />
-                {/* Exercise header */}
                 <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--color-elevated)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ width: '3px', height: '32px', background: '#29B5CC', borderRadius: '2px', opacity: 0.5, flexShrink: 0 }} />
@@ -1294,7 +1380,7 @@ if (item.type === 'superset') {
                     </div>
                     {pe.exercises?.video_url && (
                       <button
-                        onClick={() => setVideoOpen(v => !v)}
+                        onClick={() => setOpenVideoId(v => v === pe.id ? null : pe.id)}
                         style={{ fontSize: '11px', color: 'var(--color-muted)', border: '1px solid var(--color-border)', borderRadius: '5px', padding: '3px 7px', background: 'none', cursor: 'pointer' }}
                       >
                         {videoOpen ? '▲ Video' : '▶ Video'}
@@ -1312,7 +1398,6 @@ if (item.type === 'superset') {
                     </div>
                   )}
                 </div>
-                {/* Reps / weight inputs */}
                 <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
@@ -1349,7 +1434,7 @@ if (item.type === 'superset') {
           style={{ width: '100%', padding: '13px', background: '#29B5CC', color: '#000', fontWeight: 700, fontSize: '14px', border: 'none', borderRadius: '10px', cursor: 'pointer', fontFamily: 'inherit' }}
         >
           {isLastRound
-            ? (isLastItem ? 'Complete round → finish session' : 'Complete round → next exercise')
+            ? 'Complete round → how did it feel?'
             : `Complete round ${currentRound + 1} → rest`}
         </button>
       </div>
@@ -1358,114 +1443,38 @@ if (item.type === 'superset') {
 }
 ```
 
-**Note:** Using `useState` inside `.map()` is not allowed in React. Replace the per-card `videoOpen` state with a single `openVideoId` state at the component level:
+- [ ] **Step 5: Update `handleComplete` to log all exercises from sessionItems**
+
+Replace the `exercises` iteration in `handleComplete` with `sessionItems`-based collection:
 
 ```js
-const [openVideoId, setOpenVideoId] = useState(null)
+const allExerciseEntries = sessionItems.flatMap(item =>
+  item.type === 'exercise' ? [item.ex] : item.exercises
+)
 ```
 
-Then in the exercise card render:
-```jsx
-// Replace: const [videoOpen, setVideoOpen] = useState(false)
-// With:
-const videoOpen = openVideoId === pe.id
-// Replace: onClick={() => setVideoOpen(v => !v)}
-// With:
-onClick={() => setOpenVideoId(v => v === pe.id ? null : pe.id)}
-```
+Replace `for (const ex of exercises)` (video upload loop) with `for (const ex of allExerciseEntries)`.
 
-- [ ] **Step 3: Add the rest screen**
+Replace `exercises.map(ex => ({...}))` (the exercise_logs insert) with `allExerciseEntries.map(ex => ({...}))`. The object shape inside is identical — no other changes needed.
 
-After the superset block (still inside `if (step && typeof step === 'object')`), add a check for `step.restAfterRound`:
-
-```jsx
-if (step && typeof step === 'object' && step.restAfterRound !== undefined) {
-  const item = sessionItems[step.itemIndex]
-  const { group, exercises: superExs } = item
-  const completedRound = step.restAfterRound
-  const nextRound = item.currentRound  // already incremented by advanceSupersetRound
-
-  return (
-    <div style={{ minHeight: '100dvh', background: 'var(--color-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-      <div style={{ ...CARD, maxWidth: '400px', width: '100%', position: 'relative' }}>
-        <ShimmerLine />
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(41,181,204,0.10)', border: '1px solid rgba(41,181,204,0.22)', color: '#29B5CC', borderRadius: '999px', padding: '3px 10px', fontSize: '11px', fontWeight: 700 }}>
-            ⚡ {group.label} — Round {completedRound + 1} complete
-          </span>
-        </div>
-
-        <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '4px' }}>Rest</div>
-        <div style={{ fontSize: '13px', color: 'var(--color-muted)', marginBottom: '16px' }}>Round {nextRound + 1} of {group.set_count} starts next</div>
-
-        {/* Round summary */}
-        <div style={{ background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '10px', overflow: 'hidden', marginBottom: '16px' }}>
-          {superExs.map((pe, i) => {
-            const logged = pe.setsData[completedRound] ?? {}
-            return (
-              <div
-                key={pe.id}
-                style={{ padding: '9px 12px', borderBottom: i < superExs.length - 1 ? '1px solid var(--color-elevated)' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}
-              >
-                <span style={{ color: 'var(--color-text)' }}>{pe.exercises?.name}</span>
-                <span style={{ color: '#29B5CC', fontWeight: 600 }}>
-                  {logged.reps || pe.reps} {pe.measurement_type === 'seconds' ? 'sec' : 'reps'}
-                  {logged.weight ? ` · ${formatWeight(toCanonical(parseFloat(logged.weight), weightUnit), weightUnit)}` : ''} ✓
-                </span>
-              </div>
-            )
-          })}
-        </div>
-
-        <button
-          onClick={() => setStep({ itemIndex: step.itemIndex })}
-          style={{ width: '100%', padding: '13px', background: '#29B5CC', color: '#000', fontWeight: 700, fontSize: '14px', border: 'none', borderRadius: '10px', cursor: 'pointer', fontFamily: 'inherit' }}
-        >
-          Start Round {nextRound + 1} →
-        </button>
-      </div>
-    </div>
-  )
-}
-```
-
-- [ ] **Step 4: Update `handleComplete` to log all exercises from sessionItems**
-
-In `handleComplete`, replace the loop that iterates `exercises` with one that iterates `sessionItems`:
-
-```js
-// Collect all exercise entries from sessionItems
-const allExerciseEntries = sessionItems.flatMap(item => {
-  if (item.type === 'exercise') return [item.ex]
-  return item.exercises // superset members
-})
-
-// Replace: exercises.map(ex => ({...}))
-// With: allExerciseEntries.map(ex => ({...}))
-// (the object shape inside .map is identical — no other changes needed)
-```
-
-Also update the video upload loop from `for (const ex of exercises)` to `for (const ex of allExerciseEntries)`.
-
-- [ ] **Step 5: Run dev server and test with a superset session**
+- [ ] **Step 6: Run dev server and test with a superset session**
 
 ```
 npm run dev
 ```
 
-Log in as a client. Open a session that has a superset (create one in the therapist builder first). Verify:
-- Intro shows correctly
-- Superset item shows the round screen with all exercises visible
-- Each exercise has reps/weight inputs
-- "▶ Video" toggles the video inline
-- "Complete round → rest" transitions to the rest screen
-- Rest screen shows the logged values from the completed round
+Create a superset session in the therapist builder, then log in as a client and open it. Verify:
+- Round screen shows all exercises with targets and reps/weight inputs
+- "▶ Video" toggles the video (only one open at a time)
+- "Complete round → rest" transitions to rest screen with raw logged values
+- Rest screen shows `logged.weight ${weightUnit}` (no double-conversion)
 - "Start Round N+1 →" returns to the round screen
-- After the final round, advances to the next item (or summary)
-- Completing the session logs all exercises correctly (check Supabase exercise_logs)
+- After final round, "Complete round → how did it feel?" transitions to post-superset screen
+- Post-superset screen shows pain rating, notes, and video upload per exercise
+- Pain ≥7 shows the acknowledgement gate and disables "Done"
+- Completing session logs all exercises to Supabase `exercise_logs` with correct `pain_rating`, `client_notes`, `sets_data`
 
-- [ ] **Step 6: Run tests**
+- [ ] **Step 7: Run tests**
 
 ```
 npm test
@@ -1473,11 +1482,11 @@ npm test
 
 Expected: all tests pass including the 7 `buildSessionItems` tests.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```
 git add src/pages/client/SessionWizard.jsx
-git commit -m "feat: SessionWizard — superset round screen, rest screen, updated completion logging"
+git commit -m "feat: SessionWizard — superset round/rest/post-superset screens, completion logging"
 ```
 
 ---
@@ -1495,29 +1504,34 @@ git commit -m "feat: SessionWizard — superset round screen, rest screen, updat
 | §2.2 "Add superset" button | Task 5 Step 5 |
 | §2.3 SupersetPickerModal create mode | Task 3 |
 | §2.3 SupersetPickerModal edit mode | Task 3 |
+| §2.3 flat-only v1 (no prescription_exercise_sets for superset members) | Task 3 Step 1 (`handleCreate`) |
 | §2.4 superset block rendering | Task 5 Steps 1–3 |
 | §2.4 Edit action | Task 5 Step 5 (onAdd edit branch) |
 | §2.4 Ungroup action | Task 5 Step 4 |
-| §2.4 "+ Add exercise to superset" | Task 5 Step 3 (opens edit modal) |
-| §2.5 order_index management | Task 4 Step 5 (computeNextOrderIndex) |
+| §2.4 sets guard in saveEdit | Task 4 Step 8 |
+| §2.5 order_index management | Task 4 Step 5 |
 | §3.1 updated wizard fetch | Task 6 Step 3 |
 | §3.2 sessionItems model | Task 6 Step 4 |
 | §3.3 step state shape | Task 6 Steps 5–7 |
-| §3.4 superset round screen | Task 7 Step 2 |
-| §3.4 rest screen | Task 7 Step 3 |
+| §3.4 superset round screen | Task 7 Step 4 |
+| §3.4 rest screen (raw values, no conversion) | Task 7 Step 2 |
+| §3.4.1 post-superset pain/notes/video + high-pain gate | Task 7 Step 3 |
 | §3.5 progress bar | Task 6 Steps 8–9 |
-| §3.6 completion logging | Task 7 Step 4 |
-| §5 label auto-assignment | Task 3 (getLetter helper) |
-| §6 edge cases | Handled across Tasks 3 (min 2 guard), 5 (ungroup log guard), 7 (single-round no rest) |
+| §3.6 completion logging via allExerciseEntries | Task 7 Step 5 |
+| §5 label auto-assignment | Task 3 (`getLetter`) |
+| §6 edge cases | Tasks 3 (min 2), 5 (ungroup log guard), 7 (single-round goes to post-superset) |
 
-All spec sections covered. No gaps.
+All spec sections covered.
 
 **Placeholder scan:** No TBD, TODO, or incomplete steps. All code is concrete.
 
 **Type consistency:**
-- `buildSessionItems` defined in Task 2; consumed in Tasks 4 (SessionEdit) and 6 (SessionWizard) — signatures match.
-- `computeNextOrderIndex(groups, exercises)` defined and called in Task 4 — used again in Task 5 Step 5 for modal prop — consistent.
-- `updateSupersetSetField(itemIndex, exIndex, round, field, value)` defined in Task 7 Step 1; called in Task 7 Step 2 — consistent.
-- `advanceSupersetRound(itemIndex)` defined in Task 7 Step 1; called in Task 7 Step 2 — consistent.
-- `onAdd(group, newPeRows, removedPeIds)` signature defined in Task 3 (`handleCreate` passes 2 args, `handleEdit` passes 3); consumed in Task 5 Step 5 with `removedPeIds = []` default — consistent.
-- `openVideoId` state added in Task 7 Step 2 note — must be added to SessionWizard state declarations in Task 6 Step 1. **Adding this now:** add `const [openVideoId, setOpenVideoId] = useState(null)` to Task 6 Step 2 (alongside `sessionItems` state).
+- `buildSessionItems` — defined Task 2, consumed Tasks 4 + 6 — signatures match
+- `computeNextOrderIndex(groups, exercises)` — defined Task 4 Step 5, used Task 4 Step 6 and Task 5 Step 5 — consistent
+- `updateSupersetSetField(itemIndex, exIndex, round, field, value)` — defined Task 7 Step 1, called Task 7 Step 4 — consistent
+- `updateSupersetExField(itemIndex, exIndex, field, value)` — defined Task 7 Step 1, called Task 7 Steps 3 and 4 — consistent
+- `advanceSupersetRound(itemIndex)` — defined Task 7 Step 1, called Task 7 Step 4 — consistent
+- `onAdd(group, newPeRows, removedPeIds?)` — Task 3 `handleCreate` passes 2 args, `handleEdit` passes 3; Task 5 Step 5 uses `removedPeIds = []` default — consistent
+- `openVideoId` / `setOpenVideoId` — declared Task 6 Step 2, used Task 7 Step 4 — consistent
+- Rest screen uses `logged.weight ... weightUnit` (raw string, no conversion) — consistent with spec §3.4 note
+- Target display in round screen uses `formatWeight(pe.weight, weightUnit)` (pe.weight is canonical kg from DB) — correct, consistent with standalone exercise target display
