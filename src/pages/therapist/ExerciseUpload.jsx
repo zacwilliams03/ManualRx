@@ -14,7 +14,7 @@ const CATEGORIES = ['Cervical', 'Thoracic', 'Lumbar', 'Shoulder', 'Elbow', 'Wris
 
 function extractYouTubeId(url) {
   try {
-    if (url.includes('watch?v=')) {
+    if (url.includes('youtube.com/watch')) {
       return new URL(url).searchParams.get('v') || null
     }
     if (url.includes('youtu.be/')) {
