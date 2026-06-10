@@ -19,8 +19,8 @@ export const SHIMMER = {
 
 export const SECTION_LABEL = {
   fontSize: '11px',
-  fontWeight: 600,
+  fontWeight: 700,
   textTransform: 'uppercase',
-  letterSpacing: '0.08em',
+  letterSpacing: '0.09em',
   color: 'var(--color-subtle)',
 }
