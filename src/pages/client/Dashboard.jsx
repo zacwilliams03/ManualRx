@@ -263,7 +263,7 @@ export default function ClientDashboard() {
   const firstName = profile?.name?.split(' ')[0] ?? ''
 
   const datedSessions = activeSessions.filter(s => s.start_date && s.duration_weeks)
-  const anchorSession = datedSessions.sort((a, b) => new Date(a.start_date) - new Date(b.start_date))[0]
+  const anchorSession = [...datedSessions].sort((a, b) => new Date(a.start_date) - new Date(b.start_date))[0]
   const weekN = anchorSession ? currentProgramWeek(anchorSession.start_date) : null
   const weekM = anchorSession?.duration_weeks ?? null
   const heroSubtitle = weekN && weekM
@@ -416,7 +416,6 @@ export default function ClientDashboard() {
                   ...CARD,
                   opacity: isFuture ? 0.45 : 1,
                   borderColor: isRecentlyCompleted(s) && !isFuture ? 'rgba(41,181,204,0.20)' : undefined,
-                  transition: 'border-color 0.2s',
                 }}
                 onMouseEnter={!isFuture ? (e => (e.currentTarget.style.borderColor = 'rgba(41,181,204,0.18)')) : undefined}
                 onMouseLeave={!isFuture ? (e => (e.currentTarget.style.borderColor = isRecentlyCompleted(s) ? 'rgba(41,181,204,0.20)' : 'var(--color-border)')) : undefined}
@@ -486,7 +485,7 @@ export default function ClientDashboard() {
                       aria-label={s.week_number ? `Locked until Week ${s.week_number}` : 'Not yet available'}
                       style={{
                         flex: 1, padding: '11px', borderRadius: '10px',
-                        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(100,160,255,0.08)',
+                        background: 'var(--color-elevated)', border: '1px solid var(--color-border)',
                         color: 'var(--color-subtle)', fontSize: '13px', fontWeight: 600,
                         cursor: 'default', fontFamily: 'inherit',
                       }}
@@ -513,7 +512,7 @@ export default function ClientDashboard() {
                         title="Download PDF"
                         style={{
                           width: '38px', height: '38px', flexShrink: 0,
-                          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(100,160,255,0.10)',
+                          background: 'var(--color-elevated)', border: '1px solid var(--color-border)',
                           borderRadius: '9px', color: 'var(--color-subtle)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           cursor: downloadingId !== null ? 'default' : 'pointer',
@@ -547,7 +546,7 @@ export default function ClientDashboard() {
                         title="Download PDF"
                         style={{
                           width: '38px', height: '38px', flexShrink: 0,
-                          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(100,160,255,0.10)',
+                          background: 'var(--color-elevated)', border: '1px solid var(--color-border)',
                           borderRadius: '9px', color: 'var(--color-subtle)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           cursor: downloadingId !== null ? 'default' : 'pointer',
