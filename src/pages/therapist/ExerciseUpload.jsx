@@ -220,7 +220,7 @@ export default function ExerciseUpload() {
               opacity: uploading ? 0.6 : 1,
             }}
           >
-            {uploading ? `Saving… ${uploadProgress}%` : 'Save Exercise'}
+            {uploading ? (videoTab === 'file' ? `Saving… ${uploadProgress}%` : 'Saving…') : 'Save Exercise'}
           </button>
         }
       />
@@ -334,19 +334,67 @@ export default function ExerciseUpload() {
 
             {/* Video */}
             <div>
-              <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '6px' }}>Video file</label>
-              <input
-                type="file"
-                accept="video/*"
-                onChange={e => setVideoFile(e.target.files[0] ?? null)}
-                style={{ fontSize: '13px', color: 'var(--color-muted)', width: '100%' }}
-              />
-              <p style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '4px' }}>MP4, MOV, or WebM recommended</p>
+              <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '8px' }}>
+                Video <span style={{ color: 'var(--color-subtle)' }}>(optional)</span>
+              </label>
+
+              {/* Tab switcher */}
+              <div style={{ display: 'flex', marginBottom: '10px', borderRadius: '7px', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+                {[{ value: 'file', label: 'Upload file' }, { value: 'youtube', label: 'YouTube link' }].map(tab => (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    onClick={() => {
+                      setVideoTab(tab.value)
+                      if (tab.value === 'file') setYoutubeUrl('')
+                      if (tab.value === 'youtube') setVideoFile(null)
+                    }}
+                    style={{
+                      flex: 1, padding: '7px 12px', fontSize: '12px', fontWeight: 500,
+                      cursor: 'pointer', border: 'none',
+                      background: videoTab === tab.value ? '#29B5CC' : 'var(--color-elevated)',
+                      color: videoTab === tab.value ? '#000' : 'var(--color-muted)',
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {videoTab === 'file' ? (
+                <>
+                  <input
+                    type="file"
+                    accept="video/*"
+                    onChange={e => setVideoFile(e.target.files[0] ?? null)}
+                    style={{ fontSize: '13px', color: 'var(--color-muted)', width: '100%' }}
+                  />
+                  <p style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '4px' }}>MP4, MOV, or WebM recommended</p>
+                </>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    placeholder="https://youtube.com/watch?v=..."
+                    value={youtubeUrl}
+                    onChange={e => setYoutubeUrl(e.target.value)}
+                    style={{ width: '100%', padding: '8px 14px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                  {youtubeUrl && !isValidYouTubeUrl(youtubeUrl) && (
+                    <p style={{ fontSize: '11px', color: 'var(--color-danger)', marginTop: '4px' }}>Please enter a valid YouTube URL</p>
+                  )}
+                  {isValidYouTubeUrl(youtubeUrl) && (
+                    <div style={{ marginTop: '10px', borderRadius: '7px', overflow: 'hidden' }}>
+                      <VideoPlayer url={youtubeUrl} />
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {error && <p style={{ fontSize: '13px', color: 'var(--color-danger)' }}>{error}</p>}
 
-            {uploading && (
+            {uploading && videoTab === 'file' && (
               <div style={{ height: '4px', background: 'var(--color-border)', borderRadius: '2px', overflow: 'hidden' }}>
                 <div style={{ height: '100%', background: '#29B5CC', width: `${uploadProgress}%`, transition: 'width 0.2s ease', borderRadius: '2px' }} />
               </div>
