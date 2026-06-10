@@ -41,9 +41,21 @@ export default function BottomNav() {
                 prefersReduced ? '' : 'transition-colors',
                 active ? 'text-dark-accent' : 'text-dark-muted hover:text-dark-text',
               ].join(' ')}
-              style={{ minHeight: '56px' }}
+              style={{ minHeight: '56px', position: 'relative' }}
             >
-              <div style={{ position: 'relative' }}>
+              {active && (
+                <span style={{
+                  position: 'absolute',
+                  top: '6px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '36px',
+                  height: '28px',
+                  borderRadius: '10px',
+                  background: 'rgba(41,181,204,0.10)',
+                }} />
+              )}
+              <div style={{ position: 'relative', zIndex: 1 }}>
                 <Icon size={20} strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
                 {showBadge && unreadCount > 0 && (
                   <span style={{
@@ -57,7 +69,12 @@ export default function BottomNav() {
                   }} />
                 )}
               </div>
-              <span className="text-[10px] font-medium leading-none">{label}</span>
+              <span
+                className="text-[10px] font-medium leading-none"
+                style={{ position: 'relative', zIndex: 1 }}
+              >
+                {label}
+              </span>
             </Link>
           )
         })}
