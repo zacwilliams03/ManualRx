@@ -13,6 +13,16 @@ import { CARD, SECTION_LABEL } from '../../components/therapist/styles'
 import ShimmerLine from '../../components/shared/ShimmerLine'
 import VideoPlayer from '../../components/VideoPlayer'
 import useIsMobile from '../../hooks/useIsMobile'
+import { buildSessionItems } from '../../utils/supersetUtils'
+import SupersetPickerModal from '../../components/therapist/SupersetPickerModal'
+
+function computeNextOrderIndex(groups, exercises) {
+  const maxGroup = groups.reduce((m, g) => Math.max(m, g.order_index ?? 0), 0)
+  const maxEx = exercises
+    .filter(pe => pe.group_id == null)
+    .reduce((m, pe) => Math.max(m, pe.order_index ?? 0), 0)
+  return Math.max(maxGroup, maxEx) + 1
+}
 
 export default function SessionEdit() {
   const { clientId, sessionId } = useParams()
@@ -39,18 +49,28 @@ export default function SessionEdit() {
   const [savingEdit, setSavingEdit] = useState(false)
   const [saveEditError, setSaveEditError] = useState(null)
 
+  const [groups, setGroups] = useState([])
+  const [items, setItems] = useState([])
+  const [showSupersetModal, setShowSupersetModal] = useState(false)
+  const [editingSuperset, setEditingSuperset] = useState(null)
+
   useEffect(() => {
     if (profile?.id) fetchData()
   }, [sessionId, profile?.id])
 
   async function fetchData() {
     setLoading(true)
-    const [sessionRes, exercisesRes] = await Promise.all([
+    const [sessionRes, exercisesRes, groupsRes] = await Promise.all([
       supabase.from('prescriptions').select('id, name, frequency_days, start_date, duration_weeks').eq('id', sessionId).eq('therapist_id', profile.id).single(),
       supabase
         .from('prescription_exercises')
-        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
         .eq('prescription_id', sessionId),
+      supabase
+        .from('prescription_exercise_groups')
+        .select('id, label, set_count, order_index, created_at')
+        .eq('prescription_id', sessionId)
+        .order('order_index', { ascending: true }),
     ])
 
     if (sessionRes.error) { setError('Session not found.'); setLoading(false); return }
@@ -77,7 +97,11 @@ export default function SessionEdit() {
     if (exercisesRes.error) {
       setError('Failed to load exercises: ' + exercisesRes.error.message)
     } else {
-      setExercises(exercisesRes.data ?? [])
+      const fetchedExercises = exercisesRes.data ?? []
+      const fetchedGroups = groupsRes.data ?? []
+      setExercises(fetchedExercises)
+      setGroups(fetchedGroups)
+      setItems(buildSessionItems(fetchedGroups, fetchedExercises))
     }
     setLoading(false)
   }
@@ -115,8 +139,9 @@ export default function SessionEdit() {
         tempo_bottom_pause: tempoBottomPause  ?? null,
         tempo_concentric:   tempoConcentric   ?? null,
         tempo_top_pause:    tempoTopPause     ?? null,
+        order_index: computeNextOrderIndex(groups, exercises),
       })
-      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
       .single()
     if (insertError) throw new Error(insertError.message)
 
@@ -132,19 +157,31 @@ export default function SessionEdit() {
       if (setsError) throw new Error(setsError.message)
       const { data: fresh, error: freshError } = await supabase
         .from('prescription_exercises')
-        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
         .eq('id', data.id)
         .single()
       if (freshError || !fresh) throw new Error('Failed to refresh exercise after adding per-set rows.')
-      setExercises(prev => [...prev, fresh])
+      setExercises(prev => {
+        const next = [...prev, fresh]
+        setItems(buildSessionItems(groups, next))
+        return next
+      })
     } else {
-      setExercises(prev => [...prev, data])
+      setExercises(prev => {
+        const next = [...prev, data]
+        setItems(buildSessionItems(groups, next))
+        return next
+      })
     }
   }
 
   async function removeExercise(peId) {
     await supabase.from('prescription_exercises').delete().eq('id', peId)
-    setExercises(prev => prev.filter(e => e.id !== peId))
+    setExercises(prev => {
+      const next = prev.filter(pe => pe.id !== peId)
+      setItems(buildSessionItems(groups, next))
+      return next
+    })
   }
 
   function startEdit(pe) {
@@ -154,6 +191,7 @@ export default function SessionEdit() {
     setEditValues({
       sets: String(pe.sets),
       reps: String(pe.reps ?? ''),
+      groupId: pe.group_id ?? null,
       weight: pe.weight ? String(parseFloat(fromCanonical(pe.weight, weightUnit).toFixed(1))) : '',
       notes: pe.therapist_notes ?? '',
       tempoEnabled: pe.tempo_eccentric != null && pe.tempo_bottom_pause != null && pe.tempo_concentric != null && pe.tempo_top_pause != null,
@@ -199,7 +237,7 @@ export default function SessionEdit() {
     const { error: updateError } = await supabase
       .from('prescription_exercises')
       .update({
-        sets: setsCount,
+        ...(v.groupId == null ? { sets: setsCount } : {}),
         reps: v.perSetEnabled ? null : (parseInt(v.reps) || 1),
         weight: v.perSetEnabled ? null : weightVal,
         therapist_notes: v.notes.trim() || null,
@@ -232,7 +270,7 @@ export default function SessionEdit() {
     // Re-fetch to get clean canonical data with child rows (avoids manual unit conversion of local state)
     const { data: fresh, error: freshError } = await supabase
       .from('prescription_exercises')
-      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
       .eq('id', peId)
       .single()
 
@@ -241,7 +279,11 @@ export default function SessionEdit() {
       setSaveEditError('Saved, but failed to refresh — please reload.')
       return
     }
-    setExercises(prev => prev.map(e => e.id === peId ? fresh : e))
+    setExercises(prev => {
+      const next = prev.map(e => e.id === peId ? fresh : e)
+      setItems(buildSessionItems(groups, next))
+      return next
+    })
     setEditingId(null)
   }
 
