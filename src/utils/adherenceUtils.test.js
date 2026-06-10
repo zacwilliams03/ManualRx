@@ -10,6 +10,10 @@ describe('generateSlots', () => {
     expect(generateSlots({ start_date: null }, [])).toEqual([])
   })
 
+  it('returns empty array when frequency_days is 0', () => {
+    expect(generateSlots({ frequency_days: 0, start_date: null }, [])).toEqual([])
+  })
+
   it('slot count is Math.floor(14 / frequency_days) for weekly prescription', () => {
     const slots = generateSlots({ frequency_days: 7, start_date: null }, [])
     expect(slots).toHaveLength(2)
@@ -35,10 +39,24 @@ describe('generateSlots', () => {
     expect(slots[0].status).toBe('done')
   })
 
-  it('past slot is missed when no log exists in that window', () => {
+  it('past slot is missed when no log exists and start_date is null', () => {
     // start_date: null is load-bearing here — it disables the start-gate check,
     // making slot[1] always 'missed' regardless of calendar date.
     const slots = generateSlots({ frequency_days: 7, start_date: null }, [])
+    expect(slots[1].status).toBe('missed')
+  })
+
+  it('past slot is missed when log falls exactly on window boundary (windowEnd is exclusive)', () => {
+    // windowEnd for slot 1 (weekly) = today - 7 days at midnight
+    // A log at exactly that timestamp should NOT count for slot 1 (exclusive upper bound)
+    const windowEnd = new Date()
+    windowEnd.setHours(0, 0, 0, 0)
+    windowEnd.setDate(windowEnd.getDate() - 7)
+    const slots = generateSlots(
+      { frequency_days: 7, start_date: null },
+      [{ completed_at: windowEnd.toISOString() }]
+    )
+    // windowEnd is the boundary between slot 1 and slot 0; it belongs to slot 0's window
     expect(slots[1].status).toBe('missed')
   })
 
