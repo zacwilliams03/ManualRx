@@ -18,10 +18,10 @@ function extractYouTubeId(url) {
       return new URL(url).searchParams.get('v') || null
     }
     if (url.includes('youtu.be/')) {
-      return url.split('youtu.be/')[1]?.split('?')[0] || null
+      return url.split('youtu.be/')[1]?.split('?')[0]?.split('#')[0] || null
     }
     if (url.includes('youtube.com/shorts/')) {
-      return url.split('youtube.com/shorts/')[1]?.split('?')[0] || null
+      return url.split('youtube.com/shorts/')[1]?.split('?')[0]?.split('#')[0] || null
     }
     return null
   } catch {
@@ -340,7 +340,7 @@ export default function ExerciseUpload() {
 
               {/* Tab switcher */}
               <div style={{ display: 'flex', marginBottom: '10px', borderRadius: '7px', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
-                {[{ value: 'file', label: 'Upload file' }, { value: 'youtube', label: 'YouTube link' }].map(tab => (
+                {[{ value: 'file', label: 'Upload file' }, { value: 'youtube', label: 'YouTube link' }].map((tab, index) => (
                   <button
                     key={tab.value}
                     type="button"
@@ -352,6 +352,7 @@ export default function ExerciseUpload() {
                     style={{
                       flex: 1, padding: '7px 12px', fontSize: '12px', fontWeight: 500,
                       cursor: 'pointer', border: 'none',
+                      borderRight: index === 0 ? '1px solid var(--color-border)' : 'none',
                       background: videoTab === tab.value ? '#29B5CC' : 'var(--color-elevated)',
                       color: videoTab === tab.value ? '#000' : 'var(--color-muted)',
                     }}
