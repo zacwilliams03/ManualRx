@@ -115,16 +115,17 @@ function ClientAdherenceRow({ client, slots, pct, color, navigate }) {
         borderRadius: '8px',
         cursor: 'pointer',
         marginBottom: '2px',
+        transition: 'background 0.15s ease',
       }}
       onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-elevated)')}
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ width: '80px', flexShrink: 0 }}>
         <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {client.name}
         </div>
       </div>
-      <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', maxWidth: '120px' }}>
+      <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', flex: 1 }}>
         {[...slots].reverse().map((slot, i) => (
           <div
             key={i}
@@ -178,9 +179,13 @@ function AdherenceCard({ prescriptions, loading, navigate }) {
   const extraRows = rows.slice(5)
 
   return (
-    <div style={CARD}>
+    <div
+      style={CARD}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(41,181,204,0.18)')}
+      onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--color-border)')}
+    >
       <ShimmerLine />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
         <span style={SECTION_LABEL}>Client Adherence</span>
         {rows.length > 5 && (
           <button
@@ -230,7 +235,7 @@ function AdherenceCard({ prescriptions, loading, navigate }) {
           <LegendDot color="#3d4f6a" label="Missed" />
           <LegendDot outline label="Today" />
         </div>
-        <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>Each dot = 1 due session</span>
+        <span style={{ fontSize: '11px', color: 'var(--color-subtle)', marginLeft: 'auto' }}>Each dot = 1 due session</span>
       </div>
     </div>
   )
@@ -255,7 +260,7 @@ function AlertRow({ alert, onDismiss, navigate }) {
   return (
     <motion.div
       exit={{ opacity: 0, x: 12, transition: { duration: 0.22 } }}
-      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', background: bg, border, marginBottom: '6px', cursor: 'pointer' }}
+      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '10px', background: bg, border, marginBottom: '6px', cursor: 'pointer' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => navigate('/therapist/prescribe/' + alert.clientId)}
@@ -302,7 +307,11 @@ function NeedsAttentionCard({ prescriptions, loading, dismissed, setDismissed, p
   }
 
   return (
-    <div style={CARD}>
+    <div
+      style={CARD}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(41,181,204,0.18)')}
+      onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--color-border)')}
+    >
       <ShimmerLine />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
         <span style={SECTION_LABEL}>Needs Attention</span>
@@ -372,11 +381,15 @@ function ActivityFeedCard({ profile, navigate }) {
   }, [profile?.id])
 
   return (
-    <div style={CARD}>
+    <div
+      style={CARD}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(41,181,204,0.18)')}
+      onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--color-border)')}
+    >
       <ShimmerLine />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
         <span style={SECTION_LABEL}>Recent Activity</span>
-        <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>Last 10 sessions</span>
+        <span style={{ fontSize: '12px', color: 'var(--color-subtle)' }}>Last 10 sessions</span>
       </div>
 
       {loading && <div style={{ color: 'var(--color-muted)', fontSize: '13px' }}>Loading...</div>}
@@ -421,17 +434,18 @@ function ActivityFeedCard({ profile, navigate }) {
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
-              padding: '9px 8px',
+              padding: '10px 8px',
               borderRadius: '8px',
               cursor: clientId ? 'pointer' : 'default',
               marginBottom: '2px',
+              transition: 'background 0.15s ease',
             }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-elevated)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
             <div style={{
-              width: '32px',
-              height: '32px',
+              width: '34px',
+              height: '34px',
               borderRadius: '50%',
               background: 'rgba(77,142,247,0.10)',
               border: '1px solid rgba(77,142,247,0.2)',
@@ -455,12 +469,12 @@ function ActivityFeedCard({ profile, navigate }) {
             </div>
             <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
               {rpeColor && (
-                <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '4px', background: rpeColor.bg, color: rpeColor.text }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '5px', background: rpeColor.bg, color: rpeColor.text }}>
                   RPE {log.session_rpe}
                 </span>
               )}
               {painColor && (
-                <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '4px', background: painColor.bg, color: painColor.text }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '5px', background: painColor.bg, color: painColor.text }}>
                   Pain {avgPain}
                 </span>
               )}
@@ -484,12 +498,25 @@ function DashboardHeader({ firstName, greeting, alertCount, activeClientCount })
       <h1 style={{ fontSize: '26px', fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>
         Good {greeting}, {firstName}!
       </h1>
-      <p style={{ marginTop: '4px', fontSize: '14px', color: 'var(--color-muted)' }}>
-        {alertCount > 0
-          ? <><span style={{ color: 'var(--color-danger)' }}>{alertCount} {alertCount === 1 ? 'client needs' : 'clients need'} attention</span>{' · '}<span style={{ color: '#29B5CC' }}>{activeClientCount} active {activeClientCount === 1 ? 'client' : 'clients'}</span></>
-          : <><span style={{ color: '#29B5CC' }}>All clients on track</span>{' · '}<span style={{ color: '#29B5CC' }}>{activeClientCount} active {activeClientCount === 1 ? 'client' : 'clients'}</span></>
-        }
-      </p>
+      <div style={{ marginTop: '4px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        {alertCount > 0 ? (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '5px',
+            background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.22)',
+            color: '#f87171', borderRadius: '999px', padding: '2px 10px 2px 8px',
+            fontSize: '13px', fontWeight: 600,
+          }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f87171', flexShrink: 0 }} />
+            {alertCount} {alertCount === 1 ? 'client needs' : 'clients need'} attention
+          </span>
+        ) : (
+          <span style={{ color: '#29B5CC', fontSize: '13px' }}>All clients on track</span>
+        )}
+        <span style={{ color: '#333' }}>·</span>
+        <span style={{ color: '#29B5CC', fontSize: '13px' }}>
+          {activeClientCount} active {activeClientCount === 1 ? 'client' : 'clients'}
+        </span>
+      </div>
     </div>
   )
 }
