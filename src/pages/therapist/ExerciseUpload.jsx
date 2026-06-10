@@ -70,7 +70,16 @@ export default function ExerciseUpload() {
 
     let publicUrl = null
 
-    if (videoFile) {
+    if (videoTab === 'youtube') {
+      if (youtubeUrl && !isValidYouTubeUrl(youtubeUrl)) {
+        setError('Please enter a valid YouTube URL.')
+        setUploading(false)
+        return
+      }
+      if (youtubeUrl && isValidYouTubeUrl(youtubeUrl)) {
+        publicUrl = youtubeUrl
+      }
+    } else if (videoFile) {
       const allowedMimeTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v']
       if (!allowedMimeTypes.includes(videoFile.type)) {
         setError('Invalid file type. Please upload an MP4, WebM, or MOV video.')
@@ -144,6 +153,8 @@ export default function ExerciseUpload() {
     setIsTimed(false)
     setIsBilateral(false)
     setVideoFile(null)
+    setVideoTab('file')
+    setYoutubeUrl('')
     setError(null)
     setUploadedId(null)
     setUploadProgress(0)
