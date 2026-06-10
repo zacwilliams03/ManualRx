@@ -450,7 +450,7 @@ export default function ClientDashboard() {
                 <p style={{ fontSize: '12px', color: 'var(--color-muted)', margin: '0 0 10px' }}>
                   {s.prescription_exercises[0]?.count ?? 0} exercises · {frequencyLabel(s.frequency_days)}
                   {lastDone && !isFuture ? ` · Last done ${lastDone}` : ''}
-                  {isFuture ? ' · Unlocks next week' : ''}
+                  {isFuture ? ` · Unlocks Week ${s.week_number ?? '—'}` : ''}
                 </p>
 
                 {/* Dot progress row — only for non-locked cards.
@@ -470,7 +470,7 @@ export default function ClientDashboard() {
                         }} />
                       ))}
                       <span style={{ fontSize: '10px', color: 'var(--color-subtle)', marginLeft: '4px' }}>
-                        {done} of {total} sessions
+                        {total > 0 ? `${done} of ${total} sessions` : 'No sessions due yet'}
                       </span>
                     </div>
                   )
@@ -482,6 +482,8 @@ export default function ClientDashboard() {
                     <button
                       type="button"
                       disabled
+                      aria-disabled="true"
+                      aria-label={s.week_number ? `Locked until Week ${s.week_number}` : 'Not yet available'}
                       style={{
                         flex: 1, padding: '11px', borderRadius: '10px',
                         background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(100,160,255,0.08)',
