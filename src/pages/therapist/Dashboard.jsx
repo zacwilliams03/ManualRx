@@ -512,7 +512,7 @@ function DashboardHeader({ firstName, greeting, alertCount, activeClientCount })
         ) : (
           <span style={{ color: '#29B5CC', fontSize: '13px' }}>All clients on track</span>
         )}
-        <span style={{ color: '#333' }}>·</span>
+        <span style={{ color: 'var(--color-subtle)' }}>·</span>
         <span style={{ color: '#29B5CC', fontSize: '13px' }}>
           {activeClientCount} active {activeClientCount === 1 ? 'client' : 'clients'}
         </span>
