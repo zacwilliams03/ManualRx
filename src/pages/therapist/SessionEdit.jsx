@@ -70,11 +70,11 @@ export default function SessionEdit() {
       supabase.from('prescriptions').select('id, name, frequency_days, start_date, duration_weeks').eq('id', sessionId).eq('therapist_id', profile.id).single(),
       supabase
         .from('prescription_exercises')
-        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, rest_seconds, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
         .eq('prescription_id', sessionId),
       supabase
         .from('prescription_exercise_groups')
-        .select('id, label, set_count, order_index, created_at')
+        .select('id, label, set_count, order_index, created_at, rest_seconds')
         .eq('prescription_id', sessionId)
         .order('order_index', { ascending: true }),
     ])
@@ -129,7 +129,7 @@ export default function SessionEdit() {
       : `/therapist/prescribe/${clientId}`)
   }
 
-  async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral, tempoEccentric, tempoBottomPause, tempoConcentric, tempoTopPause, perSetSets }) {
+  async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral, tempoEccentric, tempoBottomPause, tempoConcentric, tempoTopPause, perSetSets, restSeconds }) {
     const { data, error: insertError } = await supabase
       .from('prescription_exercises')
       .insert({
@@ -145,9 +145,10 @@ export default function SessionEdit() {
         tempo_bottom_pause: tempoBottomPause  ?? null,
         tempo_concentric:   tempoConcentric   ?? null,
         tempo_top_pause:    tempoTopPause     ?? null,
+        rest_seconds: restSeconds ?? null,
         order_index: computeNextOrderIndex(groups, exercises),
       })
-      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, rest_seconds, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
       .single()
     if (insertError) throw new Error(insertError.message)
 
@@ -163,7 +164,7 @@ export default function SessionEdit() {
       if (setsError) throw new Error(setsError.message)
       const { data: fresh, error: freshError } = await supabase
         .from('prescription_exercises')
-        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, rest_seconds, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
         .eq('id', data.id)
         .single()
       if (freshError || !fresh) throw new Error('Failed to refresh exercise after adding per-set rows.')
@@ -205,6 +206,7 @@ export default function SessionEdit() {
       tempoHold: pe.tempo_bottom_pause != null ? String(pe.tempo_bottom_pause) : '',
       tempoUp: pe.tempo_concentric != null ? String(pe.tempo_concentric) : '',
       tempoTop: pe.tempo_top_pause != null ? String(pe.tempo_top_pause) : '',
+      restSeconds: pe.rest_seconds != null ? String(pe.rest_seconds) : '',
       perSetEnabled: perSetRows.length > 0,
       perSetRows: perSetRows
         .slice().sort((a, b) => a.set_number - b.set_number)
@@ -251,6 +253,9 @@ export default function SessionEdit() {
         tempo_bottom_pause: v.tempoEnabled ? parseInt(v.tempoHold) : null,
         tempo_concentric:   v.tempoEnabled ? parseInt(v.tempoUp)   : null,
         tempo_top_pause:    v.tempoEnabled ? parseInt(v.tempoTop)   : null,
+        rest_seconds: v.restSeconds !== '' && parseInt(v.restSeconds) > 0
+          ? parseInt(v.restSeconds)
+          : null,
       })
       .eq('id', peId)
     if (updateError) { setSavingEdit(false); setSaveEditError(updateError.message || 'Failed to save.'); return }
@@ -276,7 +281,7 @@ export default function SessionEdit() {
     // Re-fetch to get clean canonical data with child rows (avoids manual unit conversion of local state)
     const { data: fresh, error: freshError } = await supabase
       .from('prescription_exercises')
-      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, rest_seconds, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
       .eq('id', peId)
       .single()
 
@@ -347,6 +352,7 @@ export default function SessionEdit() {
             label: g.label,
             set_count: g.set_count,
             order_index: g.order_index,
+            rest_seconds: g.rest_seconds ?? null,
           })
           .select('id')
           .single()
@@ -370,6 +376,7 @@ export default function SessionEdit() {
             tempo_bottom_pause: pe.tempo_bottom_pause ?? null,
             tempo_concentric:   pe.tempo_concentric   ?? null,
             tempo_top_pause:    pe.tempo_top_pause    ?? null,
+            rest_seconds: pe.rest_seconds ?? null,
             group_id: pe.group_id ? (groupIdMap[pe.group_id] ?? null) : null,
             position_in_group: pe.position_in_group ?? null,
             order_index: pe.order_index ?? null,
@@ -602,6 +609,25 @@ export default function SessionEdit() {
               )}
               {saveEditError && <p style={{ fontSize: '12px', color: 'var(--color-danger)', margin: '4px 0 0' }}>{saveEditError}</p>}
             </div>
+            {pe.group_id == null && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', flex: 1 }}>
+                  Rest between sets <span style={{ fontWeight: 400, color: 'var(--color-subtle)' }}>(optional)</span>
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <input
+                    type="number"
+                    min="0"
+                    step="5"
+                    value={editValues.restSeconds ?? ''}
+                    onChange={e => setEditValues(v => ({ ...v, restSeconds: e.target.value }))}
+                    placeholder="—"
+                    style={{ width: '64px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark', textAlign: 'center' }}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>sec</span>
+                </div>
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 onClick={() => saveEdit(pe.id)}
