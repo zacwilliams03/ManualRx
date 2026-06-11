@@ -7,7 +7,7 @@ const btnBase = {
   border: 'none', borderRadius: '7px', padding: '8px 14px',
   fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
 }
-const primaryBtn = { ...btnBase, background: 'rgba(41,181,204,0.12)', border: '1px solid rgba(41,181,204,0.3)', color: 'var(--color-accent)' }
+const primaryBtn = { ...btnBase, background: 'var(--color-accent-bg)', border: '1px solid rgba(41,181,204,0.3)', color: 'var(--color-accent)' }
 const resetLink = { background: 'none', border: 'none', fontSize: '12px', color: 'var(--color-muted)', cursor: 'pointer', padding: '4px 8px', fontFamily: 'inherit' }
 
 /**
