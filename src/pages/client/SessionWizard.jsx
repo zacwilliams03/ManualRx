@@ -7,6 +7,7 @@ import useIsMobile from '../../hooks/useIsMobile'
 import { toCanonical, fromCanonical, formatWeight } from '../../utils/weightUtils'
 import { formatTempo } from '../../utils/formatTempo'
 import VideoPlayer from '../../components/VideoPlayer'
+import SetTimer from '../../components/client/SetTimer'
 import { motion } from 'framer-motion'
 import { CARD } from '../../components/therapist/styles'
 import ShimmerLine from '../../components/shared/ShimmerLine'
@@ -834,36 +835,77 @@ export default function SessionWizard() {
                 <span style={{ fontSize: '13px', color: 'var(--color-subtle)' }}>of {setsData.length}</span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
-                    {ex.measurement_type === 'seconds' ? 'Seconds' : 'Reps'}
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={currentSetData.reps}
-                    onChange={e => updateSetField(exIdx, currentSet, 'reps', e.target.value)}
-                    placeholder={ex.reps ? String(ex.reps) : '—'}
-                    style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+              {ex.measurement_type === 'seconds' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <SetTimer
+                    key={currentSet}
+                    targetSeconds={Number(ex.reps) || 0}
+                    onComplete={secs => updateSetField(exIdx, currentSet, 'reps', String(secs))}
+                    onReset={() => updateSetField(exIdx, currentSet, 'reps', '')}
                   />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
+                        Actual (sec)
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={currentSetData.reps}
+                        onChange={e => updateSetField(exIdx, currentSet, 'reps', e.target.value)}
+                        placeholder={ex.reps ? String(ex.reps) : '—'}
+                        style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
+                        Weight <span style={{ fontWeight: 400 }}>({weightUnit}, optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9.]*"
+                        value={currentSetData.weight}
+                        onChange={e => updateSetField(exIdx, currentSet, 'weight', e.target.value)}
+                        placeholder={ex.weight ? String(parseFloat(fromCanonical(ex.weight, weightUnit).toFixed(1))) : '—'}
+                        style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
-                    Weight <span style={{ fontWeight: 400 }}>({weightUnit}, optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9.]*"
-                    value={currentSetData.weight}
-                    onChange={e => updateSetField(exIdx, currentSet, 'weight', e.target.value)}
-                    placeholder={ex.weight ? String(parseFloat(fromCanonical(ex.weight, weightUnit).toFixed(1))) : '—'}
-                    style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
-                  />
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
+                      Reps
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={currentSetData.reps}
+                      onChange={e => updateSetField(exIdx, currentSet, 'reps', e.target.value)}
+                      placeholder={ex.reps ? String(ex.reps) : '—'}
+                      style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
+                      Weight <span style={{ fontWeight: 400 }}>({weightUnit}, optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      pattern="[0-9.]*"
+                      value={currentSetData.weight}
+                      onChange={e => updateSetField(exIdx, currentSet, 'weight', e.target.value)}
+                      placeholder={ex.weight ? String(parseFloat(fromCanonical(ex.weight, weightUnit).toFixed(1))) : '—'}
+                      style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <button
                 type="button"
