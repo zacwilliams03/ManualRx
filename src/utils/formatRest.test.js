@@ -14,6 +14,10 @@ describe('formatRest', () => {
     expect(formatRest(0)).toBeNull()
   })
 
+  it('returns null for NaN', () => {
+    expect(formatRest(NaN)).toBeNull()
+  })
+
   it('formats seconds under 60', () => {
     expect(formatRest(30)).toBe('30s')
     expect(formatRest(45)).toBe('45s')

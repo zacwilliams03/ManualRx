@@ -1,5 +1,5 @@
 export function formatRest(seconds) {
-  if (!seconds) return null
+  if (!seconds || typeof seconds !== 'number' || isNaN(seconds)) return null
   if (seconds < 60) return `${seconds}s`
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
