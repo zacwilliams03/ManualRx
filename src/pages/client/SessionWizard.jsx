@@ -395,7 +395,7 @@ export default function SessionWizard() {
               return (
                 <div
                   key={pe.id}
-                  style={{ padding: '9px 12px', borderBottom: i < superExs.length - 1 ? '1px solid var(--color-elevated)' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}
+                  style={{ padding: '9px 12px', borderBottom: i < superExs.length - 1 ? '1px solid var(--color-border)' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}
                 >
                   <span style={{ color: 'var(--color-text)' }}>{pe.exercises?.name}</span>
                   <span style={{ color: '#29B5CC', fontWeight: 600 }}>
@@ -1010,50 +1010,63 @@ export default function SessionWizard() {
         <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-text)', margin: 0, letterSpacing: '-0.02em' }}>Session summary</h2>
 
         {/* Exercise recap — glass card */}
-        <div style={{ ...CARD, padding: 0, position: 'relative', overflow: 'hidden' }}>
-          <ShimmerLine />
-          {exercises.map((ex, i) => (
-            <div
-              key={ex.id}
-              style={{
-                padding: '12px 16px',
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                gap: '12px',
-                borderBottom: i < exercises.length - 1 ? '1px solid var(--color-elevated)' : 'none',
-              }}
-            >
-              <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {ex.exercises?.name ?? 'Exercise'}
-                </p>
-                <p style={{ marginTop: '2px', fontSize: '11px', color: 'var(--color-muted)', margin: '2px 0 0' }}>
-                  {ex.setsData.length} set{ex.setsData.length !== 1 ? 's' : ''} completed
-                </p>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                {ex.painRating !== null && (
-                  <p style={{ fontSize: '11px', color: 'var(--color-muted)', margin: 0 }}>Pain: {ex.painRating}/10</p>
-                )}
-                {ex.videoFile && (
-                  <p style={{ marginTop: '2px', fontSize: '11px', color: 'var(--color-success)', margin: '2px 0 0' }}>Video attached</p>
-                )}
-                <button
-                  onClick={() => {
-                    updateEx(i, 'allSetsDone', false)
-                    updateEx(i, 'currentSet', 0)
-                    const itemIdx = sessionItems.findIndex(it => it.type === 'exercise' && it.ex.id === ex.id)
-                    setStep({ itemIndex: itemIdx >= 0 ? itemIdx : i })
+        {(() => {
+          const summaryEntries = sessionItems.flatMap((item, idx) =>
+            item.type === 'exercise'
+              ? [{ ex: item.ex, itemIndex: idx, isSuperset: false }]
+              : item.exercises.map(pe => ({ ex: pe, itemIndex: idx, isSuperset: true }))
+          )
+          return (
+            <div style={{ ...CARD, padding: 0, position: 'relative', overflow: 'hidden' }}>
+              <ShimmerLine />
+              {summaryEntries.map(({ ex, itemIndex, isSuperset }, i) => (
+                <div
+                  key={ex.id}
+                  style={{
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    borderBottom: i < summaryEntries.length - 1 ? '1px solid var(--color-border)' : 'none',
                   }}
-                  style={{ marginTop: '2px', fontSize: '11px', color: '#29B5CC', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                 >
-                  Edit
-                </button>
-              </div>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {ex.exercises?.name ?? 'Exercise'}
+                    </p>
+                    <p style={{ marginTop: '2px', fontSize: '11px', color: 'var(--color-muted)', margin: '2px 0 0' }}>
+                      {ex.setsData.length} set{ex.setsData.length !== 1 ? 's' : ''} completed
+                    </p>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    {ex.painRating !== null && (
+                      <p style={{ fontSize: '11px', color: 'var(--color-muted)', margin: 0 }}>Pain: {ex.painRating}/10</p>
+                    )}
+                    {ex.videoFile && (
+                      <p style={{ marginTop: '2px', fontSize: '11px', color: 'var(--color-success)', margin: '2px 0 0' }}>Video attached</p>
+                    )}
+                    <button
+                      onClick={() => {
+                        if (!isSuperset) {
+                          const exArrIdx = exercises.findIndex(e => e.id === ex.id)
+                          if (exArrIdx >= 0) {
+                            updateEx(exArrIdx, 'allSetsDone', false)
+                            updateEx(exArrIdx, 'currentSet', 0)
+                          }
+                        }
+                        setStep({ itemIndex })
+                      }}
+                      style={{ marginTop: '2px', fontSize: '11px', color: '#29B5CC', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )
+        })()}
 
         <ScaleSelector
           label="How hard was the session? (0 = easy, 10 = maximum)"
