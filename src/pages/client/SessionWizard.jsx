@@ -178,14 +178,51 @@ export default function SessionWizard() {
     })
   }
 
+  function updateSupersetSetField(itemIndex, exIndex, round, field, value) {
+    setSessionItems(prev => {
+      const next = [...prev]
+      const item = { ...next[itemIndex] }
+      const exArr = [...item.exercises]
+      const setsData = [...exArr[exIndex].setsData]
+      setsData[round] = { ...setsData[round], [field]: value }
+      exArr[exIndex] = { ...exArr[exIndex], setsData }
+      item.exercises = exArr
+      next[itemIndex] = item
+      return next
+    })
+  }
+
+  function updateSupersetExField(itemIndex, exIndex, field, value) {
+    setSessionItems(prev => {
+      const next = [...prev]
+      const item = { ...next[itemIndex] }
+      const exArr = [...item.exercises]
+      exArr[exIndex] = { ...exArr[exIndex], [field]: value }
+      item.exercises = exArr
+      next[itemIndex] = item
+      return next
+    })
+  }
+
+  function advanceSupersetRound(itemIndex) {
+    setSessionItems(prev => {
+      const next = [...prev]
+      next[itemIndex] = { ...next[itemIndex], currentRound: next[itemIndex].currentRound + 1 }
+      return next
+    })
+  }
+
   async function handleComplete() {
     setSubmitting(true)
     setError(null)
 
     // Upload any staged feedback videos
+    const allExerciseEntries = sessionItems.flatMap(item =>
+      item.type === 'exercise' ? [item.ex] : item.exercises
+    )
     const allowedVideoMimes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v']
     const videoUrls = {}
-    for (const ex of exercises) {
+    for (const ex of allExerciseEntries) {
       if (ex.videoFile) {
         if (!allowedVideoMimes.includes(ex.videoFile.type) || ex.videoFile.size > 100 * 1024 * 1024) continue
         const ext = ex.videoFile.name.split('.').pop()
@@ -216,7 +253,7 @@ export default function SessionWizard() {
     }
 
     const { error: elErr } = await supabase.from('exercise_logs').insert(
-      exercises.map(ex => ({
+      allExerciseEntries.map(ex => ({
         prescription_exercise_id: ex.id,
         client_id: clientId,  // exercise_logs.client_id is FK to clients.id
         session_log_id: sessionLog.id,
@@ -334,14 +371,288 @@ export default function SessionWizard() {
     )
   }
 
+  // ── Rest screen (between superset rounds) ─────────────────────────────────
+  if (step && typeof step === 'object' && step.restAfterRound !== undefined) {
+    const item = sessionItems[step.itemIndex]
+    const { group, exercises: superExs } = item
+    const completedRound = step.restAfterRound
+    const nextRound = item.currentRound  // already incremented by advanceSupersetRound
+
+    return (
+      <div style={{ minHeight: '100dvh', background: 'var(--color-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+        <div style={{ ...CARD, maxWidth: '400px', width: '100%', position: 'relative' }}>
+          <ShimmerLine />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(41,181,204,0.10)', border: '1px solid rgba(41,181,204,0.22)', color: '#29B5CC', borderRadius: '999px', padding: '3px 10px', fontSize: '11px', fontWeight: 700 }}>
+              ⚡ {group.label} — Round {completedRound + 1} complete
+            </span>
+          </div>
+          <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '4px' }}>Rest</div>
+          <div style={{ fontSize: '13px', color: 'var(--color-muted)', marginBottom: '16px' }}>Round {nextRound + 1} of {group.set_count} starts next</div>
+          <div style={{ background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '10px', overflow: 'hidden', marginBottom: '16px' }}>
+            {superExs.map((pe, i) => {
+              const logged = pe.setsData[completedRound] ?? {}
+              return (
+                <div
+                  key={pe.id}
+                  style={{ padding: '9px 12px', borderBottom: i < superExs.length - 1 ? '1px solid var(--color-elevated)' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}
+                >
+                  <span style={{ color: 'var(--color-text)' }}>{pe.exercises?.name}</span>
+                  <span style={{ color: '#29B5CC', fontWeight: 600 }}>
+                    {logged.reps || pe.reps} {pe.measurement_type === 'seconds' ? 'sec' : 'reps'}
+                    {logged.weight ? ` · ${logged.weight} ${weightUnit}` : ''} ✓
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+          <button
+            onClick={() => setStep({ itemIndex: step.itemIndex })}
+            style={{ width: '100%', padding: '13px', background: '#29B5CC', color: '#000', fontWeight: 700, fontSize: '14px', border: 'none', borderRadius: '10px', cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            Start Round {nextRound + 1} →
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Post-superset pain/notes/video screen ──────────────────────────────────
+  if (step && typeof step === 'object' && step.postSuperset === true) {
+    const item = sessionItems[step.itemIndex]
+    const { group, exercises: superExs } = item
+    const isLastItem = step.itemIndex === sessionItems.length - 1
+    const hasHighPain = superExs.some(pe => pe.painRating >= 7)
+
+    return (
+      <div style={{ minHeight: '100dvh', background: 'var(--color-bg)' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--color-surface)', backdropFilter: 'blur(8px)', borderBottom: '1px solid var(--color-border)', padding: isMobile ? '12px 14px' : '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div />
+          <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>⚡ {group.label}</span>
+          <div style={{ flexShrink: 0, overflow: 'hidden' }}>
+            {clinicBrand?.logo_url
+              ? <img src={clinicBrand.logo_url} alt="" style={{ maxHeight: '24px', maxWidth: '80px', objectFit: 'contain' }} />
+              : clinicBrand?.clinic_name
+                ? <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>{clinicBrand.clinic_name}</span>
+                : null}
+          </div>
+        </div>
+
+        <div style={{ maxWidth: '512px', margin: '0 auto', padding: '16px', paddingBottom: 'max(2rem,env(safe-area-inset-bottom))' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '4px' }}>How did it feel?</h2>
+          <p style={{ fontSize: '13px', color: 'var(--color-muted)', marginBottom: '20px' }}>Rate each exercise below</p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+            {superExs.map((pe, exIdx) => (
+              <div key={pe.id} style={{ ...CARD, padding: 0, overflow: 'hidden', position: 'relative' }}>
+                <ShimmerLine />
+                <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text)' }}>{pe.exercises?.name}</div>
+
+                  <ScaleSelector
+                    label="Pain (0 = none, 10 = severe)"
+                    value={pe.painRating}
+                    onChange={v => updateSupersetExField(step.itemIndex, exIdx, 'painRating', v)}
+                  />
+
+                  <textarea
+                    value={pe.clientNotes}
+                    onChange={e => updateSupersetExField(step.itemIndex, exIdx, 'clientNotes', e.target.value)}
+                    placeholder="Notes (optional)"
+                    rows={2}
+                    style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '8px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                  />
+
+                  <div>
+                    {pe.videoFile ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px' }}>
+                        <span style={{ fontSize: '13px', color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{pe.videoFile.name}</span>
+                        <button onClick={() => updateSupersetExField(step.itemIndex, exIdx, 'videoFile', null)} style={{ fontSize: '12px', color: 'var(--color-danger)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>Remove</button>
+                      </div>
+                    ) : (
+                      <label style={{ display: 'block', cursor: 'pointer' }}>
+                        <div style={{ padding: '8px 12px', background: 'var(--color-elevated)', border: '1px dashed var(--color-border)', borderRadius: '7px', fontSize: '12px', color: 'var(--color-muted)', textAlign: 'center' }}>
+                          Upload feedback video (optional)
+                        </div>
+                        <input
+                          type="file"
+                          accept="video/*"
+                          style={{ display: 'none' }}
+                          onChange={e => {
+                            const file = e.target.files?.[0]
+                            if (file) updateSupersetExField(step.itemIndex, exIdx, 'videoFile', file)
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {hasHighPain && (
+            <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px' }}>
+              <p style={{ fontSize: '13px', color: '#f87171', fontWeight: 600, margin: '0 0 8px' }}>High pain reported — please acknowledge before continuing.</p>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={painAcknowledged}
+                  onChange={e => setPainAcknowledged(e.target.checked)}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '13px', color: 'var(--color-text)' }}>I understand — this will be flagged to my therapist.</span>
+              </label>
+            </div>
+          )}
+
+          <button
+            onClick={() => {
+              setPainAcknowledged(false)
+              setStep(isLastItem ? 'summary' : { itemIndex: step.itemIndex + 1 })
+            }}
+            disabled={hasHighPain && !painAcknowledged}
+            style={{ width: '100%', padding: '13px', background: '#29B5CC', color: '#000', fontWeight: 700, fontSize: '14px', border: 'none', borderRadius: '10px', fontFamily: 'inherit', cursor: hasHighPain && !painAcknowledged ? 'default' : 'pointer', opacity: hasHighPain && !painAcknowledged ? 0.4 : 1 }}
+          >
+            {isLastItem ? 'Done → review session' : 'Done → next exercise'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   // ── Per-exercise / superset step ──────────────────────────────────────────
   if (step && typeof step === 'object' && step.restAfterRound === undefined && step.postSuperset === undefined) {
     const item = sessionItems[step.itemIndex]
     if (!item) return null
 
     if (item.type === 'superset') {
-      // placeholder — rendered in Task 7
-      return <div>Superset screen — Task 7</div>
+      const { group, exercises: superExs, currentRound } = item
+      const isLastRound = currentRound === group.set_count - 1
+
+      function handleCompleteRound() {
+        if (!isLastRound) {
+          advanceSupersetRound(step.itemIndex)
+          setStep({ itemIndex: step.itemIndex, restAfterRound: currentRound })
+        } else {
+          setStep({ itemIndex: step.itemIndex, postSuperset: true })
+        }
+      }
+
+      return (
+        <div style={{ minHeight: '100dvh', background: 'var(--color-bg)' }}>
+          <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--color-surface)', backdropFilter: 'blur(8px)', borderBottom: '1px solid var(--color-border)', padding: isMobile ? '12px 14px' : '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button
+              onClick={() => setStep(step.itemIndex === 0 ? 'intro' : { itemIndex: step.itemIndex - 1 })}
+              style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--color-muted)', cursor: 'pointer' }}
+            >
+              ← Back
+            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {sessionItems.map((_, i) => (
+                  <div key={i} style={{ height: '6px', borderRadius: '9999px', width: sessionItems.length > 8 ? '12px' : '20px', background: i < step.itemIndex ? 'var(--color-border-strong)' : i === step.itemIndex ? '#29B5CC' : 'var(--color-border)', transition: 'background 0.2s' }} />
+                ))}
+              </div>
+              <span style={{ marginTop: '4px', fontSize: '11px', color: 'var(--color-subtle)' }}>
+                {step.itemIndex + 1} / {sessionItems.length}
+              </span>
+            </div>
+            <div style={{ flexShrink: 0, overflow: 'hidden' }}>
+              {clinicBrand?.logo_url
+                ? <img src={clinicBrand.logo_url} alt="" style={{ maxHeight: '24px', maxWidth: '80px', objectFit: 'contain' }} />
+                : clinicBrand?.clinic_name
+                  ? <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>{clinicBrand.clinic_name}</span>
+                  : null}
+            </div>
+          </div>
+
+          <div style={{ maxWidth: '512px', margin: '0 auto', padding: '16px', paddingBottom: 'max(2rem,env(safe-area-inset-bottom))' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(41,181,204,0.10)', border: '1px solid rgba(41,181,204,0.22)', color: '#29B5CC', borderRadius: '999px', padding: '3px 10px', fontSize: '11px', fontWeight: 700 }}>
+                ⚡ {group.label}
+              </span>
+              <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>Round {currentRound + 1} of {group.set_count}</span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+              {superExs.map((pe, exIdx) => {
+                const roundData = pe.setsData[currentRound] ?? { reps: '', weight: '' }
+                const videoOpen = openVideoId === pe.id
+                return (
+                  <div key={pe.id} style={{ ...CARD, padding: 0, overflow: 'hidden', position: 'relative' }}>
+                    <ShimmerLine />
+                    <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--color-elevated)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '3px', height: '32px', background: '#29B5CC', borderRadius: '2px', opacity: 0.5, flexShrink: 0 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text)' }}>{pe.exercises?.name}</div>
+                          <div style={{ fontSize: '12px', color: 'var(--color-muted)', marginTop: '2px' }}>
+                            Target: {pe.reps} {pe.measurement_type === 'seconds' ? 'sec' : 'reps'}{pe.weight ? ` · ${formatWeight(pe.weight, weightUnit)}` : ''}
+                          </div>
+                        </div>
+                        {pe.exercises?.video_url && (
+                          <button
+                            onClick={() => setOpenVideoId(v => v === pe.id ? null : pe.id)}
+                            style={{ fontSize: '11px', color: 'var(--color-muted)', border: '1px solid var(--color-border)', borderRadius: '5px', padding: '3px 7px', background: 'none', cursor: 'pointer' }}
+                          >
+                            {videoOpen ? '▲ Video' : '▶ Video'}
+                          </button>
+                        )}
+                      </div>
+                      {videoOpen && pe.exercises?.video_url && (
+                        <div style={{ marginTop: '10px' }}>
+                          <VideoPlayer url={pe.exercises.video_url} />
+                        </div>
+                      )}
+                      {pe.therapist_notes && (
+                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#29B5CC', background: 'rgba(41,181,204,0.06)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '6px', padding: '6px 10px' }}>
+                          {pe.therapist_notes}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
+                          {pe.measurement_type === 'seconds' ? 'Seconds' : 'Reps'}
+                        </label>
+                        <input
+                          type="text" inputMode="numeric" pattern="[0-9]*"
+                          value={roundData.reps}
+                          onChange={e => updateSupersetSetField(step.itemIndex, exIdx, currentRound, 'reps', e.target.value)}
+                          placeholder={pe.reps ? String(pe.reps) : '—'}
+                          style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
+                          Weight <span style={{ fontWeight: 400 }}>({weightUnit}, optional)</span>
+                        </label>
+                        <input
+                          type="text" inputMode="decimal"
+                          value={roundData.weight}
+                          onChange={e => updateSupersetSetField(step.itemIndex, exIdx, currentRound, 'weight', e.target.value)}
+                          placeholder="—"
+                          style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <button
+              onClick={handleCompleteRound}
+              style={{ width: '100%', padding: '13px', background: '#29B5CC', color: '#000', fontWeight: 700, fontSize: '14px', border: 'none', borderRadius: '10px', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              {isLastRound
+                ? 'Complete round → how did it feel?'
+                : `Complete round ${currentRound + 1} → rest`}
+            </button>
+          </div>
+        </div>
+      )
     }
 
     const exIdx = exercises.findIndex(e => e.id === item.ex.id)
