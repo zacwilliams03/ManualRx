@@ -10,6 +10,7 @@ import VideoPlayer from '../../components/VideoPlayer'
 import { motion } from 'framer-motion'
 import { CARD } from '../../components/therapist/styles'
 import ShimmerLine from '../../components/shared/ShimmerLine'
+import { buildSessionItems } from '../../utils/supersetUtils'
 
 function ScaleSelector({ label, value, onChange }) {
   return (
@@ -50,6 +51,8 @@ export default function SessionWizard() {
   const [session, setSession] = useState(null)
   const [exercises, setExercises] = useState([])
   const [clientId, setClientId] = useState(null)  // clients.id (FK), distinct from auth uid
+  const [sessionItems, setSessionItems] = useState([])
+  const [openVideoId, setOpenVideoId] = useState(null)  // for superset round screen video toggles
   const [step, setStep] = useState('intro')
   const [sessionEffort, setSessionEffort] = useState(null)
   const [sessionNotes, setSessionNotes] = useState('')
@@ -67,11 +70,11 @@ export default function SessionWizard() {
 
   useEffect(() => {
     async function fetchData() {
-      const [sessionRes, exercisesRes, clientRes] = await Promise.all([
+      const [sessionRes, exercisesRes, clientRes, groupsRes] = await Promise.all([
         supabase.from('prescriptions').select('id, name, therapist_id').eq('id', sessionId).single(),
         supabase
           .from('prescription_exercises')
-          .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(set_number, reps, weight), exercises(id, name, category, video_url)')
+          .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(set_number, reps, weight), exercises(id, name, category, video_url)')
           .eq('prescription_id', sessionId)
           .order('id', { ascending: true }),
         supabase
@@ -81,6 +84,11 @@ export default function SessionWizard() {
           .order('created_at', { ascending: false })
           .limit(1)
           .single(),
+        supabase
+          .from('prescription_exercise_groups')
+          .select('id, label, set_count, order_index, created_at')
+          .eq('prescription_id', sessionId)
+          .order('order_index', { ascending: true }),
       ])
 
       if (sessionRes.error || !sessionRes.data) {
@@ -98,19 +106,31 @@ export default function SessionWizard() {
       setSession(sessionRes.data)
       setClientId(clientRes.data.id)
 
-      setExercises(
-        (exercisesRes.data ?? []).map(pe => ({
-          ...pe,
-          prescription_exercise_sets: [...(pe.prescription_exercise_sets ?? [])].sort((a, b) => a.set_number - b.set_number),
-          // per-set data: one entry per prescribed set
-          setsData: Array(pe.sets || 1).fill(null).map(() => ({ reps: '', weight: '' })),
-          currentSet: 0,
-          allSetsDone: false,
-          painRating: null,
-          clientNotes: '',
-          videoFile: null,
-        }))
-      )
+      if (groupsRes.error) {
+        console.error('Groups fetch failed (non-fatal):', groupsRes.error)
+      }
+
+      const fetchedExercises = exercisesRes.data ?? []
+      const fetchedGroups = groupsRes?.data ?? []
+
+      const exercisesWithState = fetchedExercises.map(pe => ({
+        ...pe,
+        prescription_exercise_sets: [...(pe.prescription_exercise_sets ?? [])].sort((a, b) => a.set_number - b.set_number),
+        // per-set data: one entry per prescribed set
+        setsData: Array(pe.sets || 1).fill(null).map(() => ({ reps: '', weight: '' })),
+        currentSet: 0,
+        allSetsDone: false,
+        painRating: null,
+        clientNotes: '',
+        videoFile: null,
+      }))
+
+      setExercises(exercisesWithState)
+
+      const rawItems = buildSessionItems(fetchedGroups, exercisesWithState)
+      setSessionItems(rawItems.map(item =>
+        item.type === 'superset' ? { ...item, currentRound: 0 } : item
+      ))
 
       if (sessionRes.data.therapist_id) {
         const { data: brand } = await supabase
@@ -256,7 +276,7 @@ export default function SessionWizard() {
           </div>
           <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--color-text)', margin: '0 0 8px' }}>Great work!</h2>
           <p style={{ fontSize: '13px', color: 'var(--color-muted)', margin: '0 0 24px' }}>
-            {exercises.length} exercise{exercises.length !== 1 ? 's' : ''} completed and logged.
+            {sessionItems.length} item{sessionItems.length !== 1 ? 's' : ''} completed and logged.
           </p>
           <Link
             to="/client"
@@ -290,7 +310,7 @@ export default function SessionWizard() {
             {exercises.length} exercise{exercises.length !== 1 ? 's' : ''}
           </p>
           <button
-            onClick={() => setStep(0)}
+            onClick={() => setStep({ itemIndex: 0 })}
             style={{
               width: '100%',
               background: '#29B5CC',
@@ -314,10 +334,19 @@ export default function SessionWizard() {
     )
   }
 
-  // ── Per-exercise step ─────────────────────────────────────────────────────
-  if (typeof step === 'number') {
-    const ex = exercises[step]
-    const isLast = step === exercises.length - 1
+  // ── Per-exercise / superset step ──────────────────────────────────────────
+  if (step && typeof step === 'object' && step.restAfterRound === undefined && step.postSuperset === undefined) {
+    const item = sessionItems[step.itemIndex]
+    if (!item) return null
+
+    if (item.type === 'superset') {
+      // placeholder — rendered in Task 7
+      return <div>Superset screen — Task 7</div>
+    }
+
+    const exIdx = exercises.findIndex(e => e.id === item.ex.id)
+    const ex = exercises[exIdx] ?? item.ex  // live state from exercises array
+    const isLast = step.itemIndex === sessionItems.length - 1
     const { setsData, currentSet, allSetsDone } = ex
     const currentSetData = setsData[currentSet] ?? { reps: '', weight: '' }
     const isLastSet = currentSet === setsData.length - 1
@@ -325,13 +354,13 @@ export default function SessionWizard() {
     function handleBack() {
       if (!allSetsDone && currentSet > 0) {
         // Go back one set within this exercise
-        updateEx(step, 'currentSet', currentSet - 1)
+        updateEx(exIdx, 'currentSet', currentSet - 1)
       } else if (!allSetsDone && currentSet === 0) {
-        setStep(step === 0 ? 'intro' : step - 1)
+        setStep(step.itemIndex === 0 ? 'intro' : { itemIndex: step.itemIndex - 1 })
       } else {
         // All sets done, back into set entry (last set)
-        updateEx(step, 'allSetsDone', false)
-        updateEx(step, 'currentSet', setsData.length - 1)
+        updateEx(exIdx, 'allSetsDone', false)
+        updateEx(exIdx, 'currentSet', setsData.length - 1)
       }
     }
 
@@ -347,21 +376,21 @@ export default function SessionWizard() {
           </button>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {exercises.map((_, i) => (
+              {sessionItems.map((_, i) => (
                 <div
                   key={i}
                   style={{
                     height: '6px',
                     borderRadius: '9999px',
-                    width: exercises.length > 8 ? '12px' : '20px',
-                    background: i < step ? 'var(--color-border-strong)' : i === step ? '#29B5CC' : 'var(--color-border)',
+                    width: sessionItems.length > 8 ? '12px' : '20px',
+                    background: i < step.itemIndex ? 'var(--color-border-strong)' : i === step.itemIndex ? '#29B5CC' : 'var(--color-border)',
                     transition: 'background 0.2s',
                   }}
                 />
               ))}
             </div>
             <span style={{ marginTop: '4px', fontSize: '11px', color: 'var(--color-subtle)' }}>
-              {step + 1} / {exercises.length}
+              {step.itemIndex + 1} / {sessionItems.length}
             </span>
           </div>
           <div style={{ flexShrink: 0, overflow: 'hidden' }}>
@@ -504,7 +533,7 @@ export default function SessionWizard() {
                     inputMode="numeric"
                     pattern="[0-9]*"
                     value={currentSetData.reps}
-                    onChange={e => updateSetField(step, currentSet, 'reps', e.target.value)}
+                    onChange={e => updateSetField(exIdx, currentSet, 'reps', e.target.value)}
                     placeholder={ex.reps ? String(ex.reps) : '—'}
                     style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                   />
@@ -518,7 +547,7 @@ export default function SessionWizard() {
                     inputMode="decimal"
                     pattern="[0-9.]*"
                     value={currentSetData.weight}
-                    onChange={e => updateSetField(step, currentSet, 'weight', e.target.value)}
+                    onChange={e => updateSetField(exIdx, currentSet, 'weight', e.target.value)}
                     placeholder={ex.weight ? String(parseFloat(fromCanonical(ex.weight, weightUnit).toFixed(1))) : '—'}
                     style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                   />
@@ -528,7 +557,7 @@ export default function SessionWizard() {
               <button
                 type="button"
                 disabled={!currentSetData.reps}
-                onClick={() => completeSet(step)}
+                onClick={() => completeSet(exIdx)}
                 style={{ width: '100%', background: !currentSetData.reps ? 'rgba(41,181,204,0.4)' : '#29B5CC', color: '#000', border: 'none', borderRadius: '7px', padding: '11px', fontSize: '13px', fontWeight: 600, cursor: !currentSetData.reps ? 'not-allowed' : 'pointer' }}
               >
                 {isLastSet ? 'Complete final set →' : `Complete Set ${currentSet + 1} →`}
@@ -568,7 +597,7 @@ export default function SessionWizard() {
               <ScaleSelector
                 label="Pain level (0 = none, 10 = worst)"
                 value={ex.painRating}
-                onChange={v => updateEx(step, 'painRating', v)}
+                onChange={v => updateEx(exIdx, 'painRating', v)}
               />
 
               {ex.painRating >= 7 && (
@@ -594,7 +623,7 @@ export default function SessionWizard() {
                 <textarea
                   rows={2}
                   value={ex.clientNotes}
-                  onChange={e => updateEx(step, 'clientNotes', e.target.value)}
+                  onChange={e => updateEx(exIdx, 'clientNotes', e.target.value)}
                   placeholder="e.g. felt tight on rep 3"
                   style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', boxSizing: 'border-box', resize: 'vertical', outline: 'none' }}
                 />
@@ -610,7 +639,7 @@ export default function SessionWizard() {
                     <span style={{ fontSize: '13px', color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ex.videoFile.name}</span>
                     <button
                       type="button"
-                      onClick={() => updateEx(step, 'videoFile', null)}
+                      onClick={() => updateEx(exIdx, 'videoFile', null)}
                       style={{ marginLeft: '8px', flexShrink: 0, background: 'none', border: 'none', fontSize: '12px', color: 'var(--color-muted)', cursor: 'pointer' }}
                     >
                       Remove
@@ -625,7 +654,7 @@ export default function SessionWizard() {
                       style={{ display: 'none' }}
                       onChange={e => {
                         const file = e.target.files?.[0]
-                        if (file) updateEx(step, 'videoFile', file)
+                        if (file) updateEx(exIdx, 'videoFile', file)
                       }}
                     />
                   </label>
@@ -633,7 +662,7 @@ export default function SessionWizard() {
               </div>
 
               <button
-                onClick={() => setStep(isLast ? 'summary' : step + 1)}
+                onClick={() => setStep(isLast ? 'summary' : { itemIndex: step.itemIndex + 1 })}
                 disabled={ex.painRating >= 7 && !painAcknowledged}
                 style={{ width: '100%', background: '#29B5CC', color: '#000', border: 'none', borderRadius: '7px', padding: '11px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', opacity: (ex.painRating >= 7 && !painAcknowledged) ? 0.4 : 1 }}
               >
@@ -659,7 +688,7 @@ export default function SessionWizard() {
           with a minimal back-only bar. The progress dots don't apply on the summary step. */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--color-surface)', backdropFilter: 'blur(8px)', borderBottom: '1px solid var(--color-border)', padding: '12px 16px' }}>
         <button
-          onClick={() => setStep(exercises.length - 1)}
+          onClick={() => setStep({ itemIndex: sessionItems.length - 1 })}
           style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--color-muted)', cursor: 'pointer' }}
         >
           ← Back
@@ -703,7 +732,8 @@ export default function SessionWizard() {
                   onClick={() => {
                     updateEx(i, 'allSetsDone', false)
                     updateEx(i, 'currentSet', 0)
-                    setStep(i)
+                    const itemIdx = sessionItems.findIndex(it => it.type === 'exercise' && it.ex.id === ex.id)
+                    setStep({ itemIndex: itemIdx >= 0 ? itemIdx : i })
                   }}
                   style={{ marginTop: '2px', fontSize: '11px', color: '#29B5CC', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                 >
