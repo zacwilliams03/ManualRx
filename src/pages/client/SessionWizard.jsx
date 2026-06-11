@@ -615,7 +615,7 @@ export default function SessionWizard() {
                     <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {pe.measurement_type === 'seconds' && (
                         <SetTimer
-                          key={currentRound}
+                          key={`${pe.id}-${currentRound}`}
                           targetSeconds={Number(pe.reps) || 0}
                           onComplete={secs => updateSupersetSetField(step.itemIndex, exIdx, currentRound, 'reps', String(secs))}
                           onReset={() => updateSupersetSetField(step.itemIndex, exIdx, currentRound, 'reps', '')}
