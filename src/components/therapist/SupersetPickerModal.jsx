@@ -2,21 +2,42 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 
+// mode: 'prescription' (default) | 'template'
+// parentId: the prescription_id or template_id
+// prescriptionId: legacy alias for parentId (prescription mode only)
 export default function SupersetPickerModal({
-  prescriptionId,
-  existingGroupCount,   // number of groups already on this prescription (for auto-label)
-  currentMaxOrderIndex, // used for new group order_index
-  onAdd,                // onAdd(group, memberPeRows, removedPeIds?) — called after DB write
+  prescriptionId,        // legacy — kept for backward compat
+  parentId: parentIdProp,
+  mode = 'prescription',
+  existingGroupCount,
+  currentMaxOrderIndex,
+  onAdd,
   onClose,
-  editGroup = null,     // group row to edit (null = create mode)
-  editMembers = [],     // existing prescription_exercises rows for this group (edit mode)
+  editGroup = null,
+  editMembers = [],
 }) {
+  const parentId = parentIdProp ?? prescriptionId
+
+  const groupTable    = mode === 'template' ? 'template_exercise_groups'    : 'prescription_exercise_groups'
+  const exerciseTable = mode === 'template' ? 'template_exercises'           : 'prescription_exercises'
+  const parentField   = mode === 'template' ? 'template_id'                  : 'prescription_id'
+  const setsFk        = mode === 'template' ? 'template_exercise_sets'       : 'prescription_exercise_sets'
+  const exSelect      = `id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, ${setsFk}(id, set_number, reps, weight), exercises(id, name, category, video_url)`
+
   const { profile } = useAuth()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [selected, setSelected] = useState(() =>
     editMembers.map(em => em.exercises).filter(Boolean)
   )
+  // bilateral per selected exercise: { [exerciseId]: boolean }
+  const [bilateralMap, setBilateralMap] = useState(() => {
+    const map = {}
+    for (const em of editMembers) {
+      if (em.exercises?.id) map[em.exercises.id] = em.bilateral ?? false
+    }
+    return map
+  })
   const [setCount, setSetCount] = useState(editGroup?.set_count ?? 3)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -47,6 +68,15 @@ export default function SupersetPickerModal({
         ? prev.filter(e => e.id !== exercise.id)
         : [...prev, exercise]
     )
+    if (!isSelected(exercise.id)) {
+      setBilateralMap(prev => ({ ...prev, [exercise.id]: false }))
+    } else {
+      setBilateralMap(prev => { const next = { ...prev }; delete next[exercise.id]; return next })
+    }
+  }
+
+  function toggleBilateral(exId) {
+    setBilateralMap(prev => ({ ...prev, [exId]: !prev[exId] }))
   }
 
   async function handleConfirm() {
@@ -68,9 +98,9 @@ export default function SupersetPickerModal({
   async function handleCreate() {
     const label = getLetter(existingGroupCount)
     const { data: group, error: gErr } = await supabase
-      .from('prescription_exercise_groups')
+      .from(groupTable)
       .insert({
-        prescription_id: prescriptionId,
+        [parentField]: parentId,
         label: `Superset ${label}`,
         set_count: setCount,
         order_index: currentMaxOrderIndex + 1,
@@ -79,8 +109,8 @@ export default function SupersetPickerModal({
       .single()
     if (gErr) throw new Error(gErr.message)
 
-    const peRows = selected.map((ex, i) => ({
-      prescription_id: prescriptionId,
+    const rows = selected.map((ex, i) => ({
+      [parentField]: parentId,
       exercise_id: ex.id,
       group_id: group.id,
       position_in_group: i,
@@ -89,15 +119,15 @@ export default function SupersetPickerModal({
       weight: null,
       therapist_notes: null,
       measurement_type: 'reps',
-      bilateral: false,
+      bilateral: bilateralMap[ex.id] ?? false,
     }))
-    const { data: inserted, error: peErr } = await supabase
-      .from('prescription_exercises')
-      .insert(peRows)
-      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
-    if (peErr) throw new Error(peErr.message)
+    const { data: inserted, error: exErr } = await supabase
+      .from(exerciseTable)
+      .insert(rows)
+      .select(exSelect)
+    if (exErr) throw new Error(exErr.message)
 
-    onAdd(group, inserted)
+    onAdd(group, inserted ?? [])
   }
 
   async function handleEdit() {
@@ -106,29 +136,34 @@ export default function SupersetPickerModal({
 
     const removedMembers = editMembers.filter(em => !selectedIds.includes(em.exercises?.id))
     if (removedMembers.length > 0) {
-      const removedPeIds = removedMembers.map(em => em.id)
-      const { data: logs, error: logsErr } = await supabase
-        .from('exercise_logs')
-        .select('id')
-        .in('prescription_exercise_id', removedPeIds)
-        .limit(1)
-      if (logsErr) throw new Error('Could not verify session history. Please try again.')
-      if (logs?.length > 0) {
-        throw new Error('One or more exercises have logged sessions and cannot be removed from this superset.')
+      const removedIds = removedMembers.map(em => em.id)
+
+      // Log guard — prescription mode only (templates have no exercise_logs)
+      if (mode === 'prescription') {
+        const { data: logs, error: logsErr } = await supabase
+          .from('exercise_logs')
+          .select('id')
+          .in('prescription_exercise_id', removedIds)
+          .limit(1)
+        if (logsErr) throw new Error('Could not verify session history. Please try again.')
+        if (logs?.length > 0) {
+          throw new Error('One or more exercises have logged sessions and cannot be removed from this superset.')
+        }
       }
+
       const { error: delErr } = await supabase
-        .from('prescription_exercises')
+        .from(exerciseTable)
         .delete()
-        .in('id', removedPeIds)
+        .in('id', removedIds)
       if (delErr) throw new Error(delErr.message)
     }
 
-    // Reindex surviving members to close position gaps
+    // Reindex surviving members
     const survivingMembers = editMembers.filter(em => !removedMembers.some(r => r.id === em.id))
     for (let i = 0; i < survivingMembers.length; i++) {
       if (survivingMembers[i].position_in_group !== i) {
         await supabase
-          .from('prescription_exercises')
+          .from(exerciseTable)
           .update({ position_in_group: i })
           .eq('id', survivingMembers[i].id)
       }
@@ -138,7 +173,7 @@ export default function SupersetPickerModal({
     let inserted = []
     if (newExercises.length > 0) {
       const newRows = newExercises.map((ex, i) => ({
-        prescription_id: prescriptionId,
+        [parentField]: parentId,
         exercise_id: ex.id,
         group_id: editGroup.id,
         position_in_group: survivingMembers.length + i,
@@ -147,27 +182,27 @@ export default function SupersetPickerModal({
         weight: null,
         therapist_notes: null,
         measurement_type: 'reps',
-        bilateral: false,
+        bilateral: bilateralMap[ex.id] ?? false,
       }))
-      const { data, error: peErr } = await supabase
-        .from('prescription_exercises')
+      const { data, error: exErr } = await supabase
+        .from(exerciseTable)
         .insert(newRows)
-        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
-      if (peErr) throw new Error(peErr.message)
+        .select(exSelect)
+      if (exErr) throw new Error(exErr.message)
       inserted = data ?? []
     }
 
     const { error: upErr } = await supabase
-      .from('prescription_exercise_groups')
+      .from(groupTable)
       .update({ set_count: setCount })
       .eq('id', editGroup.id)
     if (upErr) throw new Error(upErr.message)
 
-    const { error: peUpErr } = await supabase
-      .from('prescription_exercises')
+    const { error: exUpErr } = await supabase
+      .from(exerciseTable)
       .update({ sets: setCount })
       .eq('group_id', editGroup.id)
-    if (peUpErr) throw new Error(peUpErr.message)
+    if (exUpErr) throw new Error(exUpErr.message)
 
     onAdd({ ...editGroup, set_count: setCount }, inserted, removedMembers.map(em => em.id))
   }
@@ -186,7 +221,7 @@ export default function SupersetPickerModal({
             {isEditMode ? 'Edit superset' : 'Add superset'}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--color-muted)' }}>
-            Pick 2 or more exercises. All will share the same set count.
+            Pick 2 or more exercises. All share the same set count.
           </div>
         </div>
 
@@ -223,12 +258,23 @@ export default function SupersetPickerModal({
             <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--color-subtle)', marginBottom: '6px' }}>
               Selected ({selected.length})
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {selected.map(ex => (
-                <div key={ex.id} style={{ background: 'var(--color-elevated)', border: '1px solid rgba(41,181,204,0.18)', borderRadius: '8px', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '3px', height: '24px', background: '#29B5CC', borderRadius: '2px', opacity: 0.5, flexShrink: 0 }} />
-                  <div style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: 'var(--color-text)' }}>{ex.name}</div>
-                  <button onClick={() => toggleExercise(ex)} style={{ background: 'none', border: 'none', color: 'var(--color-muted)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: 0 }}>×</button>
+                <div key={ex.id} style={{ background: 'var(--color-elevated)', border: '1px solid rgba(41,181,204,0.18)', borderRadius: '8px', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '3px', height: '24px', background: '#29B5CC', borderRadius: '2px', opacity: 0.5, flexShrink: 0 }} />
+                    <div style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: 'var(--color-text)' }}>{ex.name}</div>
+                    <button onClick={() => toggleExercise(ex)} style={{ background: 'none', border: 'none', color: 'var(--color-muted)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: 0 }}>×</button>
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '7px', paddingLeft: '11px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={bilateralMap[ex.id] ?? false}
+                      onChange={() => toggleBilateral(ex.id)}
+                      style={{ width: '14px', height: '14px', cursor: 'pointer', accentColor: '#29B5CC' }}
+                    />
+                    <span style={{ fontSize: '11px', color: 'var(--color-muted)' }}>Both sides</span>
+                  </label>
                 </div>
               ))}
             </div>

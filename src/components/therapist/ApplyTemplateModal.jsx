@@ -37,7 +37,8 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
       .from('templates')
       .select(`
         id, name, category, duration_weeks,
-        template_exercises(id, exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(id, set_number, reps, weight), exercises(name))
+        template_exercise_groups(id, label, set_count, order_index),
+        template_exercises(id, exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(id, set_number, reps, weight), exercises(name))
       `)
       .eq('therapist_id', therapistId)
       .order('created_at', { ascending: false })
@@ -70,6 +71,9 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
       tempoConcentric:  te.tempo_concentric   ?? null,
       tempoTopPause:    te.tempo_top_pause    ?? null,
       hasPerSetRows: (te.template_exercise_sets ?? []).length > 0,
+      groupId: te.group_id ?? null,
+      positionInGroup: te.position_in_group ?? null,
+      orderIndex: te.order_index ?? null,
     }))
     setCustomExercises(initial)
     setStep('customise')
@@ -118,6 +122,24 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
     setApplyError(null)
     try {
       const prescription = await createPrescription(t)
+
+      // Copy superset groups and build old-id → new-id map
+      const groupIdMap = {}
+      for (const tg of t.template_exercise_groups ?? []) {
+        const { data: pg, error: gErr } = await supabase
+          .from('prescription_exercise_groups')
+          .insert({
+            prescription_id: prescription.id,
+            label: tg.label,
+            set_count: tg.set_count,
+            order_index: tg.order_index,
+          })
+          .select('id')
+          .single()
+        if (gErr) throw new Error(gErr.message)
+        groupIdMap[tg.id] = pg.id
+      }
+
       for (const te of t.template_exercises ?? []) {
         const { data: pe, error: exErr } = await supabase
           .from('prescription_exercises')
@@ -134,6 +156,9 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
             tempo_bottom_pause: te.tempo_bottom_pause ?? null,
             tempo_concentric:   te.tempo_concentric   ?? null,
             tempo_top_pause:    te.tempo_top_pause    ?? null,
+            group_id: te.group_id ? (groupIdMap[te.group_id] ?? null) : null,
+            position_in_group: te.position_in_group ?? null,
+            order_index: te.order_index ?? null,
           })
           .select('id')
           .single()
@@ -164,6 +189,24 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
     setApplyError(null)
     try {
       const prescription = await createPrescription()
+
+      // Copy superset groups and build old-id → new-id map
+      const groupIdMap = {}
+      for (const tg of selectedTemplate.template_exercise_groups ?? []) {
+        const { data: pg, error: gErr } = await supabase
+          .from('prescription_exercise_groups')
+          .insert({
+            prescription_id: prescription.id,
+            label: tg.label,
+            set_count: tg.set_count,
+            order_index: tg.order_index,
+          })
+          .select('id')
+          .single()
+        if (gErr) throw new Error(gErr.message)
+        groupIdMap[tg.id] = pg.id
+      }
+
       const exerciseRows = customExercises.map(ex => ({
         prescription_id: prescription.id,
         exercise_id: ex.exerciseId,
@@ -177,6 +220,9 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
         tempo_bottom_pause: ex.tempoBottomPause  ?? null,
         tempo_concentric:   ex.tempoConcentric   ?? null,
         tempo_top_pause:    ex.tempoTopPause     ?? null,
+        group_id: ex.groupId ? (groupIdMap[ex.groupId] ?? null) : null,
+        position_in_group: ex.positionInGroup ?? null,
+        order_index: ex.orderIndex ?? null,
       }))
       if (exerciseRows.length > 0) {
         const { error } = await supabase.from('prescription_exercises').insert(exerciseRows)

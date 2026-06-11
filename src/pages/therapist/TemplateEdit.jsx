@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -13,6 +13,16 @@ import { CARD, SECTION_LABEL } from '../../components/therapist/styles'
 import ShimmerLine from '../../components/shared/ShimmerLine'
 import VideoPlayer from '../../components/VideoPlayer'
 import useIsMobile from '../../hooks/useIsMobile'
+import { buildSessionItems } from '../../utils/supersetUtils'
+import SupersetPickerModal from '../../components/therapist/SupersetPickerModal'
+
+function computeNextOrderIndex(groups, exercises) {
+  const maxGroup = groups.reduce((m, g) => Math.max(m, g.order_index ?? 0), 0)
+  const maxEx = exercises
+    .filter(te => te.group_id == null)
+    .reduce((m, te) => Math.max(m, te.order_index ?? 0), 0)
+  return Math.max(maxGroup, maxEx) + 1
+}
 
 export default function TemplateEdit() {
   const { templateId } = useParams()
@@ -34,19 +44,28 @@ export default function TemplateEdit() {
   const [saving, setSaving] = useState(false)
   const [existingCategories, setExistingCategories] = useState([])
 
+  const [groups, setGroups] = useState([])
+  const [items, setItems] = useState([])
+  const [showSupersetModal, setShowSupersetModal] = useState(false)
+  const [editingSuperset, setEditingSuperset] = useState(null)
+
   useEffect(() => {
     if (profile?.id) fetchData()
   }, [templateId, profile?.id])
 
   async function fetchData() {
     setLoading(true)
-    const [templateRes, exercisesRes, allTemplatesRes] = await Promise.all([
+    const [templateRes, exercisesRes, groupsRes, allTemplatesRes] = await Promise.all([
       supabase.from('templates').select('id, name, category, duration_weeks').eq('id', templateId).single(),
       supabase
         .from('template_exercises')
-        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+        .eq('template_id', templateId),
+      supabase
+        .from('template_exercise_groups')
+        .select('id, label, set_count, order_index, created_at')
         .eq('template_id', templateId)
-        .order('created_at', { ascending: true }),
+        .order('order_index', { ascending: true }),
       supabase
         .from('templates')
         .select('category')
@@ -72,7 +91,11 @@ export default function TemplateEdit() {
     if (exercisesRes.error) {
       setError('Failed to load exercises: ' + exercisesRes.error.message)
     } else {
-      setExercises(exercisesRes.data ?? [])
+      const fetchedExercises = exercisesRes.data ?? []
+      const fetchedGroups = groupsRes.data ?? []
+      setExercises(fetchedExercises)
+      setGroups(fetchedGroups)
+      setItems(buildSessionItems(fetchedGroups, fetchedExercises))
     }
 
     const cats = [...new Set((allTemplatesRes.data ?? []).map(t => t.category).filter(Boolean))].sort()
@@ -108,8 +131,9 @@ export default function TemplateEdit() {
         tempo_bottom_pause: tempoBottomPause  ?? null,
         tempo_concentric:   tempoConcentric   ?? null,
         tempo_top_pause:    tempoTopPause     ?? null,
+        order_index: computeNextOrderIndex(groups, exercises),
       })
-      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
       .single()
     if (insertError) throw new Error(insertError.message)
 
@@ -125,19 +149,54 @@ export default function TemplateEdit() {
       if (setsError) throw new Error(setsError.message)
       const { data: fresh, error: freshError } = await supabase
         .from('template_exercises')
-        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
         .eq('id', data.id)
         .single()
       if (freshError || !fresh) throw new Error('Failed to refresh exercise after adding per-set rows.')
-      setExercises(prev => [...prev, fresh])
+      setExercises(prev => {
+        const next = [...prev, fresh]
+        setItems(buildSessionItems(groups, next))
+        return next
+      })
     } else {
-      setExercises(prev => [...prev, data])
+      setExercises(prev => {
+        const next = [...prev, data]
+        setItems(buildSessionItems(groups, next))
+        return next
+      })
     }
   }
 
   async function removeExercise(teId) {
     await supabase.from('template_exercises').delete().eq('id', teId)
-    setExercises(prev => prev.filter(e => e.id !== teId))
+    setExercises(prev => {
+      const next = prev.filter(e => e.id !== teId)
+      setItems(buildSessionItems(groups, next))
+      return next
+    })
+  }
+
+  async function handleUngroup(group, members) {
+    for (let i = 0; i < members.length; i++) {
+      const { error: updateErr } = await supabase
+        .from('template_exercises')
+        .update({ group_id: null, position_in_group: null, order_index: group.order_index + i })
+        .eq('id', members[i].id)
+      if (updateErr) { alert('Failed to ungroup: ' + updateErr.message); return }
+    }
+    const { error: deleteErr } = await supabase.from('template_exercise_groups').delete().eq('id', group.id)
+    if (deleteErr) { alert('Failed to remove superset: ' + deleteErr.message); return }
+    const updatedExercises = exercises.map(te => {
+      if (te.group_id === group.id) {
+        const idx = members.findIndex(m => m.id === te.id)
+        return { ...te, group_id: null, position_in_group: null, order_index: group.order_index + idx }
+      }
+      return te
+    })
+    const updatedGroups = groups.filter(g => g.id !== group.id)
+    setExercises(updatedExercises)
+    setGroups(updatedGroups)
+    setItems(buildSessionItems(updatedGroups, updatedExercises))
   }
 
   if (loading) {
@@ -160,6 +219,109 @@ export default function TemplateEdit() {
           </Link>
         </div>
       </SidebarLayout>
+    )
+  }
+
+  function renderExerciseRow(te, hasBorder) {
+    return (
+      <div
+        style={{ padding: '12px 20px', borderBottom: hasBorder ? '1px solid var(--color-elevated)' : 'none' }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)' }}>{te.exercises?.name}</div>
+            {te.template_exercise_sets?.length > 0 ? (
+              <div style={{ marginTop: '2px' }}>
+                <div style={{ fontSize: '11px', color: '#29B5CC', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                  Per-set · {te.template_exercise_sets.length} sets
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 1fr', gap: '2px 8px' }}>
+                  {te.template_exercise_sets
+                    .slice().sort((a, b) => a.set_number - b.set_number)
+                    .flatMap((s, i) => [
+                      <span key={`${i}-n`} style={{ fontFamily: 'monospace', fontWeight: 700, color: '#29B5CC', fontSize: '11px' }}>{s.set_number}</span>,
+                      <span key={`${i}-r`} style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{s.reps} {te.measurement_type === 'seconds' ? 'sec' : 'reps'}</span>,
+                      <span key={`${i}-w`} style={{ fontSize: '12px', color: 'var(--color-subtle)' }}>{s.weight != null ? formatWeight(s.weight, weightUnit) : 'Bodyweight'}</span>,
+                    ])
+                  }
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '2px' }}>
+                  {te.sets} sets × {te.reps} {te.measurement_type === 'seconds' ? 'sec' : 'reps'}
+                  {te.weight ? ` · ${formatWeight(te.weight, weightUnit)}` : ''}
+                  {te.bilateral ? ' · Both sides' : ''}
+                </div>
+                {(() => {
+                  const t = formatTempo(te.tempo_eccentric, te.tempo_bottom_pause, te.tempo_concentric, te.tempo_top_pause)
+                  return t ? (
+                    <span style={{ display: 'inline-block', marginTop: '3px', background: 'rgba(41,181,204,0.1)', border: '1px solid rgba(41,181,204,0.2)', borderRadius: '4px', padding: '1px 7px', fontSize: '11px', color: '#29B5CC', fontFamily: 'monospace', fontWeight: 600 }}>
+                      ⏱ {t.compact}
+                    </span>
+                  ) : null
+                })()}
+              </>
+            )}
+            {te.therapist_notes && (
+              <div style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px', fontStyle: 'italic' }}>{te.therapist_notes}</div>
+            )}
+          </div>
+          <button
+            onClick={() => removeExercise(te.id)}
+            style={{ fontSize: '12px', color: 'var(--color-danger)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
+          >
+            Remove
+          </button>
+        </div>
+        {te.exercises?.video_url && <VideoPlayer url={te.exercises.video_url} className="w-full rounded mt-2" />}
+      </div>
+    )
+  }
+
+  function renderSupersetBlock(item, hasBorder) {
+    const { group, exercises: members } = item
+    return (
+      <div
+        style={{ borderBottom: hasBorder ? '1px solid var(--color-elevated)' : 'none' }}
+      >
+        <div style={{ padding: '8px 14px', background: 'rgba(41,181,204,0.06)', borderBottom: '1px solid rgba(41,181,204,0.12)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '10px', fontWeight: 700, color: '#29B5CC', letterSpacing: '0.08em', textTransform: 'uppercase', flex: 1 }}>
+            ⚡ {group.label} · {group.set_count} sets
+          </span>
+          <button
+            onClick={() => setEditingSuperset({ group, members })}
+            style={{ fontSize: '11px', color: 'rgba(41,181,204,0.7)', background: 'none', border: '1px solid rgba(41,181,204,0.2)', borderRadius: '4px', padding: '2px 7px', cursor: 'pointer' }}
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => handleUngroup(group, members)}
+            style={{ fontSize: '11px', color: 'var(--color-muted)', background: 'none', border: '1px solid var(--color-border)', borderRadius: '4px', padding: '2px 7px', cursor: 'pointer' }}
+          >
+            Ungroup
+          </button>
+        </div>
+        {members.map((te, mi) => (
+          <div
+            key={te.id}
+            style={{ padding: '10px 14px', borderBottom: mi < members.length - 1 ? '1px solid rgba(41,181,204,0.08)' : 'none', display: 'flex', gap: '10px', alignItems: 'flex-start' }}
+          >
+            <div style={{ width: '3px', minHeight: '28px', background: '#29B5CC', borderRadius: '2px', opacity: 0.4, flexShrink: 0, marginTop: '2px' }} />
+            <div style={{ flex: 1 }}>
+              {renderExerciseRow(te, false)}
+            </div>
+          </div>
+        ))}
+        <div style={{ padding: '8px 14px' }}>
+          <span
+            onClick={() => setEditingSuperset({ group, members })}
+            style={{ fontSize: '12px', color: 'rgba(41,181,204,0.55)', cursor: 'pointer' }}
+          >
+            + Add exercise to superset
+          </span>
+        </div>
+      </div>
     )
   }
 
@@ -232,7 +394,7 @@ export default function TemplateEdit() {
               </datalist>
             </div>
 
-            {/* Duration pills — keep Tailwind classes for pills */}
+            {/* Duration pills */}
             <div>
               <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '8px' }}>
                 Duration <span style={{ color: 'var(--color-subtle)' }}>(optional default)</span>
@@ -286,70 +448,60 @@ export default function TemplateEdit() {
         >
           <ShimmerLine />
           <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--color-elevated)' }}>
-            <span style={SECTION_LABEL}>Exercises {exercises.length > 0 ? `(${exercises.length})` : ''}</span>
+            <span style={SECTION_LABEL}>Exercises {items.length > 0 ? `(${items.length})` : ''}</span>
           </div>
-          {exercises.length === 0 ? (
+          {items.length === 0 ? (
             <p style={{ padding: '16px 20px', fontSize: '13px', color: 'var(--color-muted)' }}>No exercises added yet.</p>
           ) : (
-            exercises.map((te, i) => (
-              <div
-                key={te.id}
-                style={{ padding: '12px 20px', borderBottom: i < exercises.length - 1 ? '1px solid var(--color-elevated)' : 'none' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
-                  <div>
-                    <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)' }}>{te.exercises?.name}</div>
-                    {te.template_exercise_sets?.length > 0 ? (
-                      <div style={{ marginTop: '2px' }}>
-                        <div style={{ fontSize: '11px', color: '#29B5CC', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
-                          Per-set · {te.template_exercise_sets.length} sets
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 1fr', gap: '2px 8px' }}>
-                          {te.template_exercise_sets
-                            .slice().sort((a, b) => a.set_number - b.set_number)
-                            .flatMap((s, i) => [
-                              <span key={`${i}-n`} style={{ fontFamily: 'monospace', fontWeight: 700, color: '#29B5CC', fontSize: '11px' }}>{s.set_number}</span>,
-                              <span key={`${i}-r`} style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{s.reps} {te.measurement_type === 'seconds' ? 'sec' : 'reps'}</span>,
-                              <span key={`${i}-w`} style={{ fontSize: '12px', color: 'var(--color-subtle)' }}>{s.weight != null ? formatWeight(s.weight, weightUnit) : 'Bodyweight'}</span>,
-                            ])
-                          }
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '2px' }}>
-                          {te.sets} sets × {te.reps} {te.measurement_type === 'seconds' ? 'sec' : 'reps'}
-                          {te.weight ? ` · ${formatWeight(te.weight, weightUnit)}` : ''}
-                          {te.bilateral ? ' · Both sides' : ''}
-                        </div>
-                        {(() => {
-                          const t = formatTempo(te.tempo_eccentric, te.tempo_bottom_pause, te.tempo_concentric, te.tempo_top_pause)
-                          return t ? (
-                            <span style={{ display: 'inline-block', marginTop: '3px', background: 'rgba(41,181,204,0.1)', border: '1px solid rgba(41,181,204,0.2)', borderRadius: '4px', padding: '1px 7px', fontSize: '11px', color: '#29B5CC', fontFamily: 'monospace', fontWeight: 600 }}>
-                              ⏱ {t.compact}
-                            </span>
-                          ) : null
-                        })()}
-                      </>
-                    )}
-                    {te.therapist_notes && (
-                      <div style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px', fontStyle: 'italic' }}>{te.therapist_notes}</div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => removeExercise(te.id)}
-                    style={{ fontSize: '12px', color: 'var(--color-danger)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
-                  >
-                    Remove
-                  </button>
-                </div>
-                {te.exercises?.video_url && <VideoPlayer url={te.exercises.video_url} className="w-full rounded mt-2" />}
-              </div>
+            items.map((item, i) => (
+              item.type === 'exercise'
+                ? <Fragment key={item.ex.id}>{renderExerciseRow(item.ex, i < items.length - 1)}</Fragment>
+                : <Fragment key={item.group.id}>{renderSupersetBlock(item, i < items.length - 1)}</Fragment>
             ))
           )}
         </motion.div>
 
-        {/* ExercisePicker — unchanged */}
+        {(showSupersetModal || editingSuperset) && (
+          <SupersetPickerModal
+            mode="template"
+            parentId={templateId}
+            existingGroupCount={groups.length}
+            currentMaxOrderIndex={computeNextOrderIndex(groups, exercises) - 1}
+            editGroup={editingSuperset?.group ?? null}
+            editMembers={editingSuperset?.members ?? []}
+            onAdd={(updatedGroup, newTeRows, removedTeIds = []) => {
+              if (editingSuperset) {
+                const updatedGroups = groups.map(g => g.id === updatedGroup.id ? updatedGroup : g)
+                const updatedExercises = [
+                  ...exercises.filter(te => !removedTeIds.includes(te.id)).map(te =>
+                    te.group_id === updatedGroup.id ? { ...te, sets: updatedGroup.set_count } : te
+                  ),
+                  ...newTeRows,
+                ]
+                setGroups(updatedGroups)
+                setExercises(updatedExercises)
+                setItems(buildSessionItems(updatedGroups, updatedExercises))
+                setEditingSuperset(null)
+              } else {
+                const updatedGroups = [...groups, updatedGroup]
+                const updatedExercises = [...exercises, ...newTeRows]
+                setGroups(updatedGroups)
+                setExercises(updatedExercises)
+                setItems(buildSessionItems(updatedGroups, updatedExercises))
+                setShowSupersetModal(false)
+              }
+            }}
+            onClose={() => { setShowSupersetModal(false); setEditingSuperset(null) }}
+          />
+        )}
+
+        <button
+          onClick={() => setShowSupersetModal(true)}
+          style={{ width: '100%', padding: '10px', background: 'rgba(41,181,204,0.08)', border: '1px solid rgba(41,181,204,0.25)', borderRadius: '8px', color: '#29B5CC', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+        >
+          ⚡ Add superset
+        </button>
+
         <ExercisePicker onAdd={handleAddExercise} weightUnit={weightUnit} confirmLabel="Add to template" />
       </div>
     </SidebarLayout>

@@ -54,6 +54,12 @@ export default function SessionEdit() {
   const [showSupersetModal, setShowSupersetModal] = useState(false)
   const [editingSuperset, setEditingSuperset] = useState(null)
 
+  const [showSaveAsTemplate, setShowSaveAsTemplate] = useState(false)
+  const [templateName, setTemplateName] = useState('')
+  const [savingTemplate, setSavingTemplate] = useState(false)
+  const [saveTemplateError, setSaveTemplateError] = useState(null)
+  const [saveTemplateSuccess, setSaveTemplateSuccess] = useState(false)
+
   useEffect(() => {
     if (profile?.id) fetchData()
   }, [sessionId, profile?.id])
@@ -318,6 +324,84 @@ export default function SessionEdit() {
     setExercises(updatedExercises)
     setGroups(updatedGroups)
     setItems(buildSessionItems(updatedGroups, updatedExercises))
+  }
+
+  async function handleSaveAsTemplate() {
+    if (!templateName.trim()) return
+    setSavingTemplate(true)
+    setSaveTemplateError(null)
+    try {
+      const { data: tmpl, error: tmplErr } = await supabase
+        .from('templates')
+        .insert({ therapist_id: profile.id, name: templateName.trim() })
+        .select('id')
+        .single()
+      if (tmplErr) throw new Error(tmplErr.message)
+
+      const groupIdMap = {}
+      for (const g of groups) {
+        const { data: tg, error: gErr } = await supabase
+          .from('template_exercise_groups')
+          .insert({
+            template_id: tmpl.id,
+            label: g.label,
+            set_count: g.set_count,
+            order_index: g.order_index,
+          })
+          .select('id')
+          .single()
+        if (gErr) throw new Error(gErr.message)
+        groupIdMap[g.id] = tg.id
+      }
+
+      for (const pe of exercises) {
+        const { data: te, error: exErr } = await supabase
+          .from('template_exercises')
+          .insert({
+            template_id: tmpl.id,
+            exercise_id: pe.exercises.id,
+            sets: pe.sets,
+            reps: pe.reps,
+            weight: pe.weight,
+            therapist_notes: pe.therapist_notes,
+            measurement_type: pe.measurement_type ?? 'reps',
+            bilateral: pe.bilateral ?? false,
+            tempo_eccentric:    pe.tempo_eccentric    ?? null,
+            tempo_bottom_pause: pe.tempo_bottom_pause ?? null,
+            tempo_concentric:   pe.tempo_concentric   ?? null,
+            tempo_top_pause:    pe.tempo_top_pause    ?? null,
+            group_id: pe.group_id ? (groupIdMap[pe.group_id] ?? null) : null,
+            position_in_group: pe.position_in_group ?? null,
+            order_index: pe.order_index ?? null,
+          })
+          .select('id')
+          .single()
+        if (exErr) throw new Error(exErr.message)
+        const perSetRows = pe.prescription_exercise_sets ?? []
+        if (perSetRows.length > 0) {
+          const { error: setsErr } = await supabase.from('template_exercise_sets').insert(
+            perSetRows.map(s => ({
+              template_exercise_id: te.id,
+              set_number: s.set_number,
+              reps: s.reps,
+              weight: s.weight ?? null,
+            }))
+          )
+          if (setsErr) throw new Error(setsErr.message)
+        }
+      }
+
+      setSaveTemplateSuccess(true)
+      setTimeout(() => {
+        setShowSaveAsTemplate(false)
+        setSaveTemplateSuccess(false)
+        setTemplateName('')
+      }, 1200)
+    } catch (e) {
+      setSaveTemplateError(e.message || 'Failed to save template.')
+    } finally {
+      setSavingTemplate(false)
+    }
   }
 
   if (loading) {
@@ -661,23 +745,31 @@ export default function SessionEdit() {
             : `/therapist/prescribe/${clientId}`
         }}
         actions={
-          <button
-            onClick={saveMeta}
-            disabled={savingMeta}
-            style={{
-              padding: '9px 18px',
-              background: '#29B5CC',
-              color: '#000',
-              border: 'none',
-              borderRadius: '7px',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: savingMeta ? 'default' : 'pointer',
-              opacity: savingMeta ? 0.6 : 1,
-            }}
-          >
-            {savingMeta ? 'Saving…' : 'Save'}
-          </button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              onClick={() => { setTemplateName(name); setShowSaveAsTemplate(true); setSaveTemplateError(null) }}
+              style={{ padding: '9px 14px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', color: 'var(--color-muted)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+            >
+              Save as template
+            </button>
+            <button
+              onClick={saveMeta}
+              disabled={savingMeta}
+              style={{
+                padding: '9px 18px',
+                background: '#29B5CC',
+                color: '#000',
+                border: 'none',
+                borderRadius: '7px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: savingMeta ? 'default' : 'pointer',
+                opacity: savingMeta ? 0.6 : 1,
+              }}
+            >
+              {savingMeta ? 'Saving…' : 'Save'}
+            </button>
+          </div>
         }
       />
 
@@ -850,6 +942,45 @@ export default function SessionEdit() {
         {/* ExercisePicker — unchanged */}
         <ExercisePicker onAdd={handleAddExercise} weightUnit={weightUnit} />
       </div>
+
+      {showSaveAsTemplate && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+          onClick={e => { if (e.target === e.currentTarget) { setShowSaveAsTemplate(false); setSaveTemplateError(null) } }}
+        >
+          <div style={{ background: 'var(--color-surface)', border: '1px solid rgba(41,181,204,0.25)', borderRadius: '14px', padding: '20px', width: '100%', maxWidth: '380px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '3px' }}>Save as template</div>
+              <div style={{ fontSize: '12px', color: 'var(--color-muted)' }}>Creates a reusable template with all exercises{groups.length > 0 ? ' and supersets' : ''} from this session.</div>
+            </div>
+            <div>
+              <label style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginBottom: '6px' }}>
+                Template name <span style={{ color: 'var(--color-danger)' }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={templateName}
+                onChange={e => setTemplateName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && templateName.trim()) handleSaveAsTemplate() }}
+                autoFocus
+                style={{ width: '100%', padding: '9px 12px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '8px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+            {saveTemplateError && <p style={{ fontSize: '12px', color: 'var(--color-danger)', margin: 0 }}>{saveTemplateError}</p>}
+            {saveTemplateSuccess && <p style={{ fontSize: '12px', color: '#29B5CC', margin: 0 }}>Template saved!</p>}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => { setShowSaveAsTemplate(false); setSaveTemplateError(null) }} style={{ flex: 1, padding: '10px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '8px', color: 'var(--color-muted)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button
+                onClick={handleSaveAsTemplate}
+                disabled={savingTemplate || !templateName.trim()}
+                style={{ flex: 2, padding: '10px', background: (savingTemplate || !templateName.trim()) ? 'rgba(41,181,204,0.3)' : '#29B5CC', color: (savingTemplate || !templateName.trim()) ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: (savingTemplate || !templateName.trim()) ? 'default' : 'pointer', fontFamily: 'inherit' }}
+              >
+                {savingTemplate ? 'Saving…' : 'Save template'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </SidebarLayout>
   )
 }
