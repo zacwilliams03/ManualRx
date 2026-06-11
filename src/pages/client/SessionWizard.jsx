@@ -612,30 +612,40 @@ export default function SessionWizard() {
                         </div>
                       )}
                     </div>
-                    <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
-                          {pe.measurement_type === 'seconds' ? 'Seconds' : 'Reps'}
-                        </label>
-                        <input
-                          type="text" inputMode="numeric" pattern="[0-9]*"
-                          value={roundData.reps}
-                          onChange={e => updateSupersetSetField(step.itemIndex, exIdx, currentRound, 'reps', e.target.value)}
-                          placeholder={pe.reps ? String(pe.reps) : '—'}
-                          style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                    <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {pe.measurement_type === 'seconds' && (
+                        <SetTimer
+                          key={currentRound}
+                          targetSeconds={Number(pe.reps) || 0}
+                          onComplete={secs => updateSupersetSetField(step.itemIndex, exIdx, currentRound, 'reps', String(secs))}
+                          onReset={() => updateSupersetSetField(step.itemIndex, exIdx, currentRound, 'reps', '')}
                         />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
-                          Weight <span style={{ fontWeight: 400 }}>({weightUnit}, optional)</span>
-                        </label>
-                        <input
-                          type="text" inputMode="decimal"
-                          value={roundData.weight}
-                          onChange={e => updateSupersetSetField(step.itemIndex, exIdx, currentRound, 'weight', e.target.value)}
-                          placeholder="—"
-                          style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
-                        />
+                      )}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
+                            {pe.measurement_type === 'seconds' ? 'Actual (sec)' : 'Reps'}
+                          </label>
+                          <input
+                            type="text" inputMode="numeric" pattern="[0-9]*"
+                            value={roundData.reps}
+                            onChange={e => updateSupersetSetField(step.itemIndex, exIdx, currentRound, 'reps', e.target.value)}
+                            placeholder={pe.reps ? String(pe.reps) : '—'}
+                            style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '4px' }}>
+                            Weight <span style={{ fontWeight: 400 }}>({weightUnit}, optional)</span>
+                          </label>
+                          <input
+                            type="text" inputMode="decimal"
+                            value={roundData.weight}
+                            onChange={e => updateSupersetSetField(step.itemIndex, exIdx, currentRound, 'weight', e.target.value)}
+                            placeholder="—"
+                            style={{ width: '100%', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '9px 12px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
