@@ -287,6 +287,37 @@ export default function SessionEdit() {
     setEditingId(null)
   }
 
+  async function handleUngroup(group, members) {
+    const memberIds = members.map(m => m.id)
+    const { data: logs } = await supabase
+      .from('exercise_logs')
+      .select('id')
+      .in('prescription_exercise_id', memberIds)
+      .limit(1)
+    if (logs?.length > 0) {
+      alert('This superset has logged sessions. Ungroup is not available.')
+      return
+    }
+    for (let i = 0; i < members.length; i++) {
+      await supabase
+        .from('prescription_exercises')
+        .update({ group_id: null, position_in_group: null, order_index: group.order_index + i })
+        .eq('id', members[i].id)
+    }
+    await supabase.from('prescription_exercise_groups').delete().eq('id', group.id)
+    const updatedExercises = exercises.map(pe => {
+      if (pe.group_id === group.id) {
+        const idx = members.findIndex(m => m.id === pe.id)
+        return { ...pe, group_id: null, position_in_group: null, order_index: group.order_index + idx }
+      }
+      return pe
+    })
+    const updatedGroups = groups.filter(g => g.id !== group.id)
+    setExercises(updatedExercises)
+    setGroups(updatedGroups)
+    setItems(buildSessionItems(updatedGroups, updatedExercises))
+  }
+
   if (loading) {
     return (
       <SidebarLayout>
@@ -307,6 +338,309 @@ export default function SessionEdit() {
           </Link>
         </div>
       </SidebarLayout>
+    )
+  }
+
+  function renderExerciseRow(pe, hasBorder) {
+    return (
+      <div
+        key={pe.id}
+        style={{ padding: '12px 20px', borderBottom: hasBorder ? '1px solid var(--color-elevated)' : 'none' }}
+      >
+        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', marginBottom: '6px' }}>{pe.exercises.name}</div>
+        {editingId === pe.id ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {pe.group_id != null && (
+              <div style={{ fontSize: '11px', color: 'var(--color-subtle)', background: 'rgba(41,181,204,0.06)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '6px', padding: '6px 10px' }}>
+                Set count is controlled by the superset ({pe.sets} sets). Edit the superset header to change it.
+              </div>
+            )}
+            {!editValues.perSetEnabled && (
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
+                  Sets
+                  <input
+                    type="number" min="1"
+                    value={editValues.sets}
+                    onChange={e => setEditValues(v => ({ ...v, sets: e.target.value }))}
+                    style={{ width: '60px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
+                  />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
+                  {pe.measurement_type === 'seconds' ? 'Seconds' : 'Reps'}
+                  <input
+                    type="number" min="1"
+                    value={editValues.reps}
+                    onChange={e => setEditValues(v => ({ ...v, reps: e.target.value }))}
+                    style={{ width: '70px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
+                  />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
+                  Weight ({weightUnit})
+                  <input
+                    type="number" min="0" step="0.5"
+                    value={editValues.weight}
+                    onChange={e => setEditValues(v => ({ ...v, weight: e.target.value }))}
+                    placeholder="—"
+                    style={{ width: '80px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
+                  />
+                </label>
+              </div>
+            )}
+            <input
+              type="text"
+              value={editValues.notes}
+              onChange={e => setEditValues(v => ({ ...v, notes: e.target.value }))}
+              placeholder="Therapist notes (optional)"
+              style={{ padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '12px', outline: 'none' }}
+            />
+            {/* Per-set edit */}
+            {pe.group_id == null && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editValues.perSetEnabled ? '6px' : 0 }}>
+                  <span style={{ fontSize: '11px', color: 'var(--color-muted)', fontWeight: 500 }}>
+                    Per-set weights & reps <span style={{ fontWeight: 400, color: 'var(--color-subtle)' }}>(optional)</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!editValues.perSetEnabled) {
+                        const n = Math.max(1, parseInt(editValues.sets) || 1)
+                        setEditValues(v => ({
+                          ...v,
+                          perSetEnabled: true,
+                          perSetRows: Array.from({ length: n }, () => ({ reps: v.reps, weight: v.weight })),
+                        }))
+                      } else {
+                        setEditValues(v => ({ ...v, perSetEnabled: false }))
+                      }
+                    }}
+                    style={{
+                      width: '28px', height: '16px', borderRadius: '8px', border: 'none',
+                      cursor: 'pointer', padding: 0, position: 'relative', transition: 'background 0.15s',
+                      background: editValues.perSetEnabled ? '#29B5CC' : 'var(--color-border)',
+                    }}
+                  >
+                    <span style={{
+                      display: 'block', width: '12px', height: '12px', borderRadius: '50%', background: '#fff',
+                      position: 'absolute', top: '2px', transition: 'left 0.15s',
+                      left: editValues.perSetEnabled ? '14px' : '2px',
+                    }} />
+                  </button>
+                </div>
+                {editValues.perSetEnabled && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 1fr 20px', gap: '4px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', textAlign: 'center' }}>Set</span>
+                      <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', textAlign: 'center' }}>Reps</span>
+                      <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', textAlign: 'center' }}>Wt ({weightUnit})</span>
+                      <span />
+                    </div>
+                    {(editValues.perSetRows ?? []).map((row, i) => (
+                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '24px 1fr 1fr 20px', gap: '4px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#29B5CC', textAlign: 'center', fontFamily: 'monospace' }}>{i + 1}</span>
+                        <input
+                          type="number" min="1" value={row.reps}
+                          onChange={e => setEditValues(v => ({ ...v, perSetRows: v.perSetRows.map((r, j) => j === i ? { ...r, reps: e.target.value } : r) }))}
+                          style={{ width: '100%', padding: '4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '5px', color: 'var(--color-text)', fontSize: '13px', fontFamily: 'monospace', fontWeight: 600, outline: 'none', textAlign: 'center', colorScheme: 'dark', boxSizing: 'border-box' }}
+                        />
+                        <input
+                          type="number" min="0" step="0.5" value={row.weight} placeholder="BW"
+                          onChange={e => setEditValues(v => ({ ...v, perSetRows: v.perSetRows.map((r, j) => j === i ? { ...r, weight: e.target.value } : r) }))}
+                          style={{ width: '100%', padding: '4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '5px', color: 'var(--color-text)', fontSize: '13px', fontFamily: 'monospace', fontWeight: 600, outline: 'none', textAlign: 'center', colorScheme: 'dark', boxSizing: 'border-box' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setEditValues(v => ({ ...v, perSetRows: v.perSetRows.length > 1 ? v.perSetRows.filter((_, j) => j !== i) : v.perSetRows }))}
+                          style={{ fontSize: '12px', color: (editValues.perSetRows?.length ?? 0) > 1 ? 'var(--color-muted)' : 'var(--color-border)', background: 'none', border: 'none', cursor: (editValues.perSetRows?.length ?? 0) > 1 ? 'pointer' : 'default', padding: 0, textAlign: 'center' }}
+                        >✕</button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setEditValues(v => ({ ...v, perSetRows: [...(v.perSetRows ?? []), { reps: '', weight: '' }] }))}
+                      style={{ fontSize: '11px', padding: '4px', background: 'rgba(41,181,204,0.08)', border: '1px dashed rgba(41,181,204,0.3)', color: '#29B5CC', borderRadius: '5px', cursor: 'pointer' }}
+                    >+ Add set</button>
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Tempo edit */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editValues.tempoEnabled ? '6px' : 0 }}>
+                <span style={{ fontSize: '11px', color: 'var(--color-muted)', fontWeight: 500 }}>
+                  Tempo <span style={{ fontWeight: 400, color: 'var(--color-subtle)' }}>(optional)</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => { setSaveEditError(null); setEditValues(v => ({ ...v, tempoEnabled: !v.tempoEnabled })) }}
+                  style={{
+                    width: '28px', height: '16px', borderRadius: '8px', border: 'none',
+                    cursor: 'pointer', padding: 0, position: 'relative', transition: 'background 0.15s',
+                    background: editValues.tempoEnabled ? '#29B5CC' : 'var(--color-border)',
+                  }}
+                >
+                  <span style={{
+                    display: 'block', width: '12px', height: '12px', borderRadius: '50%', background: '#fff',
+                    position: 'absolute', top: '2px', transition: 'left 0.15s',
+                    left: editValues.tempoEnabled ? '14px' : '2px',
+                  }} />
+                </button>
+              </div>
+              {editValues.tempoEnabled && (
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                    <input type="number" min={1} max={9} value={editValues.tempoDown ?? ''} onChange={e => setEditValues(v => ({ ...v, tempoDown: e.target.value }))}
+                      style={{ width: '100%', padding: '5px 4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', textAlign: 'center', colorScheme: 'dark' }} />
+                    <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>Eccentric</span>
+                  </div>
+                  <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '14px' }}>—</span>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                    <input type="number" min={0} max={9} value={editValues.tempoHold ?? ''} onChange={e => setEditValues(v => ({ ...v, tempoHold: e.target.value }))}
+                      style={{ width: '100%', padding: '5px 4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', textAlign: 'center', colorScheme: 'dark' }} />
+                    <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>HOLD</span>
+                  </div>
+                  <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '14px' }}>—</span>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                    <input type="number" min={1} max={9} value={editValues.tempoUp ?? ''} onChange={e => setEditValues(v => ({ ...v, tempoUp: e.target.value }))}
+                      style={{ width: '100%', padding: '5px 4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', textAlign: 'center', colorScheme: 'dark' }} />
+                    <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>Concentric</span>
+                  </div>
+                  <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '14px' }}>—</span>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                    <input type="number" min={0} max={9} value={editValues.tempoTop ?? ''} onChange={e => setEditValues(v => ({ ...v, tempoTop: e.target.value }))}
+                      style={{ width: '100%', padding: '5px 4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', textAlign: 'center', colorScheme: 'dark' }} />
+                    <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>TOP</span>
+                  </div>
+                </div>
+              )}
+              {saveEditError && <p style={{ fontSize: '12px', color: 'var(--color-danger)', margin: '4px 0 0' }}>{saveEditError}</p>}
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => saveEdit(pe.id)}
+                disabled={savingEdit}
+                style={{ fontSize: '12px', padding: '4px 12px', background: '#29B5CC', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+              >
+                {savingEdit ? 'Saving…' : 'Save'}
+              </button>
+              <button
+                onClick={() => setEditingId(null)}
+                style={{ fontSize: '12px', padding: '4px 10px', background: 'none', color: 'var(--color-muted)', border: '1px solid var(--color-border)', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => removeExercise(pe.id)}
+                style={{ fontSize: '12px', padding: '4px 10px', background: 'none', color: 'var(--color-danger)', border: 'none', cursor: 'pointer', marginLeft: 'auto' }}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+            <div>
+              {pe.prescription_exercise_sets?.length > 0 ? (
+                <div style={{ marginTop: '2px' }}>
+                  <div style={{ fontSize: '11px', color: '#29B5CC', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                    Per-set · {pe.prescription_exercise_sets.length} sets
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 1fr', gap: '2px 8px' }}>
+                    {pe.prescription_exercise_sets
+                      .slice().sort((a, b) => a.set_number - b.set_number)
+                      .flatMap((s, i) => [
+                        <span key={`${i}-n`} style={{ fontFamily: 'monospace', fontWeight: 700, color: '#29B5CC', fontSize: '11px' }}>{s.set_number}</span>,
+                        <span key={`${i}-r`} style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{s.reps} {pe.measurement_type === 'seconds' ? 'sec' : 'reps'}</span>,
+                        <span key={`${i}-w`} style={{ fontSize: '12px', color: 'var(--color-subtle)' }}>{s.weight != null ? formatWeight(s.weight, weightUnit) : 'Bodyweight'}</span>,
+                      ])
+                    }
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: '12px', color: 'var(--color-subtle)' }}>
+                  {pe.sets} sets × {pe.reps} {pe.measurement_type === 'seconds' ? 'sec' : 'reps'}
+                  {pe.weight ? ` · ${formatWeight(pe.weight, weightUnit)}` : ''}
+                  {pe.bilateral ? ' · Both sides' : ''}
+                </div>
+              )}
+              {(() => {
+                const t = formatTempo(pe.tempo_eccentric, pe.tempo_bottom_pause, pe.tempo_concentric, pe.tempo_top_pause)
+                return t ? (
+                  <span style={{ display: 'inline-block', marginTop: '3px', background: 'rgba(41,181,204,0.1)', border: '1px solid rgba(41,181,204,0.2)', borderRadius: '4px', padding: '1px 7px', fontSize: '11px', color: '#29B5CC', fontFamily: 'monospace', fontWeight: 600 }}>
+                    ⏱ {t.compact}
+                  </span>
+                ) : null
+              })()}
+              {pe.therapist_notes && (
+                <div style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px', fontStyle: 'italic' }}>{pe.therapist_notes}</div>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+              <button
+                onClick={() => startEdit(pe)}
+                style={{ fontSize: '12px', color: 'var(--color-accent)', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => removeExercise(pe.id)}
+                style={{ fontSize: '12px', color: 'var(--color-danger)', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        )}
+        {pe.exercises.video_url && <VideoPlayer url={pe.exercises.video_url} className="w-full rounded mt-2" />}
+      </div>
+    )
+  }
+
+  function renderSupersetBlock(item, hasBorder) {
+    const { group, exercises: members } = item
+    return (
+      <div
+        key={group.id}
+        style={{ borderBottom: hasBorder ? '1px solid var(--color-elevated)' : 'none' }}
+      >
+        <div style={{ padding: '8px 14px', background: 'rgba(41,181,204,0.06)', borderBottom: '1px solid rgba(41,181,204,0.12)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '10px', fontWeight: 700, color: '#29B5CC', letterSpacing: '0.08em', textTransform: 'uppercase', flex: 1 }}>
+            ⚡ {group.label} · {group.set_count} sets
+          </span>
+          <button
+            onClick={() => setEditingSuperset({ group, members })}
+            style={{ fontSize: '11px', color: 'rgba(41,181,204,0.7)', background: 'none', border: '1px solid rgba(41,181,204,0.2)', borderRadius: '4px', padding: '2px 7px', cursor: 'pointer' }}
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => handleUngroup(group, members)}
+            style={{ fontSize: '11px', color: 'var(--color-muted)', background: 'none', border: '1px solid var(--color-border)', borderRadius: '4px', padding: '2px 7px', cursor: 'pointer' }}
+          >
+            Ungroup
+          </button>
+        </div>
+        {members.map((pe, mi) => (
+          <div
+            key={pe.id}
+            style={{ padding: '10px 14px', borderBottom: mi < members.length - 1 ? '1px solid rgba(41,181,204,0.08)' : 'none', display: 'flex', gap: '10px', alignItems: 'flex-start' }}
+          >
+            <div style={{ width: '3px', minHeight: '28px', background: '#29B5CC', borderRadius: '2px', opacity: 0.4, flexShrink: 0, marginTop: '2px' }} />
+            <div style={{ flex: 1 }}>
+              {renderExerciseRow(pe, false)}
+            </div>
+          </div>
+        ))}
+        <div style={{ padding: '8px 14px' }}>
+          <span
+            onClick={() => setEditingSuperset({ group, members })}
+            style={{ fontSize: '12px', color: 'rgba(41,181,204,0.55)', cursor: 'pointer' }}
+          >
+            + Add exercise to superset
+          </span>
+        </div>
+      </div>
     )
   }
 
@@ -458,259 +792,58 @@ export default function SessionEdit() {
         >
           <ShimmerLine />
           <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--color-elevated)' }}>
-            <span style={SECTION_LABEL}>Exercises {exercises.length > 0 ? `(${exercises.length})` : ''}</span>
+            <span style={SECTION_LABEL}>Exercises {items.length > 0 ? `(${items.length})` : ''}</span>
           </div>
-          {exercises.length === 0 ? (
+          {items.length === 0 ? (
             <p style={{ padding: '16px 20px', fontSize: '13px', color: 'var(--color-muted)' }}>No exercises added yet.</p>
           ) : (
-            exercises.map((pe, i) => (
-              <div
-                key={pe.id}
-                style={{ padding: '12px 20px', borderBottom: i < exercises.length - 1 ? '1px solid var(--color-elevated)' : 'none' }}
-              >
-                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', marginBottom: '6px' }}>{pe.exercises.name}</div>
-                {editingId === pe.id ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {!editValues.perSetEnabled && (
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
-                          Sets
-                          <input
-                            type="number" min="1"
-                            value={editValues.sets}
-                            onChange={e => setEditValues(v => ({ ...v, sets: e.target.value }))}
-                            style={{ width: '60px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
-                          />
-                        </label>
-                        <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
-                          {pe.measurement_type === 'seconds' ? 'Seconds' : 'Reps'}
-                          <input
-                            type="number" min="1"
-                            value={editValues.reps}
-                            onChange={e => setEditValues(v => ({ ...v, reps: e.target.value }))}
-                            style={{ width: '70px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
-                          />
-                        </label>
-                        <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
-                          Weight ({weightUnit})
-                          <input
-                            type="number" min="0" step="0.5"
-                            value={editValues.weight}
-                            onChange={e => setEditValues(v => ({ ...v, weight: e.target.value }))}
-                            placeholder="—"
-                            style={{ width: '80px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
-                          />
-                        </label>
-                      </div>
-                    )}
-                    <input
-                      type="text"
-                      value={editValues.notes}
-                      onChange={e => setEditValues(v => ({ ...v, notes: e.target.value }))}
-                      placeholder="Therapist notes (optional)"
-                      style={{ padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '12px', outline: 'none' }}
-                    />
-                    {/* Per-set edit */}
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editValues.perSetEnabled ? '6px' : 0 }}>
-                        <span style={{ fontSize: '11px', color: 'var(--color-muted)', fontWeight: 500 }}>
-                          Per-set weights & reps <span style={{ fontWeight: 400, color: 'var(--color-subtle)' }}>(optional)</span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!editValues.perSetEnabled) {
-                              const n = Math.max(1, parseInt(editValues.sets) || 1)
-                              setEditValues(v => ({
-                                ...v,
-                                perSetEnabled: true,
-                                perSetRows: Array.from({ length: n }, () => ({ reps: v.reps, weight: v.weight })),
-                              }))
-                            } else {
-                              setEditValues(v => ({ ...v, perSetEnabled: false }))
-                            }
-                          }}
-                          style={{
-                            width: '28px', height: '16px', borderRadius: '8px', border: 'none',
-                            cursor: 'pointer', padding: 0, position: 'relative', transition: 'background 0.15s',
-                            background: editValues.perSetEnabled ? '#29B5CC' : 'var(--color-border)',
-                          }}
-                        >
-                          <span style={{
-                            display: 'block', width: '12px', height: '12px', borderRadius: '50%', background: '#fff',
-                            position: 'absolute', top: '2px', transition: 'left 0.15s',
-                            left: editValues.perSetEnabled ? '14px' : '2px',
-                          }} />
-                        </button>
-                      </div>
-                      {editValues.perSetEnabled && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 1fr 20px', gap: '4px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', textAlign: 'center' }}>Set</span>
-                            <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', textAlign: 'center' }}>Reps</span>
-                            <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', textAlign: 'center' }}>Wt ({weightUnit})</span>
-                            <span />
-                          </div>
-                          {(editValues.perSetRows ?? []).map((row, i) => (
-                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '24px 1fr 1fr 20px', gap: '4px', alignItems: 'center' }}>
-                              <span style={{ fontSize: '11px', fontWeight: 700, color: '#29B5CC', textAlign: 'center', fontFamily: 'monospace' }}>{i + 1}</span>
-                              <input
-                                type="number" min="1" value={row.reps}
-                                onChange={e => setEditValues(v => ({ ...v, perSetRows: v.perSetRows.map((r, j) => j === i ? { ...r, reps: e.target.value } : r) }))}
-                                style={{ width: '100%', padding: '4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '5px', color: 'var(--color-text)', fontSize: '13px', fontFamily: 'monospace', fontWeight: 600, outline: 'none', textAlign: 'center', colorScheme: 'dark', boxSizing: 'border-box' }}
-                              />
-                              <input
-                                type="number" min="0" step="0.5" value={row.weight} placeholder="BW"
-                                onChange={e => setEditValues(v => ({ ...v, perSetRows: v.perSetRows.map((r, j) => j === i ? { ...r, weight: e.target.value } : r) }))}
-                                style={{ width: '100%', padding: '4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '5px', color: 'var(--color-text)', fontSize: '13px', fontFamily: 'monospace', fontWeight: 600, outline: 'none', textAlign: 'center', colorScheme: 'dark', boxSizing: 'border-box' }}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setEditValues(v => ({ ...v, perSetRows: v.perSetRows.length > 1 ? v.perSetRows.filter((_, j) => j !== i) : v.perSetRows }))}
-                                style={{ fontSize: '12px', color: (editValues.perSetRows?.length ?? 0) > 1 ? 'var(--color-muted)' : 'var(--color-border)', background: 'none', border: 'none', cursor: (editValues.perSetRows?.length ?? 0) > 1 ? 'pointer' : 'default', padding: 0, textAlign: 'center' }}
-                              >✕</button>
-                            </div>
-                          ))}
-                          <button
-                            type="button"
-                            onClick={() => setEditValues(v => ({ ...v, perSetRows: [...(v.perSetRows ?? []), { reps: '', weight: '' }] }))}
-                            style={{ fontSize: '11px', padding: '4px', background: 'rgba(41,181,204,0.08)', border: '1px dashed rgba(41,181,204,0.3)', color: '#29B5CC', borderRadius: '5px', cursor: 'pointer' }}
-                          >+ Add set</button>
-                        </div>
-                      )}
-                    </div>
-                    {/* Tempo edit */}
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editValues.tempoEnabled ? '6px' : 0 }}>
-                        <span style={{ fontSize: '11px', color: 'var(--color-muted)', fontWeight: 500 }}>
-                          Tempo <span style={{ fontWeight: 400, color: 'var(--color-subtle)' }}>(optional)</span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => { setSaveEditError(null); setEditValues(v => ({ ...v, tempoEnabled: !v.tempoEnabled })) }}
-                          style={{
-                            width: '28px', height: '16px', borderRadius: '8px', border: 'none',
-                            cursor: 'pointer', padding: 0, position: 'relative', transition: 'background 0.15s',
-                            background: editValues.tempoEnabled ? '#29B5CC' : 'var(--color-border)',
-                          }}
-                        >
-                          <span style={{
-                            display: 'block', width: '12px', height: '12px', borderRadius: '50%', background: '#fff',
-                            position: 'absolute', top: '2px', transition: 'left 0.15s',
-                            left: editValues.tempoEnabled ? '14px' : '2px',
-                          }} />
-                        </button>
-                      </div>
-                      {editValues.tempoEnabled && (
-                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
-                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                            <input type="number" min={1} max={9} value={editValues.tempoDown ?? ''} onChange={e => setEditValues(v => ({ ...v, tempoDown: e.target.value }))}
-                              style={{ width: '100%', padding: '5px 4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', textAlign: 'center', colorScheme: 'dark' }} />
-                            <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>Eccentric</span>
-                          </div>
-                          <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '14px' }}>—</span>
-                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                            <input type="number" min={0} max={9} value={editValues.tempoHold ?? ''} onChange={e => setEditValues(v => ({ ...v, tempoHold: e.target.value }))}
-                              style={{ width: '100%', padding: '5px 4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', textAlign: 'center', colorScheme: 'dark' }} />
-                            <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>HOLD</span>
-                          </div>
-                          <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '14px' }}>—</span>
-                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                            <input type="number" min={1} max={9} value={editValues.tempoUp ?? ''} onChange={e => setEditValues(v => ({ ...v, tempoUp: e.target.value }))}
-                              style={{ width: '100%', padding: '5px 4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', textAlign: 'center', colorScheme: 'dark' }} />
-                            <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>Concentric</span>
-                          </div>
-                          <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '14px' }}>—</span>
-                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                            <input type="number" min={0} max={9} value={editValues.tempoTop ?? ''} onChange={e => setEditValues(v => ({ ...v, tempoTop: e.target.value }))}
-                              style={{ width: '100%', padding: '5px 4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', textAlign: 'center', colorScheme: 'dark' }} />
-                            <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>TOP</span>
-                          </div>
-                        </div>
-                      )}
-                      {saveEditError && <p style={{ fontSize: '12px', color: 'var(--color-danger)', margin: '4px 0 0' }}>{saveEditError}</p>}
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        onClick={() => saveEdit(pe.id)}
-                        disabled={savingEdit}
-                        style={{ fontSize: '12px', padding: '4px 12px', background: '#29B5CC', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
-                      >
-                        {savingEdit ? 'Saving…' : 'Save'}
-                      </button>
-                      <button
-                        onClick={() => setEditingId(null)}
-                        style={{ fontSize: '12px', padding: '4px 10px', background: 'none', color: 'var(--color-muted)', border: '1px solid var(--color-border)', borderRadius: '6px', cursor: 'pointer' }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={() => removeExercise(pe.id)}
-                        style={{ fontSize: '12px', padding: '4px 10px', background: 'none', color: 'var(--color-danger)', border: 'none', cursor: 'pointer', marginLeft: 'auto' }}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
-                    <div>
-                      {pe.prescription_exercise_sets?.length > 0 ? (
-                        <div style={{ marginTop: '2px' }}>
-                          <div style={{ fontSize: '11px', color: '#29B5CC', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
-                            Per-set · {pe.prescription_exercise_sets.length} sets
-                          </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 1fr', gap: '2px 8px' }}>
-                            {pe.prescription_exercise_sets
-                              .slice().sort((a, b) => a.set_number - b.set_number)
-                              .flatMap((s, i) => [
-                                <span key={`${i}-n`} style={{ fontFamily: 'monospace', fontWeight: 700, color: '#29B5CC', fontSize: '11px' }}>{s.set_number}</span>,
-                                <span key={`${i}-r`} style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{s.reps} {pe.measurement_type === 'seconds' ? 'sec' : 'reps'}</span>,
-                                <span key={`${i}-w`} style={{ fontSize: '12px', color: 'var(--color-subtle)' }}>{s.weight != null ? formatWeight(s.weight, weightUnit) : 'Bodyweight'}</span>,
-                              ])
-                            }
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: '12px', color: 'var(--color-subtle)' }}>
-                          {pe.sets} sets × {pe.reps} {pe.measurement_type === 'seconds' ? 'sec' : 'reps'}
-                          {pe.weight ? ` · ${formatWeight(pe.weight, weightUnit)}` : ''}
-                          {pe.bilateral ? ' · Both sides' : ''}
-                        </div>
-                      )}
-                      {(() => {
-                        const t = formatTempo(pe.tempo_eccentric, pe.tempo_bottom_pause, pe.tempo_concentric, pe.tempo_top_pause)
-                        return t ? (
-                          <span style={{ display: 'inline-block', marginTop: '3px', background: 'rgba(41,181,204,0.1)', border: '1px solid rgba(41,181,204,0.2)', borderRadius: '4px', padding: '1px 7px', fontSize: '11px', color: '#29B5CC', fontFamily: 'monospace', fontWeight: 600 }}>
-                            ⏱ {t.compact}
-                          </span>
-                        ) : null
-                      })()}
-                      {pe.therapist_notes && (
-                        <div style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px', fontStyle: 'italic' }}>{pe.therapist_notes}</div>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                      <button
-                        onClick={() => startEdit(pe)}
-                        style={{ fontSize: '12px', color: 'var(--color-accent)', background: 'none', border: 'none', cursor: 'pointer' }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => removeExercise(pe.id)}
-                        style={{ fontSize: '12px', color: 'var(--color-danger)', background: 'none', border: 'none', cursor: 'pointer' }}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {pe.exercises.video_url && <VideoPlayer url={pe.exercises.video_url} className="w-full rounded mt-2" />}
-              </div>
+            items.map((item, i) => (
+              item.type === 'exercise'
+                ? renderExerciseRow(item.ex, i < items.length - 1)
+                : renderSupersetBlock(item, i < items.length - 1)
             ))
           )}
         </motion.div>
+
+        {(showSupersetModal || editingSuperset) && (
+          <SupersetPickerModal
+            prescriptionId={sessionId}
+            existingGroupCount={groups.length}
+            currentMaxOrderIndex={computeNextOrderIndex(groups, exercises) - 1}
+            editGroup={editingSuperset?.group ?? null}
+            editMembers={editingSuperset?.members ?? []}
+            onAdd={(updatedGroup, newPeRows, removedPeIds = []) => {
+              if (editingSuperset) {
+                const updatedGroups = groups.map(g => g.id === updatedGroup.id ? updatedGroup : g)
+                const updatedExercises = [
+                  ...exercises.filter(pe => !removedPeIds.includes(pe.id)).map(pe =>
+                    pe.group_id === updatedGroup.id ? { ...pe, sets: updatedGroup.set_count } : pe
+                  ),
+                  ...newPeRows,
+                ]
+                setGroups(updatedGroups)
+                setExercises(updatedExercises)
+                setItems(buildSessionItems(updatedGroups, updatedExercises))
+                setEditingSuperset(null)
+              } else {
+                const updatedGroups = [...groups, updatedGroup]
+                const updatedExercises = [...exercises, ...newPeRows]
+                setGroups(updatedGroups)
+                setExercises(updatedExercises)
+                setItems(buildSessionItems(updatedGroups, updatedExercises))
+                setShowSupersetModal(false)
+              }
+            }}
+            onClose={() => { setShowSupersetModal(false); setEditingSuperset(null) }}
+          />
+        )}
+
+        <button
+          onClick={() => setShowSupersetModal(true)}
+          style={{ width: '100%', padding: '10px', background: 'rgba(41,181,204,0.08)', border: '1px solid rgba(41,181,204,0.25)', borderRadius: '8px', color: '#29B5CC', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+        >
+          ⚡ Add superset
+        </button>
 
         {/* ExercisePicker — unchanged */}
         <ExercisePicker onAdd={handleAddExercise} weightUnit={weightUnit} />
