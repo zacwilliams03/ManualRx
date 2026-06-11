@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from '@react-pdf/renderer'
 import { formatTempo } from '../../utils/formatTempo'
 import { formatWeight } from '../../utils/weightUtils'
+import { formatRest } from '../../utils/formatRest'
 
 const NAVY = '#1E2D3D'
 const TEAL = '#29B5CC'
@@ -73,6 +74,10 @@ function NormalRow({ ex, i, weightUnit }) {
       <View style={s.cellNum}><Text style={s.exNum}>{i + 1}</Text></View>
       <View style={s.cellExercise}>
         <Text style={s.exName}>{ex.name}</Text>
+        {ex.rest_seconds > 0
+          ? <Text style={{ color: GREY, fontSize: 7.5, marginTop: 2 }}>Rest: {formatRest(ex.rest_seconds)} between sets</Text>
+          : null
+        }
         {ex.therapist_notes ? (
           <View style={s.notesBox}>
             <Text style={s.notesBoxText}>{ex.therapist_notes}</Text>
@@ -104,9 +109,15 @@ function PerSetRows({ ex, i, weightUnit }) {
     <>
       <View style={s.perSetNameRow}>
         <View style={s.cellNum}><Text style={s.exNum}>{i + 1}</Text></View>
-        <View style={[s.cellExercise, { flexDirection: 'row', alignItems: 'center' }]}>
-          <Text style={s.exName}>{ex.name}</Text>
-          <View style={s.perSetBadge}><Text style={s.perSetBadgeText}>PER-SET</Text></View>
+        <View style={s.cellExercise}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={s.exName}>{ex.name}</Text>
+            <View style={s.perSetBadge}><Text style={s.perSetBadgeText}>PER-SET</Text></View>
+          </View>
+          {ex.rest_seconds > 0
+            ? <Text style={{ color: GREY, fontSize: 7.5, marginTop: 2 }}>Rest: {formatRest(ex.rest_seconds)} between sets</Text>
+            : null
+          }
         </View>
         <View style={s.cellSets} />
         <View style={s.cellReps} />
