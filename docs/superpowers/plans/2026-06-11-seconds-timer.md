@@ -148,7 +148,7 @@ Run:
 ```bash
 ls src/components/client/
 ```
-Expected: `BottomNav.jsx  SetTimer.jsx`
+Expected: `SetTimer.jsx` is present in the output (other files may also be listed).
 
 - [ ] **Step 1.3: Commit**
 
@@ -293,6 +293,8 @@ Replace with:
                 </div>
               )}
 ```
+
+> **Auto-fill semantics:** `onComplete` fires only when the countdown reaches 0 (full completion) and writes the *prescribed* target seconds — not elapsed time. Partial holds (client pauses or resets early) are entered manually via the always-visible "Actual (sec)" input. Do not attempt to capture elapsed time in `onComplete`.
 
 - [ ] **Step 2.3: Run the dev server and verify manually**
 
