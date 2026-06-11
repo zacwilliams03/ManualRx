@@ -3,6 +3,18 @@ import React, { useState, useEffect } from 'react'
 const R = 40
 const C = 2 * Math.PI * R  // ≈ 251.33
 
+const btnBase = {
+  border: 'none', borderRadius: '7px', padding: '8px 14px',
+  fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+}
+const primaryBtn = { ...btnBase, background: 'rgba(41,181,204,0.12)', border: '1px solid rgba(41,181,204,0.3)', color: 'var(--color-accent)' }
+const resetLink = { background: 'none', border: 'none', fontSize: '12px', color: 'var(--color-muted)', cursor: 'pointer', padding: '4px 8px', fontFamily: 'inherit' }
+
+/**
+ * Requires parent to set key={currentSet} (or equivalent) so this component
+ * remounts on each new set — the done-effect captures onComplete/targetSeconds
+ * via closure at mount time.
+ */
 export default function SetTimer({ targetSeconds, onComplete, onReset }) {
   const [timeLeft, setTimeLeft] = useState(targetSeconds)
   const [phase, setPhase] = useState('idle') // 'idle' | 'running' | 'paused' | 'done'
@@ -39,14 +51,7 @@ export default function SetTimer({ targetSeconds, onComplete, onReset }) {
   const offset = targetSeconds > 0
     ? C * (1 - timeLeft / targetSeconds)
     : 0
-  const ringColor = phase === 'done' ? 'var(--color-success)' : '#29B5CC'
-
-  const btnBase = {
-    border: 'none', borderRadius: '7px', padding: '8px 14px',
-    fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-  }
-  const primaryBtn = { ...btnBase, background: 'rgba(41,181,204,0.12)', border: '1px solid rgba(41,181,204,0.3)', color: '#29B5CC' }
-  const resetLink = { background: 'none', border: 'none', fontSize: '12px', color: 'var(--color-muted)', cursor: 'pointer', padding: '4px 8px', fontFamily: 'inherit' }
+  const ringColor = phase === 'done' ? 'var(--color-success)' : 'var(--color-accent)'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
