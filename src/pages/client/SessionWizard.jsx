@@ -6,6 +6,7 @@ import { useWeightUnit } from '../../hooks/useWeightUnit'
 import useIsMobile from '../../hooks/useIsMobile'
 import { toCanonical, fromCanonical, formatWeight } from '../../utils/weightUtils'
 import { formatTempo } from '../../utils/formatTempo'
+import { formatRest } from '../../utils/formatRest'
 import VideoPlayer from '../../components/VideoPlayer'
 import SetTimer from '../../components/client/SetTimer'
 import { motion } from 'framer-motion'
@@ -75,7 +76,7 @@ export default function SessionWizard() {
         supabase.from('prescriptions').select('id, name, therapist_id').eq('id', sessionId).single(),
         supabase
           .from('prescription_exercises')
-          .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(set_number, reps, weight), exercises(id, name, category, video_url)')
+          .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, rest_seconds, prescription_exercise_sets(set_number, reps, weight), exercises(id, name, category, video_url)')
           .eq('prescription_id', sessionId)
           .order('id', { ascending: true }),
         supabase
@@ -87,7 +88,7 @@ export default function SessionWizard() {
           .single(),
         supabase
           .from('prescription_exercise_groups')
-          .select('id, label, set_count, order_index, created_at')
+          .select('id, label, set_count, order_index, created_at, rest_seconds')
           .eq('prescription_id', sessionId)
           .order('order_index', { ascending: true }),
       ])
@@ -388,7 +389,9 @@ export default function SessionWizard() {
               ⚡ {group.label} — Round {completedRound + 1} complete
             </span>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '4px' }}>Rest</div>
+          <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '4px' }}>
+            {item.group.rest_seconds > 0 ? `Rest: ${formatRest(item.group.rest_seconds)}` : 'Rest'}
+          </div>
           <div style={{ fontSize: '13px', color: 'var(--color-muted)', marginBottom: '16px' }}>Round {nextRound + 1} of {group.set_count} starts next</div>
           <div style={{ background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '10px', overflow: 'hidden', marginBottom: '16px' }}>
             {superExs.map((pe, i) => {
@@ -826,6 +829,11 @@ export default function SessionWizard() {
           {ex.therapist_notes && (
             <p style={{ background: 'rgba(41,181,204,0.06)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '7px', padding: '8px 12px', fontSize: '13px', color: '#29B5CC', margin: 0 }}>
               {ex.therapist_notes}
+            </p>
+          )}
+          {ex.rest_seconds > 0 && (
+            <p style={{ background: 'rgba(41,181,204,0.04)', border: '1px solid rgba(41,181,204,0.10)', borderRadius: '7px', padding: '8px 12px', fontSize: '12px', color: 'var(--color-muted)', margin: 0 }}>
+              Rest: {formatRest(ex.rest_seconds)} between sets
             </p>
           )}
 
