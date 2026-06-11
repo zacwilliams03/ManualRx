@@ -59,11 +59,11 @@ export default function TemplateEdit() {
       supabase.from('templates').select('id, name, category, duration_weeks').eq('id', templateId).single(),
       supabase
         .from('template_exercises')
-        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, rest_seconds, template_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
         .eq('template_id', templateId),
       supabase
         .from('template_exercise_groups')
-        .select('id, label, set_count, order_index, created_at')
+        .select('id, label, set_count, order_index, created_at, rest_seconds')
         .eq('template_id', templateId)
         .order('order_index', { ascending: true }),
       supabase
@@ -115,7 +115,7 @@ export default function TemplateEdit() {
     navigate('/therapist/templates')
   }
 
-  async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral, tempoEccentric, tempoBottomPause, tempoConcentric, tempoTopPause, perSetSets }) {
+  async function handleAddExercise({ exerciseId, sets, reps, weight, notes, measurementType, bilateral, tempoEccentric, tempoBottomPause, tempoConcentric, tempoTopPause, perSetSets, restSeconds }) {
     const { data, error: insertError } = await supabase
       .from('template_exercises')
       .insert({
@@ -131,9 +131,10 @@ export default function TemplateEdit() {
         tempo_bottom_pause: tempoBottomPause  ?? null,
         tempo_concentric:   tempoConcentric   ?? null,
         tempo_top_pause:    tempoTopPause     ?? null,
+        rest_seconds: restSeconds ?? null,
         order_index: computeNextOrderIndex(groups, exercises),
       })
-      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, rest_seconds, template_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
       .single()
     if (insertError) throw new Error(insertError.message)
 
@@ -149,7 +150,7 @@ export default function TemplateEdit() {
       if (setsError) throw new Error(setsError.message)
       const { data: fresh, error: freshError } = await supabase
         .from('template_exercises')
-        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+        .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, rest_seconds, template_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
         .eq('id', data.id)
         .single()
       if (freshError || !fresh) throw new Error('Failed to refresh exercise after adding per-set rows.')
