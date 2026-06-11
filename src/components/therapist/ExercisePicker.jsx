@@ -8,7 +8,7 @@ import { formatPerSetSummary } from '../../utils/formatPerSetSummary'
 
 const CATEGORIES = [
   'Custom', 'Cervical', 'Thoracic', 'Lumbar',
-  'Shoulder', 'Elbow', 'Hand / Wrist', 'Hip', 'Knee', 'Ankle / Foot', 'General',
+  'Shoulder', 'Elbow', 'Wrist', 'Hip', 'Knee', 'Ankle', 'Core', 'General',
 ]
 
 const inputStyle = {
@@ -55,6 +55,7 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
   const [configTempoHold, setConfigTempoHold] = useState('')
   const [configTempoUp, setConfigTempoUp] = useState('')
   const [configTempoTop, setConfigTempoTop] = useState('')
+  const [configRestSeconds, setConfigRestSeconds] = useState('')
   const [configPerSetEnabled, setConfigPerSetEnabled] = useState(false)
   const [configPerSetRows, setConfigPerSetRows] = useState([])
 
@@ -116,6 +117,7 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
     setConfigTempoHold('')
     setConfigTempoUp('')
     setConfigTempoTop('')
+    setConfigRestSeconds('')
     setConfigPerSetEnabled(false)
     setConfigPerSetRows([])
     setPickerView('configure')
@@ -165,6 +167,9 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
         tempoBottomPause: configTempoEnabled ? parseInt(configTempoHold) : null,
         tempoConcentric:  configTempoEnabled ? parseInt(configTempoUp)   : null,
         tempoTopPause:    configTempoEnabled ? parseInt(configTempoTop)   : null,
+        restSeconds: configRestSeconds !== '' && parseInt(configRestSeconds) > 0
+          ? parseInt(configRestSeconds)
+          : null,
         perSetSets: configPerSetEnabled
           ? configPerSetRows.map((r, idx) => ({
               set_number: idx + 1,
@@ -522,6 +527,25 @@ export default function ExercisePicker({ onAdd, weightUnit, disabled, confirmLab
                   })()}
                 </div>
               )}
+            </div>
+
+            {/* Rest between sets — optional */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <label style={{ fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', flex: 1 }}>
+                Rest between sets <span style={{ fontWeight: 400, color: 'var(--color-subtle)' }}>(optional)</span>
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <input
+                  type="number"
+                  min="0"
+                  step="5"
+                  value={configRestSeconds}
+                  onChange={e => setConfigRestSeconds(e.target.value)}
+                  placeholder="—"
+                  style={{ width: '64px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark', textAlign: 'center' }}
+                />
+                <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>sec</span>
+              </div>
             </div>
 
             <div>
