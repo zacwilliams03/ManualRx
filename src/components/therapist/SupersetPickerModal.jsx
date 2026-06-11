@@ -40,6 +40,9 @@ export default function SupersetPickerModal({
   })
   const [setCount, setSetCount] = useState(editGroup?.set_count ?? 3)
   const [saving, setSaving] = useState(false)
+  const [restSeconds, setRestSeconds] = useState(
+    editGroup?.rest_seconds != null ? String(editGroup.rest_seconds) : ''
+  )
   const [error, setError] = useState(null)
   const debounceRef = useRef(null)
 
@@ -104,6 +107,9 @@ export default function SupersetPickerModal({
         label: `Superset ${label}`,
         set_count: setCount,
         order_index: currentMaxOrderIndex + 1,
+        rest_seconds: restSeconds !== '' && parseInt(restSeconds) > 0
+          ? parseInt(restSeconds)
+          : null,
       })
       .select('id, label, set_count, order_index, created_at')
       .single()
@@ -194,7 +200,12 @@ export default function SupersetPickerModal({
 
     const { error: upErr } = await supabase
       .from(groupTable)
-      .update({ set_count: setCount })
+      .update({
+        set_count: setCount,
+        rest_seconds: restSeconds !== '' && parseInt(restSeconds) > 0
+          ? parseInt(restSeconds)
+          : null,
+      })
       .eq('id', editGroup.id)
     if (upErr) throw new Error(upErr.message)
 
@@ -204,7 +215,15 @@ export default function SupersetPickerModal({
       .eq('group_id', editGroup.id)
     if (exUpErr) throw new Error(exUpErr.message)
 
-    onAdd({ ...editGroup, set_count: setCount }, inserted, removedMembers.map(em => em.id))
+    onAdd(
+      {
+        ...editGroup,
+        set_count: setCount,
+        rest_seconds: restSeconds !== '' && parseInt(restSeconds) > 0 ? parseInt(restSeconds) : null,
+      },
+      inserted,
+      removedMembers.map(em => em.id)
+    )
   }
 
   const isEditMode = !!editGroup
@@ -287,6 +306,24 @@ export default function SupersetPickerModal({
             <button onClick={() => setSetCount(v => Math.max(1, v - 1))} style={{ width: '28px', height: '28px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
             <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text)', width: '24px', textAlign: 'center' }}>{setCount}</span>
             <button onClick={() => setSetCount(v => v + 1)} style={{ width: '28px', height: '28px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '10px 12px' }}>
+          <div style={{ flex: 1, fontSize: '13px', color: 'var(--color-text)' }}>
+            Rest between rounds <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>(optional)</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <input
+              type="number"
+              min="0"
+              step="5"
+              value={restSeconds}
+              onChange={e => setRestSeconds(e.target.value)}
+              placeholder="—"
+              style={{ width: '64px', padding: '5px 8px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark', textAlign: 'center' }}
+            />
+            <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>sec</span>
           </div>
         </div>
 
