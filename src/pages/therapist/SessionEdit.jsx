@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -299,12 +299,14 @@ export default function SessionEdit() {
       return
     }
     for (let i = 0; i < members.length; i++) {
-      await supabase
+      const { error: updateErr } = await supabase
         .from('prescription_exercises')
         .update({ group_id: null, position_in_group: null, order_index: group.order_index + i })
         .eq('id', members[i].id)
+      if (updateErr) { alert('Failed to ungroup: ' + updateErr.message); return }
     }
-    await supabase.from('prescription_exercise_groups').delete().eq('id', group.id)
+    const { error: deleteErr } = await supabase.from('prescription_exercise_groups').delete().eq('id', group.id)
+    if (deleteErr) { alert('Failed to remove superset: ' + deleteErr.message); return }
     const updatedExercises = exercises.map(pe => {
       if (pe.group_id === group.id) {
         const idx = members.findIndex(m => m.id === pe.id)
@@ -799,8 +801,8 @@ export default function SessionEdit() {
           ) : (
             items.map((item, i) => (
               item.type === 'exercise'
-                ? renderExerciseRow(item.ex, i < items.length - 1)
-                : renderSupersetBlock(item, i < items.length - 1)
+                ? <Fragment key={item.ex.id}>{renderExerciseRow(item.ex, i < items.length - 1)}</Fragment>
+                : <Fragment key={item.group.id}>{renderSupersetBlock(item, i < items.length - 1)}</Fragment>
             ))
           )}
         </motion.div>
