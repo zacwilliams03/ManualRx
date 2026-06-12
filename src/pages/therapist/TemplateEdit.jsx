@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import SidebarLayout from '../../components/therapist/SidebarLayout'
 import ExercisePicker from '../../components/therapist/ExercisePicker'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
-import { formatWeight } from '../../utils/weightUtils'
+import { formatWeight, fromCanonical, toCanonical } from '../../utils/weightUtils'
 import { formatTempo } from '../../utils/formatTempo'
 import { motion } from 'framer-motion'
 import PageHero from '../../components/shared/PageHero'
@@ -43,6 +43,11 @@ export default function TemplateEdit() {
   const [customWeeks, setCustomWeeks] = useState('')
   const [saving, setSaving] = useState(false)
   const [existingCategories, setExistingCategories] = useState([])
+
+  const [editingId, setEditingId] = useState(null)
+  const [editValues, setEditValues] = useState({})
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [saveEditError, setSaveEditError] = useState(null)
 
   const [groups, setGroups] = useState([])
   const [items, setItems] = useState([])
@@ -105,6 +110,10 @@ export default function TemplateEdit() {
   }
 
   async function saveMeta() {
+    if (editingId) {
+      const ok = await saveEdit(editingId)
+      if (!ok) return
+    }
     setSaving(true)
     const dw = durationWeeks === 'custom' ? parseInt(customWeeks) || null : durationWeeks
     await supabase
@@ -177,6 +186,113 @@ export default function TemplateEdit() {
     })
   }
 
+  function startEdit(te) {
+    setEditingId(te.id)
+    setSaveEditError(null)
+    const perSetRows = te.template_exercise_sets ?? []
+    setEditValues({
+      sets: String(te.sets),
+      reps: String(te.reps ?? ''),
+      groupId: te.group_id ?? null,
+      weight: te.weight ? String(parseFloat(fromCanonical(te.weight, weightUnit).toFixed(1))) : '',
+      notes: te.therapist_notes ?? '',
+      tempoEnabled: te.tempo_eccentric != null && te.tempo_bottom_pause != null && te.tempo_concentric != null && te.tempo_top_pause != null,
+      tempoDown: te.tempo_eccentric != null ? String(te.tempo_eccentric) : '',
+      tempoHold: te.tempo_bottom_pause != null ? String(te.tempo_bottom_pause) : '',
+      tempoUp: te.tempo_concentric != null ? String(te.tempo_concentric) : '',
+      tempoTop: te.tempo_top_pause != null ? String(te.tempo_top_pause) : '',
+      restSeconds: te.rest_seconds != null ? String(te.rest_seconds) : '',
+      measurementType: te.measurement_type ?? 'reps',
+      perSetEnabled: perSetRows.length > 0,
+      perSetRows: perSetRows
+        .slice().sort((a, b) => a.set_number - b.set_number)
+        .map(s => ({
+          reps: String(s.reps),
+          weight: s.weight != null ? String(parseFloat(fromCanonical(s.weight, weightUnit).toFixed(1))) : '',
+        })),
+    })
+  }
+
+  async function saveEdit(teId) {
+    setSaveEditError(null)
+    const v = editValues
+
+    if (v.perSetEnabled) {
+      if (!v.perSetRows?.length) { setSaveEditError('At least one set is required.'); return false }
+      const invalid = v.perSetRows.some(r => !r.reps || isNaN(parseInt(r.reps)) || parseInt(r.reps) < 1)
+      if (invalid) { setSaveEditError('Per-set: each set must have reps ≥ 1.'); return false }
+    }
+
+    if (v.tempoEnabled) {
+      const e = parseInt(v.tempoDown), b = parseInt(v.tempoHold)
+      const c = parseInt(v.tempoUp), t = parseInt(v.tempoTop)
+      const valid =
+        !isNaN(e) && !isNaN(b) && !isNaN(c) && !isNaN(t) &&
+        e >= 1 && e <= 9 && c >= 1 && c <= 9 &&
+        b >= 0 && b <= 9 && t >= 0 && t <= 9
+      if (!valid) { setSaveEditError('Tempo: down and up must be 1–9; hold and top must be 0–9.'); return false }
+    }
+
+    setSavingEdit(true)
+    const setsCount = v.perSetEnabled ? v.perSetRows.length : (parseInt(v.sets) || 1)
+    const weightVal = v.weight.trim() ? toCanonical(parseFloat(v.weight), weightUnit) : null
+
+    const { error: updateError } = await supabase
+      .from('template_exercises')
+      .update({
+        ...(v.groupId == null ? { sets: setsCount } : {}),
+        reps: v.perSetEnabled ? null : (parseInt(v.reps) || 1),
+        weight: v.perSetEnabled ? null : weightVal,
+        therapist_notes: v.notes.trim() || null,
+        measurement_type: v.measurementType ?? 'reps',
+        tempo_eccentric:    v.tempoEnabled ? parseInt(v.tempoDown) : null,
+        tempo_bottom_pause: v.tempoEnabled ? parseInt(v.tempoHold) : null,
+        tempo_concentric:   v.tempoEnabled ? parseInt(v.tempoUp)   : null,
+        tempo_top_pause:    v.tempoEnabled ? parseInt(v.tempoTop)   : null,
+        rest_seconds: v.restSeconds !== '' && parseInt(v.restSeconds) > 0
+          ? parseInt(v.restSeconds)
+          : null,
+      })
+      .eq('id', teId)
+    if (updateError) { setSavingEdit(false); setSaveEditError(updateError.message || 'Failed to save.'); return false }
+
+    const { error: deleteError } = await supabase
+      .from('template_exercise_sets')
+      .delete()
+      .eq('template_exercise_id', teId)
+    if (deleteError) { setSavingEdit(false); setSaveEditError(deleteError.message); return false }
+
+    if (v.perSetEnabled) {
+      const rows = v.perSetRows.map((r, i) => ({
+        template_exercise_id: teId,
+        set_number: i + 1,
+        reps: parseInt(r.reps),
+        weight: r.weight !== '' && r.weight != null ? toCanonical(parseFloat(r.weight), weightUnit) : null,
+      }))
+      const { error: insertError } = await supabase.from('template_exercise_sets').insert(rows)
+      if (insertError) { setSavingEdit(false); setSaveEditError(insertError.message); return false }
+    }
+
+    const { data: fresh, error: freshError } = await supabase
+      .from('template_exercises')
+      .select('id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, rest_seconds, template_exercise_sets(id, set_number, reps, weight), exercises(id, name, category, video_url)')
+      .eq('id', teId)
+      .single()
+
+    setSavingEdit(false)
+    if (freshError || !fresh) {
+      setSaveEditError('Saved, but failed to refresh — please reload.')
+      return false
+    }
+    setExercises(prev => {
+      const next = prev.map(e => e.id === teId ? fresh : e)
+      setItems(buildSessionItems(groups, next))
+      return next
+    })
+    setEditingId(null)
+    return true
+  }
+
   async function handleUngroup(group, members) {
     for (let i = 0; i < members.length; i++) {
       const { error: updateErr } = await supabase
@@ -226,55 +342,244 @@ export default function TemplateEdit() {
   function renderExerciseRow(te, hasBorder) {
     return (
       <div
+        key={te.id}
         style={{ padding: '12px 20px', borderBottom: hasBorder ? '1px solid var(--color-elevated)' : 'none' }}
       >
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)' }}>{te.exercises?.name}</div>
-            {te.template_exercise_sets?.length > 0 ? (
-              <div style={{ marginTop: '2px' }}>
-                <div style={{ fontSize: '11px', color: '#29B5CC', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
-                  Per-set · {te.template_exercise_sets.length} sets
+        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text)', marginBottom: '6px' }}>{te.exercises?.name}</div>
+        {editingId === te.id ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {te.group_id != null && (
+              <div style={{ fontSize: '11px', color: 'var(--color-subtle)', background: 'rgba(41,181,204,0.06)', border: '1px solid rgba(41,181,204,0.15)', borderRadius: '6px', padding: '6px 10px' }}>
+                Set count is controlled by the superset ({te.sets} sets). Edit the superset header to change it.
+              </div>
+            )}
+            {/* Measurement type toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--color-muted)' }}>Type</span>
+              <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+                {['reps', 'seconds'].map(type => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setEditValues(v => ({ ...v, measurementType: type }))}
+                    style={{
+                      padding: '4px 10px', fontSize: '11px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                      background: (editValues.measurementType ?? 'reps') === type ? '#29B5CC' : 'var(--color-elevated)',
+                      color: (editValues.measurementType ?? 'reps') === type ? '#000' : 'var(--color-muted)',
+                      fontWeight: (editValues.measurementType ?? 'reps') === type ? 700 : 400,
+                    }}
+                  >
+                    {type === 'reps' ? 'Reps' : 'Seconds'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {!editValues.perSetEnabled && (
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
+                  Sets
+                  <input
+                    type="number" min="1"
+                    value={editValues.sets}
+                    onChange={e => setEditValues(v => ({ ...v, sets: e.target.value }))}
+                    style={{ width: '60px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
+                  />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
+                  {(editValues.measurementType ?? 'reps') === 'seconds' ? 'Seconds' : 'Reps'}
+                  <input
+                    type="number" min="1"
+                    value={editValues.reps}
+                    onChange={e => setEditValues(v => ({ ...v, reps: e.target.value }))}
+                    style={{ width: '70px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
+                  />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: 'var(--color-muted)' }}>
+                  Weight ({weightUnit})
+                  <input
+                    type="number" min="0" step="0.5"
+                    value={editValues.weight}
+                    onChange={e => setEditValues(v => ({ ...v, weight: e.target.value }))}
+                    placeholder="—"
+                    style={{ width: '80px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark' }}
+                  />
+                </label>
+              </div>
+            )}
+            <input
+              type="text"
+              value={editValues.notes}
+              onChange={e => setEditValues(v => ({ ...v, notes: e.target.value }))}
+              placeholder="Therapist notes (optional)"
+              style={{ padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '12px', outline: 'none' }}
+            />
+            {/* Per-set */}
+            {te.group_id == null && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editValues.perSetEnabled ? '6px' : 0 }}>
+                  <span style={{ fontSize: '11px', color: 'var(--color-muted)', fontWeight: 500 }}>
+                    Per-set weights & reps <span style={{ fontWeight: 400, color: 'var(--color-subtle)' }}>(optional)</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!editValues.perSetEnabled) {
+                        const n = Math.max(1, parseInt(editValues.sets) || 1)
+                        setEditValues(v => ({ ...v, perSetEnabled: true, perSetRows: Array.from({ length: n }, () => ({ reps: v.reps, weight: v.weight })) }))
+                      } else {
+                        setEditValues(v => ({ ...v, perSetEnabled: false }))
+                      }
+                    }}
+                    style={{ width: '28px', height: '16px', borderRadius: '8px', border: 'none', cursor: 'pointer', padding: 0, position: 'relative', transition: 'background 0.15s', background: editValues.perSetEnabled ? '#29B5CC' : 'var(--color-border)' }}
+                  >
+                    <span style={{ display: 'block', width: '12px', height: '12px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', transition: 'left 0.15s', left: editValues.perSetEnabled ? '14px' : '2px' }} />
+                  </button>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 1fr', gap: '2px 8px' }}>
-                  {te.template_exercise_sets
-                    .slice().sort((a, b) => a.set_number - b.set_number)
-                    .flatMap((s, i) => [
-                      <span key={`${i}-n`} style={{ fontFamily: 'monospace', fontWeight: 700, color: '#29B5CC', fontSize: '11px' }}>{s.set_number}</span>,
-                      <span key={`${i}-r`} style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{s.reps} {te.measurement_type === 'seconds' ? 'sec' : 'reps'}</span>,
-                      <span key={`${i}-w`} style={{ fontSize: '12px', color: 'var(--color-subtle)' }}>{s.weight != null ? formatWeight(s.weight, weightUnit) : 'Bodyweight'}</span>,
-                    ])
-                  }
+                {editValues.perSetEnabled && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 1fr 20px', gap: '4px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', textAlign: 'center' }}>Set</span>
+                      <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', textAlign: 'center' }}>Reps</span>
+                      <span style={{ fontSize: '9px', color: 'var(--color-subtle)', textTransform: 'uppercase', textAlign: 'center' }}>Wt ({weightUnit})</span>
+                      <span />
+                    </div>
+                    {(editValues.perSetRows ?? []).map((row, i) => (
+                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '24px 1fr 1fr 20px', gap: '4px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#29B5CC', textAlign: 'center', fontFamily: 'monospace' }}>{i + 1}</span>
+                        <input type="number" min="1" value={row.reps}
+                          onChange={e => setEditValues(v => ({ ...v, perSetRows: v.perSetRows.map((r, j) => j === i ? { ...r, reps: e.target.value } : r) }))}
+                          style={{ width: '100%', padding: '4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '5px', color: 'var(--color-text)', fontSize: '13px', fontFamily: 'monospace', fontWeight: 600, outline: 'none', textAlign: 'center', colorScheme: 'dark', boxSizing: 'border-box' }}
+                        />
+                        <input type="number" min="0" step="0.5" value={row.weight} placeholder="BW"
+                          onChange={e => setEditValues(v => ({ ...v, perSetRows: v.perSetRows.map((r, j) => j === i ? { ...r, weight: e.target.value } : r) }))}
+                          style={{ width: '100%', padding: '4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '5px', color: 'var(--color-text)', fontSize: '13px', fontFamily: 'monospace', fontWeight: 600, outline: 'none', textAlign: 'center', colorScheme: 'dark', boxSizing: 'border-box' }}
+                        />
+                        <button type="button"
+                          onClick={() => setEditValues(v => ({ ...v, perSetRows: v.perSetRows.length > 1 ? v.perSetRows.filter((_, j) => j !== i) : v.perSetRows }))}
+                          style={{ fontSize: '12px', color: (editValues.perSetRows?.length ?? 0) > 1 ? 'var(--color-muted)' : 'var(--color-border)', background: 'none', border: 'none', cursor: (editValues.perSetRows?.length ?? 0) > 1 ? 'pointer' : 'default', padding: 0, textAlign: 'center' }}
+                        >✕</button>
+                      </div>
+                    ))}
+                    <button type="button"
+                      onClick={() => setEditValues(v => ({ ...v, perSetRows: [...(v.perSetRows ?? []), { reps: '', weight: '' }] }))}
+                      style={{ fontSize: '11px', padding: '4px', background: 'rgba(41,181,204,0.08)', border: '1px dashed rgba(41,181,204,0.3)', color: '#29B5CC', borderRadius: '5px', cursor: 'pointer' }}
+                    >+ Add set</button>
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Tempo */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editValues.tempoEnabled ? '6px' : 0 }}>
+                <span style={{ fontSize: '11px', color: 'var(--color-muted)', fontWeight: 500 }}>Tempo <span style={{ fontWeight: 400, color: 'var(--color-subtle)' }}>(optional)</span></span>
+                <button type="button"
+                  onClick={() => { setSaveEditError(null); setEditValues(v => ({ ...v, tempoEnabled: !v.tempoEnabled })) }}
+                  style={{ width: '28px', height: '16px', borderRadius: '8px', border: 'none', cursor: 'pointer', padding: 0, position: 'relative', transition: 'background 0.15s', background: editValues.tempoEnabled ? '#29B5CC' : 'var(--color-border)' }}
+                >
+                  <span style={{ display: 'block', width: '12px', height: '12px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', transition: 'left 0.15s', left: editValues.tempoEnabled ? '14px' : '2px' }} />
+                </button>
+              </div>
+              {editValues.tempoEnabled && (
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
+                  {[['tempoDown', 'Eccentric', 1], ['tempoHold', 'Hold', 0], ['tempoUp', 'Concentric', 1], ['tempoTop', 'Top', 0]].map(([key, label, min], idx, arr) => (
+                    <Fragment key={key}>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                        <input type="number" min={min} max={9} value={editValues[key] ?? ''}
+                          onChange={e => setEditValues(v => ({ ...v, [key]: e.target.value }))}
+                          style={{ width: '100%', padding: '5px 4px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', textAlign: 'center', colorScheme: 'dark' }} />
+                        <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>{label}</span>
+                      </div>
+                      {idx < arr.length - 1 && <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '14px' }}>—</span>}
+                    </Fragment>
+                  ))}
+                </div>
+              )}
+              {saveEditError && <p style={{ fontSize: '12px', color: 'var(--color-danger)', margin: '4px 0 0' }}>{saveEditError}</p>}
+            </div>
+            {/* Rest */}
+            {te.group_id == null && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', flex: 1 }}>
+                  Rest between sets <span style={{ fontWeight: 400, color: 'var(--color-subtle)' }}>(optional)</span>
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <input type="number" min="0" step="5"
+                    value={editValues.restSeconds ?? ''}
+                    onChange={e => setEditValues(v => ({ ...v, restSeconds: e.target.value }))}
+                    placeholder="—"
+                    style={{ width: '64px', padding: '5px 8px', background: 'var(--color-elevated)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'var(--color-text)', fontSize: '13px', outline: 'none', colorScheme: 'dark', textAlign: 'center' }}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--color-subtle)' }}>sec</span>
                 </div>
               </div>
-            ) : (
-              <>
-                <div style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '2px' }}>
-                  {te.sets} sets × {te.reps} {te.measurement_type === 'seconds' ? 'sec' : 'reps'}
-                  {te.weight ? ` · ${formatWeight(te.weight, weightUnit)}` : ''}
-                  {te.bilateral ? ' · Both sides' : ''}
-                </div>
-                {(() => {
-                  const t = formatTempo(te.tempo_eccentric, te.tempo_bottom_pause, te.tempo_concentric, te.tempo_top_pause)
-                  return t ? (
-                    <span style={{ display: 'inline-block', marginTop: '3px', background: 'rgba(41,181,204,0.1)', border: '1px solid rgba(41,181,204,0.2)', borderRadius: '4px', padding: '1px 7px', fontSize: '11px', color: '#29B5CC', fontFamily: 'monospace', fontWeight: 600 }}>
-                      ⏱ {t.compact}
-                    </span>
-                  ) : null
-                })()}
-              </>
             )}
-            {te.therapist_notes && (
-              <div style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px', fontStyle: 'italic' }}>{te.therapist_notes}</div>
-            )}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => saveEdit(te.id)} disabled={savingEdit}
+                style={{ fontSize: '12px', padding: '4px 12px', background: '#29B5CC', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
+                {savingEdit ? 'Saving…' : 'Save'}
+              </button>
+              <button onClick={() => setEditingId(null)}
+                style={{ fontSize: '12px', padding: '4px 10px', background: 'none', color: 'var(--color-muted)', border: '1px solid var(--color-border)', borderRadius: '6px', cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={() => removeExercise(te.id)}
+                style={{ fontSize: '12px', padding: '4px 10px', background: 'none', color: 'var(--color-danger)', border: 'none', cursor: 'pointer', marginLeft: 'auto' }}>
+                Remove
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => removeExercise(te.id)}
-            style={{ fontSize: '12px', color: 'var(--color-danger)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
-          >
-            Remove
-          </button>
-        </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+            <div>
+              {te.template_exercise_sets?.length > 0 ? (
+                <div style={{ marginTop: '2px' }}>
+                  <div style={{ fontSize: '11px', color: '#29B5CC', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                    Per-set · {te.template_exercise_sets.length} sets
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 1fr', gap: '2px 8px' }}>
+                    {te.template_exercise_sets
+                      .slice().sort((a, b) => a.set_number - b.set_number)
+                      .flatMap((s, i) => [
+                        <span key={`${i}-n`} style={{ fontFamily: 'monospace', fontWeight: 700, color: '#29B5CC', fontSize: '11px' }}>{s.set_number}</span>,
+                        <span key={`${i}-r`} style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{s.reps} {te.measurement_type === 'seconds' ? 'sec' : 'reps'}</span>,
+                        <span key={`${i}-w`} style={{ fontSize: '12px', color: 'var(--color-subtle)' }}>{s.weight != null ? formatWeight(s.weight, weightUnit) : 'Bodyweight'}</span>,
+                      ])
+                    }
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: '12px', color: 'var(--color-subtle)', marginTop: '2px' }}>
+                    {te.sets} sets × {te.reps} {te.measurement_type === 'seconds' ? 'sec' : 'reps'}
+                    {te.weight ? ` · ${formatWeight(te.weight, weightUnit)}` : ''}
+                    {te.bilateral ? ' · Both sides' : ''}
+                  </div>
+                  {(() => {
+                    const t = formatTempo(te.tempo_eccentric, te.tempo_bottom_pause, te.tempo_concentric, te.tempo_top_pause)
+                    return t ? (
+                      <span style={{ display: 'inline-block', marginTop: '3px', background: 'rgba(41,181,204,0.1)', border: '1px solid rgba(41,181,204,0.2)', borderRadius: '4px', padding: '1px 7px', fontSize: '11px', color: '#29B5CC', fontFamily: 'monospace', fontWeight: 600 }}>
+                        ⏱ {t.compact}
+                      </span>
+                    ) : null
+                  })()}
+                </>
+              )}
+              {te.therapist_notes && (
+                <div style={{ fontSize: '11px', color: 'var(--color-subtle)', marginTop: '2px', fontStyle: 'italic' }}>{te.therapist_notes}</div>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+              <button onClick={() => startEdit(te)}
+                style={{ fontSize: '12px', color: 'var(--color-accent)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                Edit
+              </button>
+              <button onClick={() => removeExercise(te.id)}
+                style={{ fontSize: '12px', color: 'var(--color-danger)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                Remove
+              </button>
+            </div>
+          </div>
+        )}
         {te.exercises?.video_url && <VideoPlayer url={te.exercises.video_url} className="w-full rounded mt-2" />}
       </div>
     )

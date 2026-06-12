@@ -113,6 +113,11 @@ export default function SessionEdit() {
   }
 
   async function saveMeta() {
+    // Flush any open inline exercise edit before saving session meta
+    if (editingId) {
+      const ok = await saveEdit(editingId)
+      if (!ok) return
+    }
     setSavingMeta(true)
     let fd = frequencyDays
     if (frequencyDays === 'custom') fd = parseInt(customDays) || null
@@ -222,9 +227,9 @@ export default function SessionEdit() {
     const v = editValues
 
     if (v.perSetEnabled) {
-      if (!v.perSetRows?.length) { setSaveEditError('At least one set is required.'); return }
+      if (!v.perSetRows?.length) { setSaveEditError('At least one set is required.'); return false }
       const invalid = v.perSetRows.some(r => !r.reps || isNaN(parseInt(r.reps)) || parseInt(r.reps) < 1)
-      if (invalid) { setSaveEditError('Per-set: each set must have reps ≥ 1.'); return }
+      if (invalid) { setSaveEditError('Per-set: each set must have reps ≥ 1.'); return false }
     }
 
     if (v.tempoEnabled) {
@@ -234,11 +239,12 @@ export default function SessionEdit() {
         !isNaN(e) && !isNaN(b) && !isNaN(c) && !isNaN(t) &&
         e >= 1 && e <= 9 && c >= 1 && c <= 9 &&
         b >= 0 && b <= 9 && t >= 0 && t <= 9
-      if (!valid) { setSaveEditError('Tempo: down and up must be 1–9; hold and top must be 0–9.'); return }
+      if (!valid) { setSaveEditError('Tempo: down and up must be 1–9; hold and top must be 0–9.'); return false }
     }
 
     setSavingEdit(true)
     const setsCount = v.perSetEnabled ? v.perSetRows.length : (parseInt(v.sets) || 1)
+    // (return value used by saveMeta to abort navigation on error)
     const weightVal = v.weight.trim() ? toCanonical(parseFloat(v.weight), weightUnit) : null
 
     // Update parent first — if this fails, child rows are untouched (no orphan state)
@@ -258,14 +264,14 @@ export default function SessionEdit() {
           : null,
       })
       .eq('id', peId)
-    if (updateError) { setSavingEdit(false); setSaveEditError(updateError.message || 'Failed to save.'); return }
+    if (updateError) { setSavingEdit(false); setSaveEditError(updateError.message || 'Failed to save.'); return false }
 
     // Delete+reinsert child rows after parent is confirmed saved
     const { error: deleteError } = await supabase
       .from('prescription_exercise_sets')
       .delete()
       .eq('prescription_exercise_id', peId)
-    if (deleteError) { setSavingEdit(false); setSaveEditError(deleteError.message); return }
+    if (deleteError) { setSavingEdit(false); setSaveEditError(deleteError.message); return false }
 
     if (v.perSetEnabled) {
       const rows = v.perSetRows.map((r, i) => ({
@@ -275,7 +281,7 @@ export default function SessionEdit() {
         weight: r.weight !== '' && r.weight != null ? toCanonical(parseFloat(r.weight), weightUnit) : null,
       }))
       const { error: insertError } = await supabase.from('prescription_exercise_sets').insert(rows)
-      if (insertError) { setSavingEdit(false); setSaveEditError(insertError.message); return }
+      if (insertError) { setSavingEdit(false); setSaveEditError(insertError.message); return false }
     }
 
     // Re-fetch to get clean canonical data with child rows (avoids manual unit conversion of local state)
@@ -288,7 +294,7 @@ export default function SessionEdit() {
     setSavingEdit(false)
     if (freshError || !fresh) {
       setSaveEditError('Saved, but failed to refresh — please reload.')
-      return
+      return false
     }
     setExercises(prev => {
       const next = prev.map(e => e.id === peId ? fresh : e)
@@ -296,6 +302,7 @@ export default function SessionEdit() {
       return next
     })
     setEditingId(null)
+    return true
   }
 
   async function handleUngroup(group, members) {

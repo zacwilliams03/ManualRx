@@ -10,13 +10,14 @@ const TEAL_BORDER = '#A8E6F0'
 const GREY = '#6B7280'
 const WHITE = '#FFFFFF'
 
-// Column widths (pt). EXERCISE uses flex:1, so these must not overflow a standard A4 page
-// with 48pt horizontal padding on each side (usable width ≈ 499pt).
+// Column widths (pt). EXERCISE uses flex:1.
+// Usable width on A4 with 48pt horizontal padding each side ≈ 499pt.
 const WN = 22    // #
 const WS = 30    // SETS
 const WR = 40    // REPS / SEC
 const WW = 48    // WEIGHT
-const WT = 52    // TEMPO
+const WT = 48    // TEMPO
+const WRest = 36 // REST
 
 const s = StyleSheet.create({
   headerRow: { flexDirection: 'row', backgroundColor: TEAL },
@@ -34,6 +35,7 @@ const s = StyleSheet.create({
   cellReps: { width: WR, paddingHorizontal: 4, alignItems: 'center' },
   cellWeight: { width: WW, paddingHorizontal: 4, alignItems: 'center' },
   cellTempo: { width: WT, paddingHorizontal: 4, alignItems: 'center' },
+  cellRest: { width: WRest, paddingHorizontal: 4, alignItems: 'center' },
   exNum: { color: TEAL, fontFamily: 'Helvetica-Bold', fontSize: 9 },
   exName: { color: NAVY, fontFamily: 'Helvetica-Bold', fontSize: 9 },
   numVal: { color: NAVY, fontFamily: 'Helvetica-Bold', fontSize: 10 },
@@ -46,6 +48,7 @@ const s = StyleSheet.create({
   },
   tempoText: { color: TEAL, fontFamily: 'Courier-Bold', fontSize: 7.5 },
   tempoDash: { color: GREY, fontSize: 8 },
+  restVal: { color: TEAL, fontFamily: 'Helvetica-Bold', fontSize: 7.5, textAlign: 'center' },
   perSetBadge: {
     backgroundColor: TEAL, borderRadius: 3, paddingVertical: 1, paddingHorizontal: 4, marginLeft: 5,
   },
@@ -67,6 +70,12 @@ function TempoBadge({ ex }) {
   return <View style={s.tempoBadge}><Text style={s.tempoText}>{t.compact}</Text></View>
 }
 
+function RestCell({ ex }) {
+  const r = formatRest(ex.rest_seconds)
+  if (!r) return <Text style={s.tempoDash}>—</Text>
+  return <Text style={s.restVal}>{r}</Text>
+}
+
 function NormalRow({ ex, i, weightUnit }) {
   const unit = ex.measurement_type === 'seconds' ? 'sec' : 'reps'
   return (
@@ -74,10 +83,6 @@ function NormalRow({ ex, i, weightUnit }) {
       <View style={s.cellNum}><Text style={s.exNum}>{i + 1}</Text></View>
       <View style={s.cellExercise}>
         <Text style={s.exName}>{ex.name}</Text>
-        {ex.rest_seconds > 0
-          ? <Text style={{ color: GREY, fontSize: 7.5, marginTop: 2 }}>Rest: {formatRest(ex.rest_seconds)} between sets</Text>
-          : null
-        }
         {ex.therapist_notes ? (
           <View style={s.notesBox}>
             <Text style={s.notesBoxText}>{ex.therapist_notes}</Text>
@@ -98,6 +103,7 @@ function NormalRow({ ex, i, weightUnit }) {
         }
       </View>
       <View style={s.cellTempo}><TempoBadge ex={ex} /></View>
+      <View style={s.cellRest}><RestCell ex={ex} /></View>
     </View>
   )
 }
@@ -114,10 +120,6 @@ function PerSetRows({ ex, i, weightUnit }) {
             <Text style={s.exName}>{ex.name}</Text>
             <View style={s.perSetBadge}><Text style={s.perSetBadgeText}>PER-SET</Text></View>
           </View>
-          {ex.rest_seconds > 0
-            ? <Text style={{ color: GREY, fontSize: 7.5, marginTop: 2 }}>Rest: {formatRest(ex.rest_seconds)} between sets</Text>
-            : null
-          }
         </View>
         <View style={s.cellSets} />
         <View style={s.cellReps} />
@@ -128,6 +130,7 @@ function PerSetRows({ ex, i, weightUnit }) {
             : <Text style={s.tempoDash}>—</Text>
           }
         </View>
+        <View style={s.cellRest}><RestCell ex={ex} /></View>
       </View>
       <View style={s.subHeaderRow}>
         <View style={{ width: WN }} />
@@ -138,6 +141,7 @@ function PerSetRows({ ex, i, weightUnit }) {
         <View style={s.cellReps}><Text style={s.subLabel}>REPS</Text></View>
         <View style={s.cellWeight}><Text style={s.subLabel}>WEIGHT</Text></View>
         <View style={{ width: WT }} />
+        <View style={{ width: WRest }} />
       </View>
       {sets.map((set, si) => (
         <View key={si} style={[s.setRow, si === sets.length - 1 && s.setRowLast]}>
@@ -154,6 +158,7 @@ function PerSetRows({ ex, i, weightUnit }) {
             }
           </View>
           <View style={{ width: WT }} />
+          <View style={{ width: WRest }} />
         </View>
       ))}
       {ex.therapist_notes && (
@@ -168,6 +173,7 @@ function PerSetRows({ ex, i, weightUnit }) {
           <View style={s.cellReps} />
           <View style={s.cellWeight} />
           <View style={{ width: WT }} />
+          <View style={{ width: WRest }} />
         </View>
       )}
     </>
@@ -184,6 +190,7 @@ export function ExerciseTablePDF({ exercises, weightUnit }) {
         <View style={s.cellReps}><Text style={[s.thCell, { textAlign: 'center' }]}>REPS / SEC</Text></View>
         <View style={s.cellWeight}><Text style={[s.thCell, { textAlign: 'center' }]}>WEIGHT</Text></View>
         <View style={s.cellTempo}><Text style={[s.thCell, { textAlign: 'center' }]}>TEMPO</Text></View>
+        <View style={s.cellRest}><Text style={[s.thCell, { textAlign: 'center' }]}>REST</Text></View>
       </View>
       {exercises.map((ex, i) => {
         const perSet = ex.prescription_exercise_sets ?? []
