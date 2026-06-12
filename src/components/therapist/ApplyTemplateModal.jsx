@@ -37,8 +37,8 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
       .from('templates')
       .select(`
         id, name, category, duration_weeks,
-        template_exercise_groups(id, label, set_count, order_index),
-        template_exercises(id, exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(id, set_number, reps, weight), exercises(name))
+        template_exercise_groups(id, label, set_count, order_index, rest_seconds),
+        template_exercises(id, exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, group_id, position_in_group, order_index, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, rest_seconds, template_exercise_sets(id, set_number, reps, weight), exercises(name))
       `)
       .eq('therapist_id', therapistId)
       .order('created_at', { ascending: false })
@@ -70,6 +70,7 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
       tempoBottomPause: te.tempo_bottom_pause ?? null,
       tempoConcentric:  te.tempo_concentric   ?? null,
       tempoTopPause:    te.tempo_top_pause    ?? null,
+      restSeconds:      te.rest_seconds       ?? null,
       hasPerSetRows: (te.template_exercise_sets ?? []).length > 0,
       groupId: te.group_id ?? null,
       positionInGroup: te.position_in_group ?? null,
@@ -133,6 +134,7 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
             label: tg.label,
             set_count: tg.set_count,
             order_index: tg.order_index,
+            rest_seconds: tg.rest_seconds ?? null,
           })
           .select('id')
           .single()
@@ -156,6 +158,7 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
             tempo_bottom_pause: te.tempo_bottom_pause ?? null,
             tempo_concentric:   te.tempo_concentric   ?? null,
             tempo_top_pause:    te.tempo_top_pause    ?? null,
+            rest_seconds:       te.rest_seconds       ?? null,
             group_id: te.group_id ? (groupIdMap[te.group_id] ?? null) : null,
             position_in_group: te.position_in_group ?? null,
             order_index: te.order_index ?? null,
@@ -200,6 +203,7 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
             label: tg.label,
             set_count: tg.set_count,
             order_index: tg.order_index,
+            rest_seconds: tg.rest_seconds ?? null,
           })
           .select('id')
           .single()
@@ -220,6 +224,7 @@ export default function ApplyTemplateModal({ therapistId, clientId, defaultFrequ
         tempo_bottom_pause: ex.tempoBottomPause  ?? null,
         tempo_concentric:   ex.tempoConcentric   ?? null,
         tempo_top_pause:    ex.tempoTopPause     ?? null,
+        rest_seconds:       ex.restSeconds       ?? null,
         group_id: ex.groupId ? (groupIdMap[ex.groupId] ?? null) : null,
         position_in_group: ex.positionInGroup ?? null,
         order_index: ex.orderIndex ?? null,
