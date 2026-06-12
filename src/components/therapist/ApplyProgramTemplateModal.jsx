@@ -78,7 +78,7 @@ export default function ApplyProgramTemplateModal({ therapistId, clientId, onClo
           // Copy exercises from session template
           const { data: templateExercises, error: teErr } = await supabase
             .from('template_exercises')
-            .select('exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, template_exercise_sets(set_number, reps, weight)')
+            .select('exercise_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, rest_seconds, template_exercise_sets(set_number, reps, weight)')
             .eq('template_id', ts.template_id)
           if (teErr) throw new Error(teErr.message)
 
@@ -98,6 +98,7 @@ export default function ApplyProgramTemplateModal({ therapistId, clientId, onClo
                 tempo_bottom_pause: te.tempo_bottom_pause ?? null,
                 tempo_concentric:   te.tempo_concentric   ?? null,
                 tempo_top_pause:    te.tempo_top_pause    ?? null,
+                rest_seconds:       te.rest_seconds       ?? null,
               })
               .select('id')
               .single()
