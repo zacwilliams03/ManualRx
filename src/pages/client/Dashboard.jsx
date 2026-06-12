@@ -146,7 +146,7 @@ export default function ClientDashboard() {
     try {
       const { data: exercises, error } = await supabase
         .from('prescription_exercises')
-        .select('sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(set_number, reps, weight), exercises(name)')
+        .select('sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, rest_seconds, prescription_exercise_sets(set_number, reps, weight), exercises(name)')
         .eq('prescription_id', session.id)
         .order('id', { ascending: true })
       if (error) throw new Error(error.message)
@@ -163,6 +163,7 @@ export default function ClientDashboard() {
         tempo_bottom_pause: pe.tempo_bottom_pause ?? null,
         tempo_concentric: pe.tempo_concentric ?? null,
         tempo_top_pause: pe.tempo_top_pause ?? null,
+        rest_seconds: pe.rest_seconds ?? null,
         prescription_exercise_sets: pe.prescription_exercise_sets ?? [],
       }))
 
@@ -201,7 +202,7 @@ export default function ClientDashboard() {
       // Single batched query — one round trip regardless of session count
       const { data: allExercises, error } = await supabase
         .from('prescription_exercises')
-        .select('prescription_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, prescription_exercise_sets(set_number, reps, weight), exercises(name)')
+        .select('prescription_id, sets, reps, weight, therapist_notes, measurement_type, bilateral, tempo_eccentric, tempo_bottom_pause, tempo_concentric, tempo_top_pause, rest_seconds, prescription_exercise_sets(set_number, reps, weight), exercises(name)')
         .in('prescription_id', activeIds)
         .order('prescription_id', { ascending: true })
         .order('id', { ascending: true })
@@ -225,6 +226,7 @@ export default function ClientDashboard() {
         tempo_bottom_pause: pe.tempo_bottom_pause ?? null,
         tempo_concentric: pe.tempo_concentric ?? null,
         tempo_top_pause: pe.tempo_top_pause ?? null,
+        rest_seconds: pe.rest_seconds ?? null,
         prescription_exercise_sets: pe.prescription_exercise_sets ?? [],
       })
 
