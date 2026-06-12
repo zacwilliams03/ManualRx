@@ -63,6 +63,7 @@ export function computeWeeklyData(sessionLogs, weightUnit = 'kg', startDate) {
   for (const log of sessionLogs) {
     const sessionDay = new Date(log.completed_at.slice(0, 10) + 'T00:00:00Z')
     const week = Math.floor((sessionDay - anchorDay) / (7 * 86400000)) + 1
+    if (week < 1) continue
 
     if (!weekMap.has(week)) {
       weekMap.set(week, { sessionPainAvgs: [], volumeKg: 0, hasVolume: false })
@@ -70,8 +71,10 @@ export function computeWeeklyData(sessionLogs, weightUnit = 'kg', startDate) {
 
     const entry = weekMap.get(week)
 
+    const exLogs = log.exercise_logs ?? []
+
     // Per-session average pain first, then average those weekly
-    const ratings = (log.exercise_logs ?? [])
+    const ratings = exLogs
       .map(el => el.pain_rating)
       .filter(r => r !== null && r !== undefined)
     if (ratings.length > 0) {
@@ -79,9 +82,9 @@ export function computeWeeklyData(sessionLogs, weightUnit = 'kg', startDate) {
     }
 
     // Sum volume across all exercises in the session
-    for (const el of (log.exercise_logs ?? [])) {
+    for (const el of exLogs) {
       const vol = computeExerciseVolume(el)
-      if (vol !== null) {
+      if (vol !== null && vol > 0) {
         entry.volumeKg += vol
         entry.hasVolume = true
       }

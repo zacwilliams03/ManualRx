@@ -238,4 +238,14 @@ describe('computeWeeklyData', () => {
     const logs = [{ completed_at: '2025-01-01T23:59:00Z', exercise_logs: [] }]
     expect(computeWeeklyData(logs, 'kg', '2025-01-01')[0].week).toBe(1)
   })
+
+  it('ignores sessions with completed_at before startDate', () => {
+    const logs = [
+      { completed_at: '2024-12-31T10:00:00Z', exercise_logs: [] }, // before startDate
+      { completed_at: '2025-01-01T10:00:00Z', exercise_logs: [] }, // week 1
+    ]
+    const result = computeWeeklyData(logs, 'kg', '2025-01-01')
+    expect(result).toHaveLength(1)
+    expect(result[0].week).toBe(1)
+  })
 })
