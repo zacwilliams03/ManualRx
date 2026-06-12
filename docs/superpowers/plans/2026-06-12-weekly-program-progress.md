@@ -144,8 +144,11 @@ describe('computeWeeklyData', () => {
     expect(computeWeeklyData(logs, 'kg', '2025-01-01').map(r => r.week)).toEqual([1, 3])
   })
 
-  it('is timezone-safe: late-evening UTC timestamps are bucketed by calendar date', () => {
-    // completed_at '2025-01-01T23:59:00Z' has date '2025-01-01' → week 1
+  it('buckets sessions by UTC calendar date of completed_at (not local time)', () => {
+    // Implementation slices completed_at to UTC date string — week assignment is based on
+    // UTC calendar date, not the client's local date. This is consistent across all sessions
+    // in a prescription, so relative week numbers are stable.
+    // completed_at '2025-01-01T23:59:00Z' → UTC date '2025-01-01' → week 1
     const logs = [{ completed_at: '2025-01-01T23:59:00Z', exercise_logs: [] }]
     expect(computeWeeklyData(logs, 'kg', '2025-01-01')[0].week).toBe(1)
   })
@@ -421,6 +424,8 @@ Open the app at `http://localhost:5173`. Log in as a client and go to the Progre
 4. Each dot on the weekly chart represents one week, not one session
 5. A prescription with only 1 week of sessions shows neither weekly chart (silent skip)
 6. Toggle to light mode — grid lines and axis text update correctly (no hardcoded dark-only colours)
+
+Also verify on the **therapist side**: go to a client's data tab and expand the same prescription accordion. The weekly charts should appear there too (same component, shared path). `computeWeeklyData` returns `[]` silently if `prescription.start_date` is absent, so confirm the charts render — this validates that `start_date` is populated on the therapist path.
 
 If no prescription has 2+ weeks of sessions, temporarily insert a second session log via Supabase Studio with `completed_at` at least 8 days after the first.
 
