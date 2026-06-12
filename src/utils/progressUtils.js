@@ -53,3 +53,50 @@ export function computeVolumeData(sessionLogs, weightUnit = 'kg') {
     })
     .filter(Boolean)
 }
+
+export function computeWeeklyData(sessionLogs, weightUnit = 'kg', startDate) {
+  if (!startDate || !sessionLogs.length) return []
+
+  const anchorDay = new Date(startDate + 'T00:00:00Z')
+  const weekMap = new Map()
+
+  for (const log of sessionLogs) {
+    const sessionDay = new Date(log.completed_at.slice(0, 10) + 'T00:00:00Z')
+    const week = Math.floor((sessionDay - anchorDay) / (7 * 86400000)) + 1
+
+    if (!weekMap.has(week)) {
+      weekMap.set(week, { sessionPainAvgs: [], volumeKg: 0, hasVolume: false })
+    }
+
+    const entry = weekMap.get(week)
+
+    // Per-session average pain first, then average those weekly
+    const ratings = (log.exercise_logs ?? [])
+      .map(el => el.pain_rating)
+      .filter(r => r !== null && r !== undefined)
+    if (ratings.length > 0) {
+      entry.sessionPainAvgs.push(ratings.reduce((s, r) => s + r, 0) / ratings.length)
+    }
+
+    // Sum volume across all exercises in the session
+    for (const el of (log.exercise_logs ?? [])) {
+      const vol = computeExerciseVolume(el)
+      if (vol !== null) {
+        entry.volumeKg += vol
+        entry.hasVolume = true
+      }
+    }
+  }
+
+  return Array.from(weekMap.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([week, { sessionPainAvgs, volumeKg, hasVolume }]) => {
+      const avgPain = sessionPainAvgs.length > 0
+        ? Math.round((sessionPainAvgs.reduce((s, p) => s + p, 0) / sessionPainAvgs.length) * 10) / 10
+        : null
+      const volume = hasVolume
+        ? (weightUnit === 'lb' ? Math.round(volumeKg * KG_TO_LB) : Math.round(volumeKg))
+        : null
+      return { week, label: `Wk ${week}`, avgPain, volume }
+    })
+}
