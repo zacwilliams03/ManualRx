@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { CompletionStat } from './CompletionStat'
 import { PainChart } from './PainChart'
 import { VolumeChart } from './VolumeChart'
-import { computeCompletionStats, computePainData, computeVolumeData } from '../../utils/progressUtils'
+import { WeeklyProgressCard } from './WeeklyProgressCard'
+import { computeCompletionStats, computePainData, computeVolumeData, computeWeeklyData } from '../../utils/progressUtils'
 import { CARD } from '../therapist/styles'
 import ShimmerLine from '../shared/ShimmerLine'
 
@@ -13,6 +14,7 @@ export function PrescriptionProgressSection({ prescription, sessionLogs, weightU
   const completion = computeCompletionStats(prescription, sessionLogs ?? [])
   const painData = computePainData(prescriptionSessions)
   const volumeData = computeVolumeData(prescriptionSessions, weightUnit)
+  const weeklyData = computeWeeklyData(prescriptionSessions, weightUnit, prescription.start_date)
 
   const completionSummary = completion.expected !== null
     ? `${completion.completed} of ${completion.expected} sessions completed`
@@ -48,6 +50,7 @@ export function PrescriptionProgressSection({ prescription, sessionLogs, weightU
             <p style={{ fontSize: '11px', fontWeight: 500, color: 'var(--color-muted)', marginBottom: '8px' }}>Total Volume per Session ({weightUnit})</p>
             <VolumeChart data={volumeData} weightUnit={weightUnit} />
           </div>
+          <WeeklyProgressCard data={weeklyData} weightUnit={weightUnit} />
         </div>
       )}
     </div>
