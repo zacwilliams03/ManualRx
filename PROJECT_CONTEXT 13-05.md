@@ -1,17 +1,16 @@
 # Project Context — ManualRx
-> Paste this file into every new Claude/Claude Code session before asking for help.
+> This file is committed to the repository and loaded automatically via connected project knowledge. No need to paste it manually.
 > Keep it updated as the project evolves.
 
 ---
 
 ## App Name
 
-**Status: DECIDED — ManualRx**
-- Domain: manualrx.app (register immediately if not yet done; also check manualrx.com)
-- GitHub repo: rename from `prescriptr` → `manualrx` (github.com/zacwilliams03/prescriptr → Settings → General)
-- Supabase project: rename to ManualRx (cosmetic only)
-- Vercel project: rename to manualrx, add manualrx.app domain
-- Supabase Auth URLs: Site URL → https://manualrx.app; Redirect URLs → add https://manualrx.app/reset-password
+**ManualRx** — rename complete.
+- Domain: **manualrx.com** (manualrx.app was never purchased; the only remaining `.app` reference in the codebase is `mailto:hello@manualrx.app` in `src/pages/HomePage.jsx` — a known code TODO, update to `support@manualrx.com` before launch)
+- GitHub repo: `github.com/zacwilliams03/ManualRx.git` (renamed from prescriptr in Session 15)
+- Supabase Auth URLs (set Session 14): Site URL → `https://www.manualrx.com`; Redirect URL → `https://www.manualrx.com/reset-password`
+- App deployed at: `www.manualrx.com`
 
 
 ---
@@ -39,14 +38,20 @@ A web-based exercise prescription platform built specifically for **massage ther
 
 ---
 
-## Core Features (MVP)
+## Core Features (shipped)
 
-1. **Dual-role authentication** — therapist and client accounts with separate permissions
-2. **Exercise library** — searchable, each exercise has a built-in video, description, and default reps/sets
-3. **Custom video upload** — therapists can upload their own videos, saved to a personal library for reuse across clients
-4. **Exercise prescription** — therapist assigns exercises from the library (or their own library) to a specific client
-5. **Rep/set logging** — client logs completions per exercise
-6. **Notes fields** — one for the therapist (visible to client), one for the client (filled in on completion)
+1. **Dual-role authentication** — therapist and client accounts with separate RLS-enforced permissions; invite-based client signup via one-time code
+2. **Exercise library** — full-text search + category filter; built-in exercises and custom exercises per therapist; video player (YouTube iframe or Supabase Storage HTML5)
+3. **Custom video upload** — therapists upload videos to Supabase Storage; reusable across clients
+4. **Exercise prescription** — named sessions with sets/reps/weight/notes per exercise; active/inactive state derived from start date + duration weeks; reactivate duplicates with today as new start date
+5. **Session templates** — therapists save reusable exercise programs with optional category and duration; apply a template to create a fresh prescription
+6. **Per-set logging** — client steps through each set individually; data stored as JSONB per-set actuals; pain rating (0–10 NPRS), RPE (Borg CR-10), client notes, optional feedback video upload; high pain gate (≥7/10) + safety disclaimers on every exercise step
+7. **PDF export** — single-prescription PDF and all-sessions PDF; lazy-fetched, client-side generated via `@react-pdf/renderer`; emailable to client via `send-prescription-email` Supabase Edge Function
+8. **In-app messaging** — therapist ↔ client direct messages (`TherapistThread.jsx`, `ClientMessages.jsx`)
+9. **Client progress / adherence** — completion stat, pain chart, volume chart per prescription; weekly-aggregated pain and volume charts (week-over-week trend, per prescription start date); 14-day adherence dot grid on therapist dashboard; overdue and program-complete alerts with dismiss-to-DB
+10. **Clinic branding** — therapist logo upload in Settings; clinic logo + name displayed in client session header
+11. **kg/lb weight unit conversion** — weights stored canonically in kg; displayed in user's preferred unit throughout
+12. **Light/dark theme** — CSS custom property token system; dark mode default (`:root`), light mode via `[data-theme="light"]` Cool Slate palette; `dark.*` Tailwind tokens bridge to `var(--color-*)`
 
 ---
 
@@ -57,7 +62,7 @@ A web-based exercise prescription platform built specifically for **massage ther
 | Frontend | React | Web app, mobile-responsive |
 | Backend/Database | Supabase | Auth, PostgreSQL database, file storage |
 | Hosting | Vercel | Connected to GitHub, auto-deploys |
-| Video (built-in library) | Cloudflare Stream or Bunny.net | Cheap, fast video CDN |
+| Video (built-in library) | TBD — no CDN integrated | Built-in library has no video content yet; Cloudflare Stream / Bunny.net were considered but neither is integrated; decision deferred (see Exercise Content section) |
 | Video (therapist uploads) | Supabase Storage | Fine for MVP |
 | Payments (later) | Stripe | Subscription billing |
 | Version control | GitHub | All code lives here |
@@ -72,7 +77,7 @@ Therapists invite clients into the platform. Clients have real accounts (email +
 ### Flow
 1. Therapist enters client details: name, email, (optionally DOB)
 2. System creates a pending invite record with a unique single-use code
-3. Therapist shares either a link (`manualrx.app/join/AB12CD`) or the raw code
+3. Therapist shares either a link (`manualrx.com/join/AB12CD`) or the raw code
 4. Client opens the link or enters the code on a `/join` page
 5. Client sets a password → account created with `role: 'client'`, linked to the inviting therapist
 6. Invite code is consumed (cannot be reused)
@@ -414,7 +419,7 @@ Scope:
 - Add optional `phone` field to Add Client form
 - Build `send-invite-sms` Supabase Edge Function via Twilio — same
   pattern as `send-invite-email`. Message: "[TherapistName] has shared
-  an exercise program with you: manualrx.app/join/{code}"
+  an exercise program with you: manualrx.com/join/{code}"
 - Build `send-reminders` scheduled Edge Function (pg_cron) — daily SMS
   to clients with active prescriptions, stored phone number, and
   reminder enabled
@@ -445,33 +450,35 @@ each platform. Long-term only.
 ## Branding
 
 ### Status
-Colour palette **decided** (Sessions 31–32 — full dark sweep). Typography **decided** (Session 18). Logo and favicon not yet done.
+Colour palette **decided and implemented** (Sessions 31–32 dark sweep; CSS custom property token system with light mode variant). Typography **decided** (Session 18). Logo **implemented** (Outfit Bold 700, Option 1 F1 Bar — `AppSidebar.jsx` and inline `Logo()` in auth/join pages). Favicon **implemented** (SVG data URI in `index.html`).
 
 ### Decisions locked
 
-**Colour palette — Dark theme (near-black + teal accent)**
+**Colour palette — Near-black + teal accent, with light mode variant**
 
-The entire app — therapist UI, client UI, auth pages, and homepage — uses a unified dark theme. The old "Slate Navy + Bright Teal" light palette (decided Session 18) was superseded in Sessions 31–32.
+The app UI (therapist, client, auth pages) uses a CSS custom property token system that supports both dark (default) and light mode. The homepage uses raw dark hex only (no token system, always dark). The old "Slate Navy + Bright Teal" brand.* palette (decided Session 18) was superseded in Sessions 31–32 by the dark sweep; a Cool Slate light variant was added later via `[data-theme="light"]`.
 
-**App UI** — `dark.*` tokens in `tailwind.config.js` under `theme.extend.colors.dark`:
+**App UI** — `dark.*` tokens in `tailwind.config.js` now bridge to CSS custom properties (`var(--color-*)`). Values are defined in `src/index.css` under `:root` (dark default) and `[data-theme="light"]` (Cool Slate light palette). Light mode is implemented and live; setting `data-theme="light"` on the root element activates the light palette.
 
-| Role | Hex | Tailwind token |
-|---|---|---|
-| Page background | `#0e1117` | `bg-dark-bg` |
-| Card / sidebar / surface | `#111111` | `bg-dark-surface` |
-| Hover / input fill | `#1a1a1a` | `bg-dark-elevated` |
-| Border | `rgba(255,255,255,0.06)` | `border-dark-border` |
-| Primary text | `#f0f0f0` | `text-dark-text` |
-| Muted text | `#888888` | `text-dark-muted` |
-| Subtle text / placeholders | `#555555` | `text-dark-subtle` |
-| Accent (buttons, links, active, icons) | `#29B5CC` | `bg-dark-accent` / `text-dark-accent` |
-| Accent background (badge bg, tinted panels) | `rgba(41,181,204,0.10)` | `bg-dark-accent-bg` |
+| Role | Dark (`:root`) | Light (`[data-theme="light"]`) | Tailwind token |
+|---|---|---|---|
+| Page background | `#0e1117` | `#f8fafc` | `bg-dark-bg` |
+| Card / sidebar / surface | `rgba(13,17,23,0.85)` | `#ffffff` | `bg-dark-surface` |
+| Hover / input fill | `rgba(255,255,255,0.04)` | `#f1f5f9` | `bg-dark-elevated` |
+| Border | `rgba(100,160,255,0.08)` | `rgba(15,23,42,0.08)` | `border-dark-border` |
+| Primary text | `#f0f0f0` | `#0f172a` | `text-dark-text` |
+| Muted text | `#999999` | `#475569` | `text-dark-muted` |
+| Subtle text / placeholders | `#555555` | `#94a3b8` | `text-dark-subtle` |
+| Accent (buttons, links, active, icons) | `#29B5CC` | `#29B5CC` | `bg-dark-accent` / `text-dark-accent` |
+| Accent background (badge bg, tinted panels) | `rgba(41,181,204,0.10)` | `rgba(41,181,204,0.12)` | `bg-dark-accent-bg` |
 
-> Note: `dark.bg` was `#0a0a0a` through Session 36 — updated to `#0e1117` in Session 37 to match the sidebar and eliminate a visible contrast seam. The homepage still uses `#0a0a0a` as raw hex (intentional — it doesn't use Tailwind tokens).
+Additional CSS-only tokens (no Tailwind alias): `--color-border-strong`, `--color-danger`, `--color-success`, `--color-warning`.
+
+> Note: `dark.bg` was `#0a0a0a` through Session 36 — updated to `#0e1117` in Session 37. The homepage still uses `#0a0a0a` as raw hex (intentional — it does not use Tailwind tokens and is always dark). The `dark.*` tokens previously used hardcoded hex values; they now bridge to CSS custom properties, which is what enabled the light mode variant.
 
 **Homepage** — raw hex inline styles (no Tailwind tokens). bg `#0a0a0a`, surface `#111111`, primary `#29B5CC`, text `#f0f0f0`, muted `#888888`.
 
-**`brand.*` tokens** — still present in `tailwind.config.js` but are secondary / legacy. Primary value is `#29B5CC` (same accent). The old light-theme values (`#F7F8F9` bg, `#CDE9EF` border etc.) are no longer used in the UI — do not treat them as active. If doing a light-mode variant in future, start from scratch.
+**`brand.*` tokens** — still present in `tailwind.config.js` but are secondary / legacy. Primary value is `#29B5CC` (same accent). The old light-theme values (`#F7F8F9` bg, `#CDE9EF` border etc.) are no longer used in the UI — do not treat them as active. A light mode variant has since been implemented via CSS custom properties (see token table above).
 
 Invite email template still uses old `#2E6B7A` — update when re-doing email templates.
 
@@ -530,8 +537,8 @@ letterSpacing: '0.08em', color: '#888888'
 - Reference aesthetic: Linear.app — restrained motion, dark, single accent colour
 - Typography: DM Serif Display (headings/hero) paired with DM Sans (body) — font contrast
   signals premium without being ornate
-- No light/dark toggle — committing to dark mode for both homepage and app UI
-- App UI dark mode sweep to follow after homepage is finalised
+- Homepage: dark only — no toggle, always `#0a0a0a` raw hex
+- App UI: light/dark mode supported via CSS custom properties; homepage does not participate in the token system
 
 **Homepage sections (built — Session 30):**
 1. Nav — fixed, blur backdrop, Logo Option 1 + links + CTA buttons
@@ -546,7 +553,7 @@ letterSpacing: '0.08em', color: '#888888'
 
 **Pending (TODOs in code):**
 - Confirm pricing figures before launch (`{/* TODO: confirm pricing before launch */}`)
-- Confirm contact email — currently `mailto:hello@manualrx.app` (`{/* TODO: replace mailto with confirmed address before launch */}`)
+- ~~Confirm contact email~~ — confirmed as `support@manualrx.com`. Code still uses `mailto:hello@manualrx.app` at `src/pages/HomePage.jsx` line ~1117 — update before launch.
 - ~~Add real Privacy policy, Terms, Contact pages for footer links~~ — ✅ done. Pages live at `/privacy`, `/terms`, `/contact`; footer links use React Router `<Link>`. **Pre-launch: have a lawyer review all three docs — current drafts are placeholder-quality and need to hold up under AU Privacy Act (and HIPAA if US expansion).**
 
 **Build order:** ~~Logo~~ → ~~Homepage~~ → ~~App UI dark mode sweep~~
@@ -583,10 +590,11 @@ Clinic tier. Pricing to be confirmed at launch; current placeholders: Solo $29/m
 
 ### Still needed before launch
 
-**Logo / favicon:**
-- Wordmark: "ManualRx" in DM Sans SemiBold — white version (for nav) + dark version (`#1E2D3D`, for light backgrounds)
-- Favicon: "Rx" in `#3DBDB5` on white, minimum 32×32px
-- No icon mark / symbol yet — deferred until post-validation
+**Logo / favicon: ✅ DONE**
+- Logo implemented: Outfit Bold 700, 3px `#29B5CC` vertical bar + "Manual" white + "Rx" teal, 17px. Used in `src/components/therapist/AppSidebar.jsx` and inline `Logo()` functions in all auth/join pages.
+- Favicon implemented (Session 32): SVG data URI in `index.html` — "Rx" in `#29B5CC` on `#111111` background, Georgia serif (custom fonts can't be used in SVG data URIs in browser chrome), `rx='6'` rounded corners.
+- `<meta name="theme-color" content="#111111">` set in `index.html`.
+- No icon mark / symbol — deferred until post-validation (unchanged).
 
 **Email templates:**
 - Invite email still uses old `#2E6B7A` — needs updating to new palette
@@ -774,6 +782,7 @@ Clinic tier. Pricing to be confirmed at launch; current placeholders: Solo $29/m
 
 **Therapist navigation:**
 - New: `src/components/therapist/TherapistNav.jsx` — persistent dark top nav bar on all therapist pages. Clients link highlights on `/therapist/clients/*` and `/therapist/prescribe/*`. Exercises link highlights on `/therapist/exercises/*`.
+  > ℹ️ TherapistNav.jsx was **deleted in Session 31** and replaced by the fixed-left `AppSidebar.jsx` + `SidebarLayout.jsx`. No references remain in the live codebase.
 - `src/pages/therapist/Dashboard.jsx`: full redesign — time-of-day greeting + first name, live client count query, old standalone log out button removed
 - All therapist pages updated: `Clients`, `ExerciseLibrary`, `ExerciseDetail`, `ExerciseUpload`, `Prescribe`, `SessionEdit` — each has TherapistNav at top, content wrapped in max-width container with consistent padding
 
@@ -857,7 +866,7 @@ Currently therapists have two places with overlapping concerns: `/account` (chan
 **Automatic invite email built:**
 - Resend account created. Domain `manualrx.com` added with DKIM, SPF, and DMARC DNS records added to Namecheap. MX record skipped (Namecheap doesn't expose it when email hosting is active — not blocking, only affects bounce tracking).
 - Supabase Edge Function: `supabase/functions/send-invite-email/index.ts` — Deno TypeScript. Verifies caller JWT via service role client, builds invite URL from `SITE_URL` secret, extracts client first name, builds sender line (falls back gracefully if `clinicName` is null), POSTs to Resend API. Returns `{ success: true }` or 500.
-- `Clients.jsx` updated: fetches `therapist_profiles.clinic_name` on mount (stored as `clinicName` state, does not shadow auth context `profile`). After both DB inserts succeed, invokes edge function with `{ code, email, clientName, therapistName, clinicName }`. Failure condition: `!fnError && fnData?.success === true`. Two success UI paths: green "Invite sent to [email]" with secondary copy-link on success; amber "Couldn't send email — share this link manually" with prominent copy-link on failure.
+- `Clients.jsx` updated: fetches `therapist_profiles.clinic_name` on mount (stored as `clinicName` state, does not shadow auth context `profile`). After both DB inserts succeed, invokes edge function with `{ code, email, clientName, therapistName, clinicName }`. Success condition: `emailSent = !fnError && fnData?.success === true` (confirmed in `Clients.jsx` — this expression is the success guard, not a failure condition). Two UI paths: green "Invite sent to [email]" with secondary copy-link when emailSent is true; amber "Couldn't send email — share this link manually" with prominent copy-link when false.
 - Secrets set: `RESEND_API_KEY`, `SITE_URL`. `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are auto-injected by Supabase into Edge Functions — do not add manually.
 - Edge function deployed via `supabase functions deploy send-invite-email`.
 - Amber fallback path confirmed working in production (Resend rejected send because domain not yet verified).
@@ -1673,4 +1682,30 @@ CREATE POLICY "Therapists manage own dismissed alerts" ON dashboard_dismissed_al
 - Menu items: `#94a3b8` text + `hover:bg-white/5` Tailwind hover class
 - Divider: `rgba(41,181,204,0.1)` teal tint (vs plain white in earlier iteration)
 - Fixed-position dropdown avoids `overflow: hidden` on `PageHero` — must use `getBoundingClientRect()` on button open; `right` computed as `window.innerWidth - rect.right`
+
+---
+
+### Session 41 — Weekly program progress charts
+
+**Goal:** Add week-over-week pain and volume trend charts to the client progress section, sitting alongside the existing per-session charts.
+
+**New utility: `src/utils/progressUtils.js` — `computeWeeklyData(sessionLogs, weightUnit, startDate)`**
+- Groups sessions into week buckets relative to prescription `start_date` (Week 1 = days 0–6)
+- Week number: `Math.floor((sessionDay - anchorDay) / (7 * 86400000)) + 1`; sessions before `start_date` are dropped (`week < 1` guard)
+- Timezone-safe: both dates sliced to `YYYY-MM-DD` and suffixed `T00:00:00Z` so comparison is always UTC midnight
+- `avgPain`: per-session average first (all non-null `pain_rating` values in a session's exercise_logs), then weekly average of those session averages — ensures every session contributes equally regardless of exercise count
+- `volume`: sum of `computeExerciseVolume()` across all exercise_logs in the week, converted to `weightUnit`; `null` (not `0`) when no weighted exercises exist — uses `hasVolume` boolean flag; `vol > 0` guard handles `computeExerciseVolume` returning `0` for zero-rep sets
+- Returns `[{ week, label: 'Wk N', avgPain: number|null, volume: number|null }]`; weeks with no sessions omitted; weeks with partial data included (each chart filters its own metric)
+
+**New component: `src/components/progress/WeeklyProgressCard.jsx`**
+- Props: `data` (from `computeWeeklyData`), `weightUnit`
+- Two stacked Recharts `LineChart`s: "Average Pain per Week (0–10)" (domain `[0,10]`) and "Total Volume per Week"
+- Each chart independently requires ≥2 non-null data points; component returns `null` when neither has enough data
+- Styled identically to `PainChart`/`VolumeChart` siblings (same `chartColors`, `CartesianGrid`, `Tooltip`, `ResponsiveContainer` patterns, `useTheme` hook)
+
+**Integration: `src/components/progress/PrescriptionProgressSection.jsx`**
+- `computeWeeklyData` called with `prescriptionSessions`, `weightUnit`, `prescription.start_date`
+- `<WeeklyProgressCard>` rendered after the existing "Total Volume per Session" section; all null/sparse-data logic is internal to the component
+
+**Tests: `src/utils/progressUtils.test.js`** — extended from 18 to 30 tests (12 new for `computeWeeklyData`): null/empty inputs, week assignment, two-level pain averaging (discriminating test: 3 exercises in one session + 1 in another = 4.0 not 4.33), avgPain null, volume sum, volume null for bodyweight-only sessions, lb conversion, sparse weeks, UTC date bucketing, pre-startDate session drop.
 
