@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useWeightUnit } from '../../hooks/useWeightUnit'
@@ -67,6 +67,32 @@ export default function SupersetPickerModal({
     return map
   })
 
+  const [tempoEnabledMap, setTempoEnabledMap] = useState(() => {
+    const map = {}
+    for (const em of editMembers) {
+      if (em.exercises?.id) {
+        map[em.exercises.id] = em.tempo_eccentric != null && em.tempo_bottom_pause != null &&
+          em.tempo_concentric != null && em.tempo_top_pause != null
+      }
+    }
+    return map
+  })
+
+  const [tempoMap, setTempoMap] = useState(() => {
+    const map = {}
+    for (const em of editMembers) {
+      if (em.exercises?.id) {
+        map[em.exercises.id] = {
+          down: em.tempo_eccentric != null ? String(em.tempo_eccentric) : '',
+          hold: em.tempo_bottom_pause != null ? String(em.tempo_bottom_pause) : '',
+          up: em.tempo_concentric != null ? String(em.tempo_concentric) : '',
+          top: em.tempo_top_pause != null ? String(em.tempo_top_pause) : '',
+        }
+      }
+    }
+    return map
+  })
+
   // Re-initialize weight display values once weightUnit resolves
   useEffect(() => {
     if (!weightUnit || editMembers.length === 0) return
@@ -117,15 +143,29 @@ export default function SupersetPickerModal({
       setMeasurementTypeMap(prev => { const next = { ...prev }; delete next[exercise.id]; return next })
       setRepsMap(prev => { const next = { ...prev }; delete next[exercise.id]; return next })
       setWeightMap(prev => { const next = { ...prev }; delete next[exercise.id]; return next })
+      setTempoEnabledMap(prev => { const next = { ...prev }; delete next[exercise.id]; return next })
+      setTempoMap(prev => { const next = { ...prev }; delete next[exercise.id]; return next })
     } else {
       setSelected(prev => [...prev, exercise])
       setBilateralMap(prev => ({ ...prev, [exercise.id]: false }))
       setMeasurementTypeMap(prev => ({ ...prev, [exercise.id]: 'reps' }))
       setRepsMap(prev => ({ ...prev, [exercise.id]: String(exercise.default_reps ?? 10) }))
       setWeightMap(prev => ({ ...prev, [exercise.id]: '' }))
+      setTempoEnabledMap(prev => ({ ...prev, [exercise.id]: false }))
+      setTempoMap(prev => ({ ...prev, [exercise.id]: { down: '', hold: '', up: '', top: '' } }))
       setQuery('')
       setResults([])
     }
+  }
+
+  function getTempoForExercise(exId) {
+    if (!tempoEnabledMap[exId]) return { eccentric: null, bottomPause: null, concentric: null, topPause: null }
+    const t = tempoMap[exId] ?? {}
+    const e = parseInt(t.down), b = parseInt(t.hold), c = parseInt(t.up), tp = parseInt(t.top)
+    if (!isNaN(e) && !isNaN(b) && !isNaN(c) && !isNaN(tp)) {
+      return { eccentric: e, bottomPause: b, concentric: c, topPause: tp }
+    }
+    return { eccentric: null, bottomPause: null, concentric: null, topPause: null }
   }
 
   function toggleBilateral(exId) {
@@ -134,8 +174,20 @@ export default function SupersetPickerModal({
 
   async function handleConfirm() {
     if (selected.length < 2) return
-    setSaving(true)
     setError(null)
+    for (const ex of selected) {
+      if (tempoEnabledMap[ex.id]) {
+        const t = tempoMap[ex.id] ?? {}
+        const e = parseInt(t.down), b = parseInt(t.hold), c = parseInt(t.up), tp = parseInt(t.top)
+        const valid = !isNaN(e) && !isNaN(b) && !isNaN(c) && !isNaN(tp) &&
+          e >= 1 && e <= 9 && c >= 1 && c <= 9 && b >= 0 && b <= 9 && tp >= 0 && tp <= 9
+        if (!valid) {
+          setError(`${ex.name}: tempo requires Eccentric/Concentric 1–9, Hold/Top 0–9.`)
+          return
+        }
+      }
+    }
+    setSaving(true)
     try {
       if (editGroup) {
         await handleEdit()
@@ -165,18 +217,25 @@ export default function SupersetPickerModal({
       .single()
     if (gErr) throw new Error(gErr.message)
 
-    const rows = selected.map((ex, i) => ({
-      [parentField]: parentId,
-      exercise_id: ex.id,
-      group_id: group.id,
-      position_in_group: i,
-      sets: setCount,
-      reps: parseInt(repsMap[ex.id]) || ex.default_reps || 10,
-      weight: weightMap[ex.id] ? toCanonical(parseFloat(weightMap[ex.id]), weightUnit ?? 'kg') : null,
-      therapist_notes: null,
-      measurement_type: measurementTypeMap[ex.id] ?? 'reps',
-      bilateral: bilateralMap[ex.id] ?? false,
-    }))
+    const rows = selected.map((ex, i) => {
+      const tempo = getTempoForExercise(ex.id)
+      return {
+        [parentField]: parentId,
+        exercise_id: ex.id,
+        group_id: group.id,
+        position_in_group: i,
+        sets: setCount,
+        reps: parseInt(repsMap[ex.id]) || ex.default_reps || 10,
+        weight: weightMap[ex.id] ? toCanonical(parseFloat(weightMap[ex.id]), weightUnit ?? 'kg') : null,
+        therapist_notes: null,
+        measurement_type: measurementTypeMap[ex.id] ?? 'reps',
+        bilateral: bilateralMap[ex.id] ?? false,
+        tempo_eccentric: tempo.eccentric,
+        tempo_bottom_pause: tempo.bottomPause,
+        tempo_concentric: tempo.concentric,
+        tempo_top_pause: tempo.topPause,
+      }
+    })
     const { data: inserted, error: exErr } = await supabase
       .from(exerciseTable)
       .insert(rows)
@@ -219,6 +278,7 @@ export default function SupersetPickerModal({
     for (let i = 0; i < survivingMembers.length; i++) {
       const em = survivingMembers[i]
       const exId = em.exercises?.id
+      const tempo = getTempoForExercise(exId)
       await supabase
         .from(exerciseTable)
         .update({
@@ -227,6 +287,10 @@ export default function SupersetPickerModal({
           weight: weightMap[exId] ? toCanonical(parseFloat(weightMap[exId]), weightUnit ?? 'kg') : null,
           measurement_type: measurementTypeMap[exId] ?? em.measurement_type ?? 'reps',
           bilateral: bilateralMap[exId] ?? false,
+          tempo_eccentric: tempo.eccentric,
+          tempo_bottom_pause: tempo.bottomPause,
+          tempo_concentric: tempo.concentric,
+          tempo_top_pause: tempo.topPause,
         })
         .eq('id', em.id)
     }
@@ -234,18 +298,25 @@ export default function SupersetPickerModal({
     const newExercises = selected.filter(e => !existingExerciseIds.includes(e.id))
     let inserted = []
     if (newExercises.length > 0) {
-      const newRows = newExercises.map((ex, i) => ({
-        [parentField]: parentId,
-        exercise_id: ex.id,
-        group_id: editGroup.id,
-        position_in_group: survivingMembers.length + i,
-        sets: setCount,
-        reps: parseInt(repsMap[ex.id]) || ex.default_reps || 10,
-        weight: weightMap[ex.id] ? toCanonical(parseFloat(weightMap[ex.id]), weightUnit ?? 'kg') : null,
-        therapist_notes: null,
-        measurement_type: measurementTypeMap[ex.id] ?? 'reps',
-        bilateral: bilateralMap[ex.id] ?? false,
-      }))
+      const newRows = newExercises.map((ex, i) => {
+        const tempo = getTempoForExercise(ex.id)
+        return {
+          [parentField]: parentId,
+          exercise_id: ex.id,
+          group_id: editGroup.id,
+          position_in_group: survivingMembers.length + i,
+          sets: setCount,
+          reps: parseInt(repsMap[ex.id]) || ex.default_reps || 10,
+          weight: weightMap[ex.id] ? toCanonical(parseFloat(weightMap[ex.id]), weightUnit ?? 'kg') : null,
+          therapist_notes: null,
+          measurement_type: measurementTypeMap[ex.id] ?? 'reps',
+          bilateral: bilateralMap[ex.id] ?? false,
+          tempo_eccentric: tempo.eccentric,
+          tempo_bottom_pause: tempo.bottomPause,
+          tempo_concentric: tempo.concentric,
+          tempo_top_pause: tempo.topPause,
+        }
+      })
       const { data, error: exErr } = await supabase
         .from(exerciseTable)
         .insert(newRows)
@@ -388,6 +459,35 @@ export default function SupersetPickerModal({
                     />
                     <span style={{ fontSize: '11px', color: 'var(--color-muted)' }}>Both sides</span>
                   </label>
+                  {/* Tempo toggle */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '11px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--color-muted)' }}>Tempo <span style={{ color: 'var(--color-subtle)', fontSize: '10px' }}>(optional)</span></span>
+                    <button
+                      type="button"
+                      onClick={() => setTempoEnabledMap(prev => ({ ...prev, [ex.id]: !prev[ex.id] }))}
+                      style={{ width: '28px', height: '16px', borderRadius: '8px', border: 'none', cursor: 'pointer', padding: 0, position: 'relative', transition: 'background 0.15s', background: tempoEnabledMap[ex.id] ? '#29B5CC' : 'var(--color-border)' }}
+                    >
+                      <span style={{ display: 'block', width: '12px', height: '12px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', transition: 'left 0.15s', left: tempoEnabledMap[ex.id] ? '14px' : '2px' }} />
+                    </button>
+                  </div>
+                  {tempoEnabledMap[ex.id] && (
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', paddingLeft: '11px' }}>
+                      {[['down', 'Ecc', 1], ['hold', 'Hold', 0], ['up', 'Con', 1], ['top', 'Top', 0]].map(([key, label, min], idx, arr) => (
+                        <Fragment key={key}>
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                            <input
+                              type="number" min={min} max={9}
+                              value={tempoMap[ex.id]?.[key] ?? ''}
+                              onChange={e => setTempoMap(prev => ({ ...prev, [ex.id]: { ...(prev[ex.id] ?? {}), [key]: e.target.value } }))}
+                              style={{ width: '100%', padding: '4px 2px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '5px', color: 'var(--color-text)', fontSize: '13px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', textAlign: 'center', colorScheme: 'dark' }}
+                            />
+                            <span style={{ fontSize: '8px', color: 'var(--color-subtle)', textTransform: 'uppercase' }}>{label}</span>
+                          </div>
+                          {idx < arr.length - 1 && <span style={{ color: 'var(--color-subtle)', fontSize: '12px', paddingBottom: '14px' }}>—</span>}
+                        </Fragment>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
